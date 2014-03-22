@@ -22,7 +22,7 @@ public class RemoteMapClient implements RemoteMap {
   }
 
   @Override
-  public Serializable get(int type, Serializable key) throws IOException {
+  public Serializable get(int type, String key) throws IOException {
     for (int i = 1; i < N_TRIES; ++i) {
       try {
         return getOnce(type, key);
@@ -34,7 +34,7 @@ public class RemoteMapClient implements RemoteMap {
   }
 
   @Override
-  public void performTransaction(int type, Serializable key, Transaction transaction)
+  public void performTransaction(int type, String key, Transaction transaction)
       throws IOException {
     LOGGER.debug(String.format("performTransaction(%d,%s, %s)", type, key, transaction));
     try (Socket socket = new Socket(serverAddress_.getAddress(), serverAddress_.getPort())) {
@@ -52,7 +52,7 @@ public class RemoteMapClient implements RemoteMap {
   }
 
   @Override
-  public void put(int type, Serializable key, Serializable value) throws IOException {
+  public void put(int type, String key, Serializable value) throws IOException {
     LOGGER.debug(String.format("put(%d,%s, %s)", type, key, value));
     try (Socket socket = new Socket(serverAddress_.getAddress(), serverAddress_.getPort())) {
       ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());

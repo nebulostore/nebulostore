@@ -1,5 +1,6 @@
 package org.nebulostore.newcommunication.naming;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -16,7 +17,9 @@ import org.nebulostore.newcommunication.naming.addressmap.AddressMapFactory;
 import org.nebulostore.newcommunication.naming.addressmap.ObservableAddressMap;
 import org.nebulostore.newcommunication.naming.addressmap.ObservableAddressMap.PutEvent;
 import org.nebulostore.newcommunication.netutils.StubNetworkAddressDiscovery;
-import org.nebulostore.newcommunication.netutils.remotemap.InMemoryMap;
+import org.nebulostore.newcommunication.netutils.remotemap.RemoteMap;
+import org.nebulostore.newcommunication.netutils.remotemap.RemoteMapImpl;
+import org.nebulostore.persistence.InMemoryStore;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -38,7 +41,8 @@ public class AddressMappingMaintainerTest {
   public void setUp() {
     putEvents_ = new LinkedBlockingQueue<ObservableAddressMap.PutEvent>();
     AddressMapFactory addressMapFactory = mock(AddressMapFactory.class);
-    addressMap_ = new ObservableAddressMap(new AddressMapAdapter(new InMemoryMap()), putEvents_);
+    RemoteMap remoteMap = new RemoteMapImpl(new InMemoryStore<Serializable>());
+    addressMap_ = new ObservableAddressMap(new AddressMapAdapter(remoteMap), putEvents_);
 
     when(addressMapFactory.getAddressMap()).thenReturn(addressMap_);
 

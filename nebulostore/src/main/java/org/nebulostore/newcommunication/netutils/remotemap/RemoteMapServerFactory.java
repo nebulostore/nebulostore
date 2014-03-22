@@ -6,7 +6,6 @@ import java.util.concurrent.ExecutorService;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-
 import org.apache.log4j.Logger;
 
 /**
@@ -14,7 +13,7 @@ import org.apache.log4j.Logger;
  */
 public class RemoteMapServerFactory implements RemoteMapFactory {
   private static final Logger LOGGER = Logger.getLogger(RemoteMapServerFactory.class);
-  private final InMemoryMap localMap_;
+  private final RemoteMap localMap_;
   private final ExecutorService executor_;
   private final ExecutorService workerExecutor_;
   private final int commPort_;
@@ -24,7 +23,7 @@ public class RemoteMapServerFactory implements RemoteMapFactory {
 
   @Inject
   public RemoteMapServerFactory(
-      InMemoryMap localMap,
+      RemoteMap localMap,
       @Named("communication.remotemap.server-executor") ExecutorService executor,
       @Named("communication.remotemap.worker-executor") ExecutorService workerExecutor,
       @Named("communication.remotemap.local-port") int commPort) {

@@ -21,14 +21,14 @@ public interface RemoteMap extends Remote {
    * @return null if no mapping exists.
    * @throws IOException
    */
-  Serializable get(int type, Serializable key) throws IOException;
+  Serializable get(int type, String key) throws IOException;
 
   /**
    * Puts given mapping to map.
    *
    * @throws IOException
    */
-  void put(int type, Serializable key, Serializable value) throws IOException;
+  void put(int type, String key, Serializable value) throws IOException;
 
-  void performTransaction(int type, Serializable key, Transaction transaction) throws IOException;
+  void performTransaction(int type, String key, Transaction transaction) throws IOException;
 }

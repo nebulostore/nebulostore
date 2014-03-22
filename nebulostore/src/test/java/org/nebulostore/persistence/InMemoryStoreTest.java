@@ -8,8 +8,8 @@ import java.io.IOException;
 public class InMemoryStoreTest extends KeyValueStoreTestTemplate {
 
   @Override
-  protected KeyValueStore getKeyValueStore() throws IOException {
-    return new InMemoryStore();
+  protected KeyValueStore<String> getKeyValueStore() throws IOException {
+    return new InMemoryStore<String>();
   }
 
 }

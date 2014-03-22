@@ -16,7 +16,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.google.inject.Inject;
-
 import org.apache.log4j.Logger;
 
 /**
@@ -26,7 +25,7 @@ import org.apache.log4j.Logger;
  */
 public class RemoteMapServer implements Runnable {
   private static final Logger LOGGER = Logger.getLogger(RemoteMapServer.class);
-  private final InMemoryMap localMap_;
+  private final RemoteMap localMap_;
   private final ServerSocket serverSocket_;
   private final ExecutorService workerExecutor_;
 
@@ -35,7 +34,7 @@ public class RemoteMapServer implements Runnable {
 
 
   @Inject
-  public RemoteMapServer(InMemoryMap localMap,
+  public RemoteMapServer(RemoteMap localMap,
       ServerSocket serverSocket,
       ExecutorService workerExecutor) {
     localMap_ = localMap;
@@ -108,7 +107,7 @@ public class RemoteMapServer implements Runnable {
         ObjectInputStream ois = new ObjectInputStream(sis);
         int op = ois.read();
         int type = ois.read();
-        Serializable key = (Serializable) ois.readObject();
+        String key = (String) ois.readObject();
         if (op == RemoteMap.GET_ID) {
           LOGGER.trace(String.format("get(%d, %s)", type, key));
           ObjectOutputStream oos = new ObjectOutputStream(clientSocket_.getOutputStream());

@@ -1,18 +1,21 @@
 package org.nebulostore.persistence;
 
+import java.io.IOException;
+
+import com.google.common.base.Function;
+
 /**
- * Interface for any persistent key/value store. All implementations should be thread-safe.
+ * Interface for any persistent key/value store. All methods are thread-safe and atomic.
  *
  * @author Bolek Kulbabinski
  */
-public interface KeyValueStore {
-  void putString(String key, String value) throws StoreException;
+public interface KeyValueStore<T> {
 
-  String getString(String key) throws StoreException;
+  void put(String key, T value) throws IOException;
 
-  void putBytes(String key, byte[] data) throws StoreException;
+  T get(String key) throws IOException;
 
-  byte[] getBytes(String key) throws StoreException;
+  void delete(String key) throws IOException;
 
-  void delete(String key) throws StoreException;
+  void performTransaction(String key, Function<T, T> function) throws IOException;
 }

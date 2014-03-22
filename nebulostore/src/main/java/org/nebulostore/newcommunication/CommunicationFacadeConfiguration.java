@@ -1,5 +1,6 @@
 package org.nebulostore.newcommunication;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -16,7 +17,6 @@ import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Names;
-
 import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
@@ -30,9 +30,10 @@ import org.nebulostore.newcommunication.naming.addressmap.AddressMapFactory;
 import org.nebulostore.newcommunication.naming.addressmap.AddressMapFactoryImpl;
 import org.nebulostore.newcommunication.netutils.NetworkAddressDiscovery;
 import org.nebulostore.newcommunication.netutils.UserGivenNetworkAddressDiscovery;
-import org.nebulostore.newcommunication.netutils.remotemap.InMemoryMap;
+import org.nebulostore.newcommunication.netutils.remotemap.RemoteMap;
 import org.nebulostore.newcommunication.netutils.remotemap.RemoteMapClientFactory;
 import org.nebulostore.newcommunication.netutils.remotemap.RemoteMapFactory;
+import org.nebulostore.newcommunication.netutils.remotemap.RemoteMapImpl;
 import org.nebulostore.newcommunication.netutils.remotemap.RemoteMapServerFactory;
 import org.nebulostore.newcommunication.peerdiscovery.PeerDiscovery;
 import org.nebulostore.newcommunication.peerdiscovery.PeerDiscoveryFactory;
@@ -42,6 +43,7 @@ import org.nebulostore.newcommunication.routing.ListenerService;
 import org.nebulostore.newcommunication.routing.MessageSender;
 import org.nebulostore.newcommunication.routing.OOSDispatcher;
 import org.nebulostore.newcommunication.routing.Router;
+import org.nebulostore.persistence.InMemoryStore;
 
 /**
  * @author Grzegorz Milka
@@ -129,7 +131,8 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
   private void configureRemoteMap() {
     ExecutorService workerExecutor = Executors.newFixedThreadPool(8);
     if (xmlConfig_.getString("communication.remotemap.mode").equals("server")) {
-      bind(InMemoryMap.class).in(Singleton.class);
+      // TODO: add config entry for either in-memory or persistent map
+      bind(RemoteMap.class).toInstance(new RemoteMapImpl(new InMemoryStore<Serializable>()));
       bind(ExecutorService.class).annotatedWith(Names.named(
           "communication.remotemap.server-executor")).toInstance(serviceExecutor_);
       bind(ExecutorService.class).annotatedWith(Names.named(

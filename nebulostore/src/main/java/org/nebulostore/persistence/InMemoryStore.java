@@ -1,48 +1,38 @@
 package org.nebulostore.persistence;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.common.base.Charsets;
+import com.google.common.base.Function;
 
 /**
  * Non-persistent storage.
  *
  * @author Bolek Kulbabinski
  */
-public class InMemoryStore implements KeyValueStore {
+public class InMemoryStore<T> implements KeyValueStore<T> {
 
-  private final Map<String, byte[]> map_;
+  private final Map<String, T> map_ = new HashMap<>();
 
-  public InMemoryStore() {
-    map_ = new HashMap<>();
+  @Override
+  public synchronized void put(String key, T value) {
+    map_.put(key, value);
   }
 
   @Override
-  public synchronized void putString(String key, String value) {
-    putBytes(key, value.getBytes(Charsets.UTF_8));
-  }
-
-  @Override
-  public synchronized String getString(String key) throws StoreException {
-    return new String(getBytes(key), Charsets.UTF_8);
-  }
-
-  @Override
-  public synchronized void putBytes(String key, byte[] data) {
-    map_.put(key, data);
-  }
-
-  @Override
-  public synchronized byte[] getBytes(String key) throws StoreException {
-    if (!map_.containsKey(key)) {
-      throw new StoreException("No such key");
-    }
+  public synchronized T get(String key) {
     return map_.get(key);
   }
 
   @Override
   public synchronized void delete(String key) {
     map_.remove(key);
+  }
+
+  @Override
+  public synchronized void performTransaction(String key, Function<T, T> function)
+      throws IOException {
+    map_.put(key, function.apply(map_.get(key)));
   }
 }

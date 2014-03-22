@@ -25,11 +25,11 @@ public class ReplicaResolverAdapter implements ReplicaResolver {
     */
   @Override
   public ValueDHT get(KeyDHT key) throws IOException {
-    return (ValueDHT) remoteMap_.get(CONTRACT_TYPE, key);
+    return (ValueDHT) remoteMap_.get(CONTRACT_TYPE, key.toString());
   }
 
   @Override
   public void put(KeyDHT key, ValueDHT value) throws IOException {
-    remoteMap_.performTransaction(CONTRACT_TYPE, key, new MergeTransaction(value));
+    remoteMap_.performTransaction(CONTRACT_TYPE, key.toString(), new MergeTransaction(value));
   }
 }

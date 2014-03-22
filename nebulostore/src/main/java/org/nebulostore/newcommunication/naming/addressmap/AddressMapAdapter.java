@@ -21,11 +21,11 @@ public class AddressMapAdapter implements AddressMap {
 
   @Override
   public InetSocketAddress getAddress(CommAddress commAddress) throws IOException {
-    return (InetSocketAddress) remoteMap_.get(0, commAddress);
+    return (InetSocketAddress) remoteMap_.get(0, commAddress.toString());
   }
 
   @Override
   public void putAddress(CommAddress commAddress, InetSocketAddress netAddress) throws IOException {
-    remoteMap_.put(0, commAddress, netAddress);
+    remoteMap_.put(0, commAddress.toString(), netAddress);
   }
 }
