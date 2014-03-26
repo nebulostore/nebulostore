@@ -1,12 +1,13 @@
 package org.nebulostore.peers;
 
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import com.google.common.base.Functions;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
 import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.api.DeleteNebuloObjectModule;
 import org.nebulostore.api.GetNebuloObjectModule;
@@ -30,6 +31,8 @@ import org.nebulostore.networkmonitor.ConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.DefaultConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.networkmonitor.NetworkMonitorImpl;
+import org.nebulostore.persistence.FileStore;
+import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.ReplicatorImpl;
 import org.nebulostore.replicator.core.Replicator;
 import org.nebulostore.subscription.api.SimpleSubscriptionNotificationHandler;
@@ -48,7 +51,8 @@ public class PeerConfiguration extends GenericConfiguration {
   protected void configureAll() {
     bind(XMLConfiguration.class).toInstance(config_);
 
-    bind(AppKey.class).toInstance(new AppKey(config_.getString("app-key", "")));
+    AppKey appKey = new AppKey(config_.getString("app-key", ""));
+    bind(AppKey.class).toInstance(appKey);
     bind(CommAddress.class).toInstance(
         new CommAddress(config_.getString("communication.comm-address", "")));
 
@@ -73,13 +77,27 @@ public class PeerConfiguration extends GenericConfiguration {
 
     bind(Timer.class).to(TimerImpl.class);
 
-    bind(Replicator.class).to(ReplicatorImpl.class);
-
     configureAdditional();
+    configureBroker();
     configureCommunicationPeer();
     configureNetworkMonitor();
-    configureBroker();
     configurePeer();
+    configureReplicator(appKey);
+  }
+
+  private void configureReplicator(AppKey appKey) {
+    KeyValueStore<byte[]> replicatorStore;
+    try {
+      String pathPrefix = config_.getString("replicator.storage-path") + "/" +
+        appKey.getKey().toString() + "_storage/";
+      replicatorStore = new FileStore<byte[]>(pathPrefix,
+        Functions.<byte[]>identity(), Functions.<byte[]>identity());
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to configure Replicator module", e);
+    }
+    bind(new TypeLiteral<KeyValueStore<byte[]>>() { }).
+      annotatedWith(Names.named("ReplicatorStore")).toInstance(replicatorStore);
+    bind(Replicator.class).to(ReplicatorImpl.class);
   }
 
   protected void configureAdditional() {

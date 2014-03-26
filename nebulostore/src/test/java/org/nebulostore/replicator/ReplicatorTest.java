@@ -1,108 +1,96 @@
 package org.nebulostore.replicator;
 
+import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.junit.Ignore;
+import com.google.common.base.Charsets;
+import org.junit.Assert;
 import org.junit.Test;
 import org.nebulostore.appcore.addressing.ObjectId;
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.model.EncryptedObject;
-import org.nebulostore.replicator.core.TransactionAnswer;
-import org.nebulostore.replicator.messages.ConfirmationMessage;
+import org.nebulostore.persistence.InMemoryStore;
+import org.nebulostore.persistence.KeyValueStore;
+import org.nebulostore.replicator.core.Replicator;
 import org.nebulostore.replicator.messages.GetObjectMessage;
-import org.nebulostore.replicator.messages.QueryToStoreObjectMessage;
 import org.nebulostore.replicator.messages.ReplicatorErrorMessage;
 import org.nebulostore.replicator.messages.SendObjectMessage;
-import org.nebulostore.replicator.messages.TransactionResultMessage;
-
-import static org.junit.Assert.assertTrue;
 
 /**
- * @author szymonmatejczyk
+ * @author Bolek Kulbabinski
  */
 public class ReplicatorTest {
+  private static final ObjectId ID_1 = new ObjectId(new BigInteger("111"));
+  private static final String CONTENT_1 = "sample file content 1";
 
-  private final BlockingQueue<Message> inQueue_ = new LinkedBlockingQueue<Message>();
-  private final BlockingQueue<Message> inQueue1_ = new LinkedBlockingQueue<Message>();
-  private final BlockingQueue<Message> networkQueue_ = new LinkedBlockingQueue<Message>();
-  private final BlockingQueue<Message> deadDispatcherQueue_ = new LinkedBlockingQueue<Message>();
-  private final ReplicatorImpl replicator_ = null;
-  private final ReplicatorImpl replicator1_ = null;
-
-  private Thread replicatorThread_;
-
-  // TODO(bolek): Refactor this test with fake disk writes.
-  /**
-   * Saving file. Retrieving it using id.
-   * @throws InterruptedException
-   * @throws NebuloException
-   */
-  @Ignore
   @Test
-  public void testStoreGetMessages() throws InterruptedException, NebuloException {
-    ObjectId objectId1 = new ObjectId(new BigInteger("3"));
-    byte[] enc = {33, 12};
-    EncryptedObject entity1 = new EncryptedObject(enc);
+  public void shouldGetExistingObject() throws Exception {
+    // given
+    ReplicatorWrapper replicator = startNewReplicator()
+        .store(ID_1.toString(), CONTENT_1)
+        .store(ID_1.toString() + ".meta", "metadata");
+    // when
+    replicator.sendMsg(new GetObjectMessage(null, ID_1, null));
+    // then
+    Message result = replicator.receiveMsg();
+    Assert.assertTrue(result instanceof SendObjectMessage);
+    Assert.assertArrayEquals(CONTENT_1.getBytes(Charsets.UTF_8),
+        ((SendObjectMessage) result).getEncryptedEntity().getEncryptedData());
+    // clean
+    endReplicator(replicator);
+  }
 
-    String[] previousVersion = {"version1"};
-    QueryToStoreObjectMessage storeMessage = new QueryToStoreObjectMessage("job1",
-        null, objectId1, entity1, new HashSet<String>(Arrays.asList(previousVersion)), "");
-    inQueue_.add(storeMessage);
+  @Test
+  public void shouldSendErrorMessageWhenGettingNonexistentObject() throws Exception {
+    // given
+    ReplicatorWrapper replicator = startNewReplicator();
+    // when
+    replicator.sendMsg(new GetObjectMessage(null, ID_1, null));
+    // then
+    Message result = replicator.receiveMsg();
+    Assert.assertTrue(result instanceof ReplicatorErrorMessage);
+    // clean
+    endReplicator(replicator);
+  }
 
-    replicator_.setNetworkQueue(networkQueue_);
-
-    replicatorThread_ = new Thread(replicator_);
-    replicatorThread_.start();
 
 
-    Message msg;
-    try {
-      Thread.sleep(300);
-      msg = networkQueue_.take();
-      if (!(msg instanceof ConfirmationMessage)) {
-        assertTrue(false);
-        return;
-      }
-    } catch (InterruptedException exception) {
-      assertTrue(false);
-      return;
+  static class ReplicatorWrapper {
+    public KeyValueStore<byte[]> store_ = new InMemoryStore<>();
+    public Replicator replicator_ = new ReplicatorImpl(store_);
+    public BlockingQueue<Message> inQueue_ = new LinkedBlockingQueue<Message>();
+    public BlockingQueue<Message> outQueue_ = new LinkedBlockingQueue<Message>();
+    public BlockingQueue<Message> networkQueue_ = new LinkedBlockingQueue<Message>();
+    public Thread thread_ = new Thread(replicator_);
+
+    {
+      replicator_.setInQueue(inQueue_);
+      replicator_.setOutQueue(outQueue_);
+      replicator_.setNetworkQueue(networkQueue_);
     }
 
-    TransactionResultMessage transactionResult = new TransactionResultMessage("job1", null,
-        TransactionAnswer.COMMIT);
-    inQueue_.add(transactionResult);
-
-    // replicator thread died here
-    Thread.sleep(100);
-
-    replicatorThread_ = new Thread(replicator1_);
-    replicator1_.setNetworkQueue(networkQueue_);
-    replicatorThread_.start();
-
-    GetObjectMessage getMessage = new GetObjectMessage(null, null, objectId1, "");
-    inQueue1_.add(getMessage);
-
-    try {
-      msg = networkQueue_.take();
-    } catch (InterruptedException exception) {
-      assertTrue(false);
-      return;
+    public void sendMsg(Message msg) {
+      inQueue_.add(msg);
     }
 
-    if (msg instanceof SendObjectMessage) {
-      SendObjectMessage som = (SendObjectMessage) msg;
-      assertTrue(Arrays.equals(enc, som.getEncryptedEntity().getEncryptedData()));
-    } else if (msg instanceof ReplicatorErrorMessage) {
-      ReplicatorErrorMessage rem = (ReplicatorErrorMessage) msg;
-      assertTrue(rem.getMessage(), false);
-    } else {
-      assertTrue("Unknown message type received.", false);
-      return;
+    public Message receiveMsg() throws InterruptedException {
+      return networkQueue_.take();
     }
+
+    public ReplicatorWrapper store(String key, String value) throws IOException {
+      store_.put(key, value.getBytes(Charsets.UTF_8));
+      return this;
+    }
+  }
+
+  private ReplicatorWrapper startNewReplicator() {
+    ReplicatorWrapper wrapper = new ReplicatorWrapper();
+    wrapper.thread_.start();
+    return wrapper;
+  }
+
+  private void endReplicator(ReplicatorWrapper wrapper) throws InterruptedException {
+    wrapper.thread_.join();
   }
 }

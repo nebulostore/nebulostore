@@ -23,12 +23,10 @@ public abstract class KeyValueStoreTestTemplate {
     Assert.assertEquals("value 1", store.get("one"));
   }
 
-  // TODO: decide on behavior for nonexistent keys
-  // (problems with AddressMappingMaintainerTest.shouldUpdateMapEntryOnAddressChange()
-  //@Test(expected = IOException.class)
-  public void shouldThrowOnNonExistentKey() throws Exception {
+  @Test
+  public void shouldReturnNullOnNonExistentKey() throws Exception {
     KeyValueStore<String> store = getKeyValueStore();
-    store.get("bad key");
+    Assert.assertNull(store.get("bad key"));
   }
 
   @Test

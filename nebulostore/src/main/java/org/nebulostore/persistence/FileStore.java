@@ -46,12 +46,12 @@ public class FileStore<T> implements KeyValueStore<T> {
   }
 
   @Override
-  public T get(String key) throws IOException {
+  public T get(String key) {
     lockMap_.lock(key);
     try {
       return deserializer_.apply(doRead(key));
     } catch (IOException e) {
-      throw new IOException("Unable to read data", e);
+      return null;
     } finally {
       lockMap_.unlock(key);
     }

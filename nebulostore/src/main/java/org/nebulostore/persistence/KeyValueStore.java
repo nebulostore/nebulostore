@@ -13,9 +13,15 @@ public interface KeyValueStore<T> {
 
   void put(String key, T value) throws IOException;
 
-  T get(String key) throws IOException;
+  /**
+   * Return object or null if key not found.
+   */
+  T get(String key);
 
   void delete(String key) throws IOException;
 
+  /**
+   * Atomically apply function to an object stored under given key.
+   */
   void performTransaction(String key, Function<T, T> function) throws IOException;
 }

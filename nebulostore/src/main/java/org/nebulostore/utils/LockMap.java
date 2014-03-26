@@ -2,6 +2,7 @@ package org.nebulostore.utils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,18 +16,23 @@ public class LockMap {
    * Store locks that are used.
    */
   public void lock(String key) {
-    Lock lock = null;
-    synchronized (locksMap_) {
-      lock = locksMap_.get(key);
-      if (lock == null) {
-        lock = new ReentrantLock();
-        locksMap_.put(key, lock);
-        locksUsersCount_.put(key, 1);
-      } else {
-        locksUsersCount_.put(key, locksUsersCount_.get(key) + 1);
-      }
-    }
+    Lock lock = getOrCreateLock(key);
     lock.lock();
+  }
+
+  public boolean tryLock(String key, long time, TimeUnit unit) throws InterruptedException {
+    Lock lock = getOrCreateLock(key);
+    try {
+      if (lock.tryLock(time, unit)) {
+        return true;
+      } else {
+        returnLock(key);
+        return false;
+      }
+    } catch (InterruptedException e) {
+      returnLock(key);
+      throw e;
+    }
   }
 
   /**
@@ -37,6 +43,27 @@ public class LockMap {
       Lock lock = locksMap_.get(key);
       Preconditions.checkNotNull(lock, "Lock for key " + key + " does not exist in locksMap");
       lock.unlock();
+      returnLock(key);
+    }
+  }
+
+  private Lock getOrCreateLock(String key) {
+    Lock lock;
+    synchronized (locksMap_) {
+      lock = locksMap_.get(key);
+      if (lock == null) {
+        lock = new ReentrantLock();
+        locksMap_.put(key, lock);
+        locksUsersCount_.put(key, 1);
+      } else {
+        locksUsersCount_.put(key, locksUsersCount_.get(key) + 1);
+      }
+    }
+    return lock;
+  }
+
+  private void returnLock(String key) {
+    synchronized (locksMap_) {
       Integer users = locksUsersCount_.get(key);
       if (users == 1) {
         locksMap_.remove(key);
@@ -46,4 +73,5 @@ public class LockMap {
       }
     }
   }
+
 }
