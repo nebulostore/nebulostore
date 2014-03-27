@@ -53,7 +53,7 @@ for arg in sys.argv:
 tree = ET.parse(sys.stdin)
 
 for key, value in argmap.items():
-  nodePath = './/' + re.sub('\.', '/', key)
+  nodePath = './/' + re.sub('\.', '/', re.sub('_', '-', key.lower()))
   if (len(tree.findall(nodePath)) > 1):
     raise RuntimeError("Attribute not unique")
   if (len(tree.findall(nodePath)) < 1):

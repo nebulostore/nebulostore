@@ -2,6 +2,8 @@
 
 # Build and copy PEERS_NUM peers with resources to JAR_DIR/i/.
 # Optional parameters: -p number_of_peers -m maven_profile_name
+EXEC_DIR=$(pwd)
+cd $(dirname $0)
 
 source _jar-properties.sh
 source _utils.sh
@@ -39,3 +41,6 @@ do
     CURR_PATH="$JAR_DIR/$i"
     createNebuloLocalArtifact $CURR_PATH $MAVEN_JAR $JAR
 done
+
+cd $EXEC_DIR
+

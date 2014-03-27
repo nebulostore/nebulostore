@@ -1,0 +1,5 @@
+<peer>
+  <class-name>
+    org.nebulostore.peers.Peer
+  </class-name>
+</peer>
