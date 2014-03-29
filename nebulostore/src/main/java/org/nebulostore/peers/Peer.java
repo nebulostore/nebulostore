@@ -19,7 +19,7 @@ import org.nebulostore.async.AddSynchroPeerModule;
 import org.nebulostore.async.RetrieveAsynchronousMessagesModule;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.communication.CommunicationPeerFactory;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.Dispatcher;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.NetworkMonitor;

@@ -2,8 +2,8 @@ package org.nebulostore.replicaresolver;
 
 import java.io.IOException;
 
-import org.nebulostore.communication.dht.core.KeyDHT;
-import org.nebulostore.communication.dht.core.ValueDHT;
+import org.nebulostore.dht.core.KeyDHT;
+import org.nebulostore.dht.core.ValueDHT;
 
 /**
  * Map for contracts.

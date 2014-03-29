@@ -12,7 +12,7 @@ import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.ReturningJobModule;
 import org.nebulostore.async.messages.NetworkContextChangedMessage;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.messages.ErrorMessage;
 import org.nebulostore.conductor.messages.FinishMessage;
 import org.nebulostore.conductor.messages.GatherStatsMessage;

@@ -4,8 +4,8 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.async.StoreAsynchronousMessagesModule;
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Store asynchronous message.

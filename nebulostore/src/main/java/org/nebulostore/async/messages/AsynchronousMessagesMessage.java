@@ -4,8 +4,8 @@ import java.util.List;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.MessageVisitor;
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Collection of messages that are to be delivered.

@@ -1,6 +1,6 @@
 package org.nebulostore.replicator.messages;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * This message is send to idicate that execution of message send to the

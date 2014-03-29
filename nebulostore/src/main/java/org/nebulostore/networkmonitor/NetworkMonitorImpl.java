@@ -17,7 +17,7 @@ import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.messages.ConnectionTestMessage;
 import org.nebulostore.timer.MessageGenerator;

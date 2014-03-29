@@ -1,7 +1,7 @@
 package org.nebulostore.replicator.messages;
 
 import org.nebulostore.appcore.addressing.ObjectId;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * This is a request for a particular object sent to peer that hold this

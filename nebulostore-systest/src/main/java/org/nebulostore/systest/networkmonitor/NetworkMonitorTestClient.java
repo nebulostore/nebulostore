@@ -8,7 +8,7 @@ import com.google.inject.Provider;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.GatherStatsMessage;
 import org.nebulostore.conductor.messages.NewPhaseMessage;

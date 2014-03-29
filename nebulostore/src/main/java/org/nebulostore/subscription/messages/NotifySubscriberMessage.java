@@ -3,8 +3,8 @@ package org.nebulostore.subscription.messages;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.subscription.model.SubscriptionNotification;
 import org.nebulostore.subscription.modules.SubscriptionReceivedModule;
 

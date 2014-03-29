@@ -1,7 +1,7 @@
 package org.nebulostore.broker.messages;
 
 import org.nebulostore.broker.Contract;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Reply to a contract offer.

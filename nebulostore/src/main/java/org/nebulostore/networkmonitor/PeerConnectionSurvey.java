@@ -2,7 +2,7 @@ package org.nebulostore.networkmonitor;
 
 import java.io.Serializable;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Class that holds data of one peers connections survey.

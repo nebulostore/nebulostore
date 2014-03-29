@@ -9,7 +9,7 @@ import java.util.Random;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.CaseStatistics;
 import org.nebulostore.conductor.ConductorServer;
 import org.nebulostore.conductor.messages.InitMessage;

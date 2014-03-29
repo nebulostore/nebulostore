@@ -5,8 +5,8 @@ import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.broker.BrokerMessageForwarder;
 import org.nebulostore.broker.Contract;
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Message send by another peer to acknowledge contract break.

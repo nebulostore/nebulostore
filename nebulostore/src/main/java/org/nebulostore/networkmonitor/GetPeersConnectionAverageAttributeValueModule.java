@@ -2,7 +2,7 @@ package org.nebulostore.networkmonitor;
 
 import com.google.common.base.Predicate;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Returns average connectionAttribute retrived from DHT for a given peer.

@@ -1,7 +1,7 @@
 package org.nebulostore.replicator.messages;
 
 import org.nebulostore.appcore.addressing.ObjectId;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Request to delete a particular object from a peer that is replicating it.

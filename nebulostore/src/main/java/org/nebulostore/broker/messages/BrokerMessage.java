@@ -3,8 +3,8 @@ package org.nebulostore.broker.messages;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.broker.BrokerMessageForwarder;
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * @author Bolek Kulbabinski

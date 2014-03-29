@@ -9,14 +9,14 @@ import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.EndModuleMessage;
 import org.nebulostore.appcore.modules.Module;
-import org.nebulostore.communication.dht.core.KeyDHT;
-import org.nebulostore.communication.dht.core.ValueDHT;
-import org.nebulostore.communication.dht.messages.ErrorDHTMessage;
-import org.nebulostore.communication.dht.messages.GetDHTMessage;
-import org.nebulostore.communication.dht.messages.OkDHTMessage;
-import org.nebulostore.communication.dht.messages.OutDHTMessage;
-import org.nebulostore.communication.dht.messages.PutDHTMessage;
-import org.nebulostore.communication.dht.messages.ValueDHTMessage;
+import org.nebulostore.dht.core.KeyDHT;
+import org.nebulostore.dht.core.ValueDHT;
+import org.nebulostore.dht.messages.ErrorDHTMessage;
+import org.nebulostore.dht.messages.GetDHTMessage;
+import org.nebulostore.dht.messages.OkDHTMessage;
+import org.nebulostore.dht.messages.OutDHTMessage;
+import org.nebulostore.dht.messages.PutDHTMessage;
+import org.nebulostore.dht.messages.ValueDHTMessage;
 
 public class BDBPeerToReplicaResolverAdapter extends Module {
   private static final Logger LOGGER = Logger.getLogger(BDBPeerToReplicaResolverAdapter.class);

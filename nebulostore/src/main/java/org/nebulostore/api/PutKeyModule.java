@@ -14,11 +14,11 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.ReturningJobModule;
-import org.nebulostore.communication.dht.core.KeyDHT;
-import org.nebulostore.communication.dht.core.ValueDHT;
-import org.nebulostore.communication.dht.messages.ErrorDHTMessage;
-import org.nebulostore.communication.dht.messages.OkDHTMessage;
-import org.nebulostore.communication.dht.messages.PutDHTMessage;
+import org.nebulostore.dht.core.KeyDHT;
+import org.nebulostore.dht.core.ValueDHT;
+import org.nebulostore.dht.messages.ErrorDHTMessage;
+import org.nebulostore.dht.messages.OkDHTMessage;
+import org.nebulostore.dht.messages.PutDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 
 import static com.google.common.base.Preconditions.checkNotNull;

@@ -1,6 +1,6 @@
 package org.nebulostore.replicator.messages;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Send as answer to StoreObjectMessage when object on this replica is not up to date.

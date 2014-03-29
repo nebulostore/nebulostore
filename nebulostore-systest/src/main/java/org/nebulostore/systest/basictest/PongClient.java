@@ -3,7 +3,7 @@ package org.nebulostore.systest.basictest;
 import java.math.BigInteger;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.NewPhaseMessage;
 import org.nebulostore.conductor.messages.UserCommMessage;

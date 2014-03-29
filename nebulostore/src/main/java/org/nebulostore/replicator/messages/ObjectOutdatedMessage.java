@@ -1,7 +1,7 @@
 package org.nebulostore.replicator.messages;
 
 import org.nebulostore.appcore.addressing.NebuloAddress;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Message send to replicator by owner of an object, when he stores outdated version of object.

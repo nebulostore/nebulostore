@@ -4,7 +4,8 @@ import java.util.List;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import org.nebulostore.communication.address.CommAddress;
+
+import org.nebulostore.communication.naming.CommAddress;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

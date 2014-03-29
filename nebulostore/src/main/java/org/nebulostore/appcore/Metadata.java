@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.ContractList;
-import org.nebulostore.communication.dht.core.Mergeable;
+import org.nebulostore.dht.core.Mergeable;
 
 /**
  * Metadata object is stored in main DHT. It contains data necessary for system,

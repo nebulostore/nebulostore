@@ -3,7 +3,7 @@ package org.nebulostore.systest.newcommunication.functionaltest.messageexchange;
 import java.io.Serializable;
 import java.util.Collection;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Results for this test.

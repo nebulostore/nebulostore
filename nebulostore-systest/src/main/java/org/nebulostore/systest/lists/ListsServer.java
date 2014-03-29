@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.NebuloAddress;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.CaseStatistics;
 import org.nebulostore.conductor.ConductorServer;
 import org.nebulostore.conductor.messages.InitMessage;

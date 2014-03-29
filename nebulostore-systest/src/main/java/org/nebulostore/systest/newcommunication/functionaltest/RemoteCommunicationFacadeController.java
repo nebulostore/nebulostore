@@ -3,8 +3,8 @@ package org.nebulostore.systest.newcommunication.functionaltest;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Controller to which test instances should register and notify about events.

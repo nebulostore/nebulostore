@@ -2,7 +2,7 @@ package org.nebulostore.systest.readwrite;
 
 import java.util.List;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * @author: hryciukrafal

@@ -15,7 +15,7 @@ import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.NebuloFile;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.NewPhaseMessage;
 

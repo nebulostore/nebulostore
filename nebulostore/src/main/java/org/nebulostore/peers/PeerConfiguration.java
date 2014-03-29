@@ -24,13 +24,12 @@ import org.nebulostore.broker.ContractsSelectionAlgorithm;
 import org.nebulostore.broker.GreedyContractsSelection;
 import org.nebulostore.broker.OnlySizeContractsEvaluator;
 import org.nebulostore.broker.ValuationBasedBroker;
-import org.nebulostore.communication.CommunicationPeerConfiguration;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.CommunicationFacadeAdapterConfiguration;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.networkmonitor.ConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.DefaultConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.networkmonitor.NetworkMonitorImpl;
-import org.nebulostore.newcommunication.CommunicationFacadeAdapterConfiguration;
 import org.nebulostore.replicator.ReplicatorImpl;
 import org.nebulostore.replicator.core.Replicator;
 import org.nebulostore.subscription.api.SimpleSubscriptionNotificationHandler;
@@ -92,11 +91,7 @@ public class PeerConfiguration extends GenericConfiguration {
 
   protected void configureCommunicationPeer() {
     GenericConfiguration genConf;
-    if (config_.getString("communication.comm-module", "").equals("communication")) {
-      genConf = new CommunicationPeerConfiguration();
-    } else {
-      genConf = new CommunicationFacadeAdapterConfiguration();
-    }
+    genConf = new CommunicationFacadeAdapterConfiguration();
     genConf.setXMLConfig(config_);
     install(genConf);
   }

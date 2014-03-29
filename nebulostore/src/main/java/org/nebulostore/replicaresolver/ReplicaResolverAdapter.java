@@ -2,9 +2,9 @@ package org.nebulostore.replicaresolver;
 
 import java.io.IOException;
 
-import org.nebulostore.communication.dht.core.KeyDHT;
-import org.nebulostore.communication.dht.core.ValueDHT;
-import org.nebulostore.newcommunication.netutils.remotemap.RemoteMap;
+import org.nebulostore.communication.netutils.remotemap.RemoteMap;
+import org.nebulostore.dht.core.KeyDHT;
+import org.nebulostore.dht.core.ValueDHT;
 
 /**
  * @author Grzegorz Milka

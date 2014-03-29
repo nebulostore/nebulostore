@@ -1,197 +1,148 @@
 package org.nebulostore.communication.bootstrap;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
-import net.tomp2p.p2p.Peer;
-
 import org.apache.log4j.Logger;
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.communication.address.CommAddress;
-import org.nebulostore.communication.address.CommAddressResolver;
-import org.nebulostore.communication.address.PersistentAddressingPeer;
-import org.nebulostore.communication.address.TomP2PPeer;
-import org.nebulostore.communication.address.TomP2PServer;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
- * Simple Bootstrap Server.
- *
- * Chooses its address and puts it into kademlia. Then it simply listens for
- * incoming connections and returns it's address for gossiping.
+ * Bootstrap server.
  *
  * @author Grzegorz Milka
+ *
  */
-// Using threading multiplexing because each connection is a simple read/write
-// and close session without gaps so polling advantage is lost.
-//
-//  Address garbage collecting will be necessary for completement
-//  Possible solutions:
-//    Check if kademlia has some timestamping and automatic deletion
-//    Clients send "Possibly out of network" message when they can't connect to
-//    someone
-// TODO(grzegorzmilka) Inactive address cleanup
-public class BootstrapServer extends BootstrapService implements Runnable {
-  private static Logger logger_ = Logger.getLogger(BootstrapServer.class);
+public class BootstrapServer implements BootstrapService, Runnable {
+  private static final Logger LOGGER = Logger.getLogger(BootstrapService.class);
+
+  private final int listeningPort_;
+
+  private final ExecutorService mainExecutor_;
+  private final ExecutorService workerExecutor_;
+
+  private Future<?> thisTask_;
   private ServerSocket serverSocket_;
 
-  private final CommAddress myCommAddress_;
-  private final BootstrapMessage myWelcomeMessage_;
-  private final InetSocketAddress myInetSocketAddress_;
-  private PersistentAddressingPeer pAPeer_;
-  private ExecutorService service_ = Executors.newCachedThreadPool();
-  private AtomicBoolean isEnding_ = new AtomicBoolean(false);
+  private final AtomicBoolean isShutdown_;
 
-  /**
-   * commAddress - iff not equal to null then myCommAddress is set to it.
-   * Otherwise it is random
-   */
+  private final BootstrapInformation bootstrapInformation_;
+
   @Inject
   public BootstrapServer(
-      @Named("communication.bootstrap.address") String bootstrapServerAddress,
-      @Named("communication.ports.comm-cli-port") int commCliPort,
-      @Named("communication.ports.bootstrap-port") int bootstrapPort,
-      @Named("communication.ports.tomp2p-port") int tomP2PPort,
-      @Named("LocalCommAddress") CommAddress commAddress)
-      throws NebuloException {
-    super(commCliPort, bootstrapPort, tomP2PPort, tomP2PPort);
-    myInetSocketAddress_ = new InetSocketAddress(bootstrapServerAddress, commCliPort_);
-    bootstrapPort_ = bootstrapPort;
-    tomP2PPort_ = tomP2PPort;
-    myCommAddress_ = commAddress;
-    myWelcomeMessage_ = new BootstrapMessage(myCommAddress_);
-    pAPeer_ = null;
-    serverSocket_ = null;
-    logger_.info("Set server at address: " + myCommAddress_ + ".");
+      @Named("communication.local-comm-address") CommAddress localCommAddress,
+      @Named("communication.ports.bootstrap-server-port") int listeningPort,
+      @Named("communication.bootstrap.server-executor") ExecutorService mainExecutor,
+      @Named("communication.bootstrap.worker-executor") ExecutorService workerExecutor) {
+    listeningPort_ = listeningPort;
 
+    mainExecutor_ = mainExecutor;
+    workerExecutor_ = workerExecutor;
+
+    isShutdown_ = new AtomicBoolean(false);
+
+    Collection<CommAddress> commAddressCollection = new LinkedList<>();
+    commAddressCollection.add(localCommAddress);
+    bootstrapInformation_ = new BootstrapInformation(commAddressCollection);
   }
 
   @Override
-  public void startUpService() throws IOException {
-    pAPeer_ = new TomP2PServer();
-    pAPeer_.setDHTPort(tomP2PPort_);
-    pAPeer_.setCommPort(commCliPort_);
-    pAPeer_.setBootstrapServerAddress(myInetSocketAddress_.getHostName());
-    pAPeer_.setMyCommAddress(myCommAddress_);
-    pAPeer_.setUpAndRun();
-
-    serverSocket_ = new ServerSocket(bootstrapPort_);
+  public BootstrapInformation getBootstrapInformation() {
+    return bootstrapInformation_;
   }
 
-  @Override
-  /**
-   * Simple loop accepting handling incoming network connections.
-   * @author Grzegorz Milka
-   */
   public void run() {
-    while (!isEnding_.get()) {
-      Socket clientSocket;
+    while (!isShutdown_.get()) {
+      Socket incomingConnection;
       try {
-        clientSocket = serverSocket_.accept();
-        logger_.info("Accepted connection from: " +
-            clientSocket.getRemoteSocketAddress());
+        incomingConnection = serverSocket_.accept();
       } catch (IOException e) {
-        if (isEnding_.get()) {
-          logger_.info("IOException on serverSocket during shutdown of " +
-              "module: " + e);
+        if (isShutdown_.get()) {
+          break;
         } else {
-          logger_.warn("Unexpected IOException on serverSocket: " + e);
+          LOGGER.warn("BootstrapServer socket threw exception on accept.", e);
+          continue;
         }
-        continue;
       }
-      service_.execute(new BootstrapProtocol(clientSocket));
+      Runnable handlerTask = new BootstrapInformationSender(incomingConnection);
+      workerExecutor_.submit(handlerTask);
     }
   }
 
   @Override
-  public CommAddress getBootstrapCommAddress() {
-    return myCommAddress_;
-  }
+  public synchronized void shutDown() throws InterruptedException {
+    isShutdown_.set(true);
 
-  @Override
-  public Peer getTP2PPeer() {
-    return ((TomP2PPeer) pAPeer_).getPeer();
-  }
+    workerExecutor_.shutdownNow();
+    workerExecutor_.awaitTermination(1, TimeUnit.DAYS);
 
-  @Override
-  public CommAddressResolver getResolver() {
-    return pAPeer_.getResolver();
-  }
-
-  @Override
-  public void shutdownService() {
-    isEnding_.set(true);
-    pAPeer_.destroy();
     try {
       serverSocket_.close();
     } catch (IOException e) {
-      logger_.debug("Error when closing serverSocket: " + e);
+      LOGGER.warn("IOException when closing server socket.", e);
     }
-    service_.shutdownNow();
+
+    try {
+      thisTask_.get();
+    } catch (ExecutionException e) {
+      throw new IllegalStateException("Unexpected exception", e);
+    }
   }
 
   @Override
-  public String toString() {
-    return "BootstrapServer with CommAddress: " + myCommAddress_ + ", peer: " +
-      pAPeer_;
+  public synchronized void startUp() throws IOException {
+    serverSocket_ = new ServerSocket(listeningPort_);
+    try {
+      serverSocket_.setReuseAddress(true);
+    } catch (SocketException e) {
+      LOGGER.warn("Couldn't set serverSocket of bootstrap to reuse address.", e);
+    }
+
+    thisTask_ = mainExecutor_.submit(this);
   }
 
   /**
+   * Sender of bootstrap information to connection client.
+   *
    * @author Grzegorz Milka
+   *
    */
-  private class BootstrapProtocol implements Runnable {
-    Socket clientSocket_;
-    public BootstrapProtocol(Socket clientSocket) {
+  private class BootstrapInformationSender implements Runnable {
+    private final Socket clientSocket_;
+
+    public BootstrapInformationSender(Socket clientSocket) {
       clientSocket_ = clientSocket;
     }
 
+    @Override
     public void run() {
       try {
-        BootstrapMessage msg;
-        try {
-          InputStream socketIS = clientSocket_.getInputStream();
-          ObjectInputStream ois = new ObjectInputStream(socketIS);
-          msg = (BootstrapMessage) ois.readObject();
-        } catch (ClassNotFoundException e) {
-          logger_.warn("Error when handling received message " + e);
-          return;
-        } catch (EOFException e) {
-          //GM Possibly client has just checked if this server works
-          logger_.debug("EOF at the beginning of connection with: " +
-              clientSocket_.getRemoteSocketAddress());
-          return;
-        }
-        logger_.info("Received Hello message from: " + msg.getPeerAddress() +
-            "/" + clientSocket_.getRemoteSocketAddress());
-
-        ObjectOutputStream oos = new ObjectOutputStream(
-            clientSocket_.getOutputStream());
-        oos.writeObject(myWelcomeMessage_);
-        logger_.info("Sent Hello message to: " + msg.getPeerAddress() +
-            "/" + clientSocket_.getRemoteSocketAddress());
+        ObjectOutputStream oos = new ObjectOutputStream(clientSocket_.getOutputStream());
+        oos.writeObject(bootstrapInformation_);
+        oos.flush();
       } catch (IOException e) {
-        logger_.warn("IOException when handling client: " +
-            clientSocket_.getRemoteSocketAddress() + ", error: " + e);
+        LOGGER.warn("Exception when sending bootstrap information to client.", e);
       } finally {
         try {
-          logger_.info("Closing connection with client: " +
-              clientSocket_.getRemoteSocketAddress());
           clientSocket_.close();
         } catch (IOException e) {
-          logger_.debug("IOException when closing client's socket: " + e);
+          /* IGNORE */
+          this.hashCode();
         }
       }
     }
   }
+
 }

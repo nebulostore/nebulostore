@@ -9,7 +9,7 @@ import com.google.inject.name.Names;
 
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Guice context with default values.

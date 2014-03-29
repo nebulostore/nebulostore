@@ -8,7 +8,7 @@ import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.EncryptedObject;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.replicator.messages.SendObjectMessage;
 import org.nebulostore.utils.Pair;
 

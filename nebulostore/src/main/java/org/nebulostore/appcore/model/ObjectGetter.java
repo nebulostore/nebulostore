@@ -2,7 +2,7 @@ package org.nebulostore.appcore.model;
 
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Interface for modules capable of fetching NebuloObjects from the system.

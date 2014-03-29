@@ -8,7 +8,7 @@ import org.nebulostore.broker.Broker;
 import org.nebulostore.broker.BrokerContext;
 import org.nebulostore.broker.Contract;
 import org.nebulostore.broker.ContractsSet;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.GatherStatsMessage;
 import org.nebulostore.conductor.messages.NewPhaseMessage;

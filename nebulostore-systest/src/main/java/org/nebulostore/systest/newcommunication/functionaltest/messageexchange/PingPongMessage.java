@@ -1,8 +1,8 @@
 package org.nebulostore.systest.newcommunication.functionaltest.messageexchange;
 
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
-import org.nebulostore.newcommunication.routing.MessageMatcher;
+import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.communication.routing.MessageMatcher;
 
 /**
  * Initial ping message used in message exchange test.

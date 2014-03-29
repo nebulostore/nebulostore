@@ -16,7 +16,7 @@ import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.subscription.model.Subscribers;
 import org.nebulostore.subscription.model.SubscriptionNotification;
 import org.nebulostore.subscription.modules.NotifySubscribersModule;

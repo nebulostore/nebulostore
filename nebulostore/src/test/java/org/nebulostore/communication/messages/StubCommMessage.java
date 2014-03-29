@@ -1,6 +1,6 @@
 package org.nebulostore.communication.messages;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  *

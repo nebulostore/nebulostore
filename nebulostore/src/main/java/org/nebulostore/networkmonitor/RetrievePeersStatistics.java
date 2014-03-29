@@ -9,10 +9,10 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.ReturningJobModule;
-import org.nebulostore.communication.address.CommAddress;
-import org.nebulostore.communication.dht.messages.ErrorDHTMessage;
-import org.nebulostore.communication.dht.messages.GetDHTMessage;
-import org.nebulostore.communication.dht.messages.ValueDHTMessage;
+import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.dht.messages.ErrorDHTMessage;
+import org.nebulostore.dht.messages.GetDHTMessage;
+import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 
 /**

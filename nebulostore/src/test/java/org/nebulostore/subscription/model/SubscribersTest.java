@@ -4,7 +4,7 @@ import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;

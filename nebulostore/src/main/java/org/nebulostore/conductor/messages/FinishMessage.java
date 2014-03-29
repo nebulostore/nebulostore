@@ -2,8 +2,8 @@ package org.nebulostore.conductor.messages;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.MessageVisitor;
-import org.nebulostore.communication.address.CommAddress;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Message used to finish tests immediatelly. Send by TestingServer to clients.

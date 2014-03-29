@@ -1,6 +1,6 @@
 package org.nebulostore.replicator.messages;
 
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.replicator.core.TransactionAnswer;
 
 /**

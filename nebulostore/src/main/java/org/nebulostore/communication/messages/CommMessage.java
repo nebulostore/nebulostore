@@ -1,7 +1,7 @@
 package org.nebulostore.communication.messages;
 
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Created as a base class for all messages that are being sent over communication layer.

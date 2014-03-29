@@ -5,7 +5,7 @@ import java.util.Set;
 import com.rits.cloning.Cloner;
 
 import org.nebulostore.appcore.model.EncryptedObject;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * This is a message containing requested object.

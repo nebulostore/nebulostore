@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.inject.Inject;
 
-import org.nebulostore.newcommunication.netutils.remotemap.RemoteMapFactory;
+import org.nebulostore.communication.netutils.remotemap.RemoteMapFactory;
 
 
 /**

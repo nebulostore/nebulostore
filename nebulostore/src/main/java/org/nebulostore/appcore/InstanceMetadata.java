@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.nebulostore.appcore.addressing.AppKey;
-import org.nebulostore.communication.address.CommAddress;
-import org.nebulostore.communication.dht.core.Mergeable;
+import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.dht.core.Mergeable;
 import org.nebulostore.networkmonitor.PeerConnectionSurvey;
 
 /**

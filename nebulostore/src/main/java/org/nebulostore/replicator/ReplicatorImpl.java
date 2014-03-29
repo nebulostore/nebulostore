@@ -28,7 +28,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.model.EncryptedObject;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.replicator.core.DeleteObjectException;
 import org.nebulostore.replicator.core.Replicator;

@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.nebulostore.async.messages.AsynchronousMessage;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Persistent data shared by parts of asynchronous messages module.

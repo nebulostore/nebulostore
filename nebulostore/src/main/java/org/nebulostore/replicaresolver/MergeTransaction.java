@@ -2,8 +2,8 @@ package org.nebulostore.replicaresolver;
 
 import java.io.Serializable;
 
-import org.nebulostore.communication.dht.core.ValueDHT;
-import org.nebulostore.newcommunication.netutils.remotemap.Transaction;
+import org.nebulostore.communication.netutils.remotemap.Transaction;
+import org.nebulostore.dht.core.ValueDHT;
 
 /**
  * @author Grzegorz Milka

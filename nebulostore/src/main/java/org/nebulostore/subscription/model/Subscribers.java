@@ -5,7 +5,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
-import org.nebulostore.communication.address.CommAddress;
+
+import org.nebulostore.communication.naming.CommAddress;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

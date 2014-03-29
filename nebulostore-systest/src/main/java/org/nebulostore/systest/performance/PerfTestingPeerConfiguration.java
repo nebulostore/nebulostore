@@ -9,15 +9,11 @@ import com.google.inject.name.Names;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.broker.AlwaysAcceptingBroker;
 import org.nebulostore.broker.Broker;
-import org.nebulostore.communication.CommunicationPeerConfiguration;
-import org.nebulostore.communication.gossip.GossipService;
-import org.nebulostore.communication.gossip.GossipServiceFactory;
-import org.nebulostore.communication.gossip.OneTimeUniformGossipService;
-import org.nebulostore.newcommunication.CommunicationFacadeAdapterConfiguration;
-import org.nebulostore.newcommunication.CommunicationFacadeConfiguration;
-import org.nebulostore.newcommunication.peerdiscovery.OneTimeUniformGossipPeerDiscovery;
-import org.nebulostore.newcommunication.peerdiscovery.PeerDiscovery;
-import org.nebulostore.newcommunication.peerdiscovery.PeerDiscoveryFactory;
+import org.nebulostore.communication.CommunicationFacadeAdapterConfiguration;
+import org.nebulostore.communication.CommunicationFacadeConfiguration;
+import org.nebulostore.communication.peerdiscovery.OneTimeUniformGossipPeerDiscovery;
+import org.nebulostore.communication.peerdiscovery.PeerDiscovery;
+import org.nebulostore.communication.peerdiscovery.PeerDiscoveryFactory;
 import org.nebulostore.peers.AbstractPeer;
 import org.nebulostore.peers.GenericConfiguration;
 import org.nebulostore.systest.TestingPeerConfiguration;
@@ -35,11 +31,7 @@ public class PerfTestingPeerConfiguration extends TestingPeerConfiguration {
   @Override
   protected void configureCommunicationPeer() {
     GenericConfiguration genConf;
-    if (config_.getString("communication.comm-module", "").equals("communication")) {
-      genConf = new PerfTestingCommunicationPeerConfiguration();
-    } else {
-      genConf = new PerfTestingCommunicationFacadeAdapterConfiguration();
-    }
+    genConf = new CommunicationFacadeAdapterConfiguration();
     genConf.setXMLConfig(config_);
     install(genConf);
   }
@@ -48,19 +40,6 @@ public class PerfTestingPeerConfiguration extends TestingPeerConfiguration {
   protected void configureBroker() {
     bind(Broker.class).to(AlwaysAcceptingBroker.class).in(Scopes.SINGLETON);
   }
-}
-
-/**
- * Configuration Communication peer and its submodules for performance peer.
- * @author Grzegorz Milka
- */
-final class PerfTestingCommunicationPeerConfiguration extends CommunicationPeerConfiguration {
-  @Override
-  protected void configureGossip() {
-    install(new FactoryModuleBuilder().implement(GossipService.class,
-          OneTimeUniformGossipService.class).build(GossipServiceFactory.class));
-  }
-
 }
 
 final class PerfTestingCommunicationFacadeConfiguration extends CommunicationFacadeConfiguration {
@@ -91,3 +70,4 @@ final class PerfTestingCommunicationFacadeAdapterConfiguration
     return new PerfTestingCommunicationFacadeConfiguration(config_);
   }
 }
+

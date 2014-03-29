@@ -19,9 +19,9 @@ import com.google.inject.name.Names;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.log4j.Logger;
-import org.nebulostore.communication.address.CommAddress;
-import org.nebulostore.newcommunication.CommunicationFacade;
-import org.nebulostore.newcommunication.CommunicationFacadeConfiguration;
+import org.nebulostore.communication.CommunicationFacade;
+import org.nebulostore.communication.CommunicationFacadeConfiguration;
+import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * @author Grzegorz Milka

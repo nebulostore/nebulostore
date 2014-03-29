@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.google.inject.Inject;
+
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
@@ -18,7 +19,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.NebuloElement;
 import org.nebulostore.appcore.model.NebuloList;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.NewPhaseMessage;
 import org.nebulostore.crypto.CryptoException;

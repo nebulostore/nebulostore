@@ -13,10 +13,10 @@ import java.util.concurrent.Future;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.CommunicationFacade;
 import org.nebulostore.communication.messages.CommMessage;
-import org.nebulostore.newcommunication.CommunicationFacade;
-import org.nebulostore.newcommunication.routing.MessageListener;
+import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.communication.routing.MessageListener;
 import org.nebulostore.systest.newcommunication.functionaltest.messageexchange.PingPongMessage.Type;
 import org.nebulostore.utils.CompletionServiceReader;
 import org.nebulostore.utils.ContextedException;

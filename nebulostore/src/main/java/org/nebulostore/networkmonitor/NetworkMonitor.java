@@ -6,7 +6,7 @@ import java.util.Set;
 import com.google.inject.Inject;
 
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.timer.MessageGenerator;
 
 /**

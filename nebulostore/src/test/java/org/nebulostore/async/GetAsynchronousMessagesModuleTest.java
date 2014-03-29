@@ -12,7 +12,7 @@ import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.async.messages.AsynchronousMessagesMessage;
 import org.nebulostore.async.messages.GetAsynchronousMessagesMessage;
 import org.nebulostore.async.messages.GotAsynchronousMessagesMessage;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.JobEndedMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 

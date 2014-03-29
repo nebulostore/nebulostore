@@ -7,7 +7,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.subscription.messages.NotifySubscriberMessage;
 import org.nebulostore.subscription.model.SubscriptionNotification;

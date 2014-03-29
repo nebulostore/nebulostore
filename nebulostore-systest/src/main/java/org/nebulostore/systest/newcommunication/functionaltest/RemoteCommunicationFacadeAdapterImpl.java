@@ -3,8 +3,8 @@ package org.nebulostore.systest.newcommunication.functionaltest;
 import java.io.IOException;
 import java.rmi.RemoteException;
 
+import org.nebulostore.communication.CommunicationFacade;
 import org.nebulostore.communication.messages.CommMessage;
-import org.nebulostore.newcommunication.CommunicationFacade;
 
 /**
  * Implementation of {@link RemoteCommunicationFacadeAdapter}.

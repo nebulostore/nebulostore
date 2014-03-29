@@ -13,12 +13,13 @@ import java.util.Collection;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.NebuloFile;
-import org.nebulostore.communication.address.CommAddress;
+import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.messages.NewPhaseMessage;
 
 /**
