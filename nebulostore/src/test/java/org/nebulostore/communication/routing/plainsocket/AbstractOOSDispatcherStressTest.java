@@ -1,4 +1,4 @@
-package org.nebulostore.communication.routing;
+package org.nebulostore.communication.routing.plainsocket;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -19,6 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.routing.ListenerService;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -127,7 +128,8 @@ public abstract class AbstractOOSDispatcherStressTest {
       BlockingQueue<CommMessage> queue = new LinkedBlockingQueue<>();
       Executor executor = Executors.newSingleThreadExecutor();
       ExecutorService workExecutor = Executors.newCachedThreadPool();
-      ListenerService listener = new ListenerService(listenPort_, queue, executor, workExecutor);
+      ListenerService listener = new PlainSocketListenerService(
+          listenPort_, queue, executor, workExecutor);
       try {
         listener.start();
       } catch (IOException e1) {

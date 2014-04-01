@@ -1,4 +1,4 @@
-package org.nebulostore.communication.routing;
+package org.nebulostore.communication.routing.plainsocket;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

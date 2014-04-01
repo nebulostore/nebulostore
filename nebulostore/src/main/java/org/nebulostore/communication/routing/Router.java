@@ -23,7 +23,7 @@ import org.nebulostore.utils.CompletionServiceFactory;
  *
  * On shutdown no new messages are dispatched.
  *
- * This is a service that should be started before use and stopped when no longer useful.
+ * This is a service that should be started before use and shutdown when no longer useful.
  *
  * @author Grzegorz Milka
  *

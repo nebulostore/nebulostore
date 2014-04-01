@@ -1,4 +1,4 @@
-package org.nebulostore.communication.routing;
+package org.nebulostore.communication.routing.plainsocket;
 
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -6,6 +6,7 @@ import java.net.Socket;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.nebulostore.communication.routing.ConnectionInitiator;
 
 import static org.junit.Assert.assertEquals;
 

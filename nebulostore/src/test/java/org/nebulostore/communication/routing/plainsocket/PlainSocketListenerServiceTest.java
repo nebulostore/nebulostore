@@ -1,4 +1,4 @@
-package org.nebulostore.communication.routing;
+package org.nebulostore.communication.routing.plainsocket;
 
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
@@ -26,12 +26,12 @@ import static org.mockito.Mockito.mock;
  *
  * @author Grzegorz Milka
  */
-public final class ListenerServiceTest {
+public final class PlainSocketListenerServiceTest {
   private static final int LISTENER_SERVICE_TEST_PORT = 3000;
 
   private ExecutorService serviceExecutor_;
   private ExecutorService workerExecutor_;
-  private ListenerService listenerService_;
+  private PlainSocketListenerService listenerService_;
 
   @Before
   public void setUp() {
@@ -40,7 +40,7 @@ public final class ListenerServiceTest {
 
     AbstractModule initModule = new ListenerServiceTestModule(serviceExecutor_, workerExecutor_);
     Injector injector = Guice.createInjector(initModule);
-    listenerService_ = injector.getInstance(ListenerService.class);
+    listenerService_ = injector.getInstance(PlainSocketListenerService.class);
   }
 
   @After
@@ -95,7 +95,7 @@ public final class ListenerServiceTest {
         annotatedWith(Names.named("communication.routing.listener-worker-executor")).
         toInstance(workerExecutor_);
 
-      bind(ListenerService.class);
+      bind(PlainSocketListenerService.class);
     }
   }
 

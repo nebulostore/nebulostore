@@ -1,4 +1,4 @@
-package org.nebulostore.communication.routing;
+package org.nebulostore.communication.routing.plainsocket;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -23,6 +23,8 @@ import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.messages.StubCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.communication.naming.CommAddressResolver;
+import org.nebulostore.communication.routing.MessageSender;
+import org.nebulostore.communication.routing.SendResult;
 import org.nebulostore.communication.routing.SendResult.ResultType;
 import org.nebulostore.utils.BlockingAnswer;
 
@@ -41,7 +43,7 @@ import static org.mockito.Mockito.when;
 /**
  * @author Grzegorz Milka
  */
-public final class MessageSenderTest {
+public class PlainSocketMessageSenderTest {
   private static final CommAddress SOURCE = new CommAddress(0, 0);
   private static final CommAddress DEST = new CommAddress(0, 1);
   private static final String MSG = "TEST MESSAGE";
@@ -57,7 +59,7 @@ public final class MessageSenderTest {
     executor_ = Executors.newCachedThreadPool();
     dispatcher_ = mock(OOSDispatcher.class);
     resolver_ = mock(CommAddressResolver.class);
-    sender_ = new MessageSender(executor_, dispatcher_, resolver_);
+    sender_ = new PlainSocketMessageSender(executor_, dispatcher_, resolver_);
   }
 
   @After

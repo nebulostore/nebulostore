@@ -39,11 +39,13 @@ import org.nebulostore.communication.netutils.remotemap.RemoteMapServerFactory;
 import org.nebulostore.communication.peerdiscovery.PeerDiscovery;
 import org.nebulostore.communication.peerdiscovery.PeerDiscoveryFactory;
 import org.nebulostore.communication.peerdiscovery.SamplingGossipPeerDiscovery;
-import org.nebulostore.communication.routing.CachedOOSDispatcher;
 import org.nebulostore.communication.routing.ListenerService;
 import org.nebulostore.communication.routing.MessageSender;
-import org.nebulostore.communication.routing.OOSDispatcher;
 import org.nebulostore.communication.routing.Router;
+import org.nebulostore.communication.routing.plainsocket.CachedOOSDispatcher;
+import org.nebulostore.communication.routing.plainsocket.OOSDispatcher;
+import org.nebulostore.communication.routing.plainsocket.PlainSocketListenerService;
+import org.nebulostore.communication.routing.plainsocket.PlainSocketMessageSender;
 import org.nebulostore.persistence.InMemoryStore;
 
 /**
@@ -171,14 +173,16 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.listener-worker-executor")).
       toInstance(listenerWorkerExecutor);
-    bind(ListenerService.class).in(Singleton.class);
+    bind(ListenerService.class).to(PlainSocketListenerService.class);
+    bind(PlainSocketListenerService.class).in(Singleton.class);
 
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.sender-worker-executor")).
       toInstance(senderWorkerExecutor);
 
     bind(OOSDispatcher.class).to(CachedOOSDispatcher.class);
-    bind(MessageSender.class).in(Singleton.class);
+    bind(MessageSender.class).to(PlainSocketMessageSender.class);
+    bind(PlainSocketMessageSender.class).in(Singleton.class);
 
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.router-executor")).
