@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
-import org.nebulostore.communication.routing.ConnectionInitiator;
-
 /**
  * Straightforward initiator creating TCP sockets to given address.
  *

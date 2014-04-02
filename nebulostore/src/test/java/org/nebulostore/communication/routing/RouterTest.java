@@ -38,15 +38,15 @@ public class RouterTest {
     when(listener_.getListeningQueue()).thenReturn(listeningQueue_);
     ExecutorService executor = Executors.newFixedThreadPool(1);
     router_ = new Router(listener_, msgSender_, new CommAddress(0, 0), executor);
-    router_.start();
+    router_.startUp();
 
-    verify(listener_).start();
+    verify(listener_).startUp();
   }
 
   @After
   public void tearDown() throws Exception {
     router_.shutDown();
-    verify(listener_).stop();
+    verify(listener_).shutDown();
     verify(msgSender_).shutDown();
   }
 

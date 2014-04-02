@@ -10,10 +10,10 @@ import org.nebulostore.communication.messages.CommMessage;
  *
  * @author Grzegorz Milka
  */
-public interface ListenerService extends Runnable {
+public interface ListenerService {
   BlockingQueue<CommMessage> getListeningQueue();
 
-  void start() throws IOException;
+  void startUp() throws IOException;
 
-  void stop();
+  void shutDown();
 }

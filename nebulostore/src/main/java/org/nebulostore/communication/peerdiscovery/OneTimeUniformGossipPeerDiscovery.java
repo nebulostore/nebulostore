@@ -1,5 +1,6 @@
 package org.nebulostore.communication.peerdiscovery;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -21,12 +22,12 @@ import com.google.inject.name.Named;
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.AddressNotPresentException;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.communication.routing.MessageListener;
 import org.nebulostore.communication.routing.MessageMatcher;
 import org.nebulostore.communication.routing.Router;
 import org.nebulostore.communication.routing.SendResult;
-import org.nebulostore.communication.routing.SendResult.ResultType;
 
 /**
  * Gossip service that ensures uniform gossiping between peers. It is parameterized by:
@@ -117,13 +118,13 @@ public class OneTimeUniformGossipPeerDiscovery extends Observable
 
   private void triggerOneTimeGossip() {
     int nPushAttempts = 0;
-    ResultType sendResult = ResultType.ERROR;
+    boolean sendResult = false;
 
-    while (sendResult == ResultType.ERROR && nPushAttempts < MAX_PUSH_ATTEMPTS) {
+    while (!sendResult && nPushAttempts < MAX_PUSH_ATTEMPTS) {
       sendResult = sendLocalAddressToBootstrap();
       ++nPushAttempts;
 
-      if (sendResult == ResultType.OK) {
+      if (sendResult) {
         LOGGER.debug("Successfully sent initial gossip message. " +
                      "MessageListener should expect PeerGossipMessage now.");
       } else {
@@ -144,7 +145,7 @@ public class OneTimeUniformGossipPeerDiscovery extends Observable
     }
   }
 
-  private ResultType sendLocalAddressToBootstrap() {
+  private boolean sendLocalAddressToBootstrap() {
     LOGGER.trace("Sending local CommAddress to Bootstrap.");
 
     if (!bootstrapCommAddresses_.isEmpty()) {
@@ -163,15 +164,21 @@ public class OneTimeUniformGossipPeerDiscovery extends Observable
     return getSendResult();
   }
 
-  private ResultType getSendResult() {
+  private boolean getSendResult() {
     SendResult result;
     try {
       result = resultQueue_.take();
+      return result.getResult();
     } catch (InterruptedException exception) {
       LOGGER.warn("Interrupted while waiting for send result: " + exception.getMessage());
-      return ResultType.ERROR;
+      return false;
+    } catch (AddressNotPresentException e) {
+      LOGGER.warn("AddressNotPresentException while waiting for send result: " + e.getMessage());
+      return false;
+    } catch (IOException e) {
+      LOGGER.warn("IOException while waiting for send result: " + e.getMessage());
+      return false;
     }
-    return result.getType();
   }
 
   private void addGossipMessageListener() {

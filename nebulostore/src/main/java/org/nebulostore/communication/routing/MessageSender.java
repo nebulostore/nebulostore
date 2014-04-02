@@ -1,10 +1,10 @@
 package org.nebulostore.communication.routing;
 
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Future;
 
 import org.nebulostore.communication.messages.CommMessage;
-import org.nebulostore.utils.CompletionServiceFactory;
+import org.nebulostore.communication.naming.AddressNotPresentException;
 
 /**
  * Sends given messages to intended recipients.
@@ -13,34 +13,24 @@ import org.nebulostore.utils.CompletionServiceFactory;
  */
 public interface MessageSender {
   /**
-   * Send message over network.
-   *
-   * @param msg
-   * @return Future which on failure may throw {@link AddressNotPresentException},
-   *  {@code InterruptedException} and {@code IOException}.
+   * {@link #sendMessage(CommMessage, BlockingQueue, SendOperationIdentifier)}.
    */
-  Future<CommMessage> sendMessage(CommMessage msg);
+  MessageSendFuture sendMessage(CommMessage msg);
 
   /**
    * Send message over network and add results to queue.
    *
    * @param msg
-   * @param results queue to which send result of the operation.
-   * @return Future which on failure may throw {@link AddressNotPresentException},
-   *  {@code InterruptedException} and {@code IOException}.
+   * @param results
+   *          queue to which send result of the operation.
+   * @return {@link MessageSendFuture}
    */
-  Future<CommMessage> sendMessage(CommMessage msg, BlockingQueue<SendResult> results);
+  MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> results);
 
-  /**
-   * Send message using CompletionService produced by given factory.
-   *
-   * @param msg
-   * @param complServiceFactory
-   * @return Future which on failure may throw {@link AddressNotPresentException},
-   *  {@code InterruptedException} and {@code IOException}.
-   */
-  Future<CommMessage> sendMessage(CommMessage msg,
-      CompletionServiceFactory<CommMessage> complServiceFactory);
+  void sendMessageSynchronously(CommMessage msg) throws AddressNotPresentException,
+      InterruptedException, IOException;
+
+  void startUp();
 
   /**
    * Stop and wait for shutdown of all senders.

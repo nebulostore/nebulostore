@@ -39,13 +39,15 @@ import org.nebulostore.communication.netutils.remotemap.RemoteMapServerFactory;
 import org.nebulostore.communication.peerdiscovery.PeerDiscovery;
 import org.nebulostore.communication.peerdiscovery.PeerDiscoveryFactory;
 import org.nebulostore.communication.peerdiscovery.SamplingGossipPeerDiscovery;
+import org.nebulostore.communication.routing.ByteListenerService;
+import org.nebulostore.communication.routing.ByteSender;
 import org.nebulostore.communication.routing.ListenerService;
+import org.nebulostore.communication.routing.ListenerServiceAdapter;
 import org.nebulostore.communication.routing.MessageSender;
+import org.nebulostore.communication.routing.MessageSenderAdapter;
 import org.nebulostore.communication.routing.Router;
-import org.nebulostore.communication.routing.plainsocket.CachedOOSDispatcher;
-import org.nebulostore.communication.routing.plainsocket.OOSDispatcher;
-import org.nebulostore.communication.routing.plainsocket.PlainSocketListenerService;
-import org.nebulostore.communication.routing.plainsocket.PlainSocketMessageSender;
+import org.nebulostore.communication.routing.plainsocket.PlainSocketByteListenerService;
+import org.nebulostore.communication.routing.plainsocket.PlainSocketByteSender;
 import org.nebulostore.persistence.InMemoryStore;
 
 /**
@@ -158,31 +160,39 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
   }
 
   private void configureRouting() {
+    BlockingQueue<byte[]> byteListeningQueue = new LinkedBlockingQueue<>();
     BlockingQueue<CommMessage> listeningQueue = new LinkedBlockingQueue<>();
     ExecutorService listenerWorkerExecutor = Executors.newCachedThreadPool();
-    ExecutorService senderWorkerExecutor = Executors.newFixedThreadPool(8);
+    ExecutorService senderWorkerExecutor = Executors.newFixedThreadPool(4);
+    ExecutorService byteSenderWorkerExecutor = Executors.newFixedThreadPool(4);
 
     bindConstant().annotatedWith(Names.named("communication.ports.comm-cli-port")).to(
         xmlConfig_.getInt("communication.ports.comm-cli-port"));
     bind(new TypeLiteral<BlockingQueue<CommMessage>>() { }).
       annotatedWith(Names.named("communication.routing.listening-queue")).
       toInstance(listeningQueue);
+    bind(new TypeLiteral<BlockingQueue<byte[]>>() { }).
+      annotatedWith(Names.named("communication.routing.byte-listening-queue")).
+      toInstance(byteListeningQueue);
     bind(Executor.class).annotatedWith(Names.named(
         "communication.routing.listener-service-executor")).
       toInstance(serviceExecutor_);
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.listener-worker-executor")).
       toInstance(listenerWorkerExecutor);
-    bind(ListenerService.class).to(PlainSocketListenerService.class);
-    bind(PlainSocketListenerService.class).in(Singleton.class);
+
+    bind(ByteListenerService.class).to(PlainSocketByteListenerService.class).in(Singleton.class);
+    bind(ListenerService.class).to(ListenerServiceAdapter.class);
 
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.sender-worker-executor")).
       toInstance(senderWorkerExecutor);
+    bind(ExecutorService.class).annotatedWith(Names.named(
+        "communication.routing.byte-sender-worker-executor")).
+      toInstance(byteSenderWorkerExecutor);
 
-    bind(OOSDispatcher.class).to(CachedOOSDispatcher.class);
-    bind(MessageSender.class).to(PlainSocketMessageSender.class);
-    bind(PlainSocketMessageSender.class).in(Singleton.class);
+    bind(ByteSender.class).to(PlainSocketByteSender.class).in(Singleton.class);
+    bind(MessageSender.class).to(MessageSenderAdapter.class);
 
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.router-executor")).

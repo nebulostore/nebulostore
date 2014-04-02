@@ -1,5 +1,6 @@
 package org.nebulostore.communication.peerdiscovery;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,13 +30,12 @@ import com.google.inject.name.Named;
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.AddressNotPresentException;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.communication.routing.MessageListener;
 import org.nebulostore.communication.routing.MessageMatcher;
 import org.nebulostore.communication.routing.Router;
 import org.nebulostore.communication.routing.SendResult;
-import org.nebulostore.communication.routing.SendResult.ResultType;
-
 
 /**
  * Standard peer gossiping service.
@@ -140,8 +140,10 @@ public class SamplingGossipPeerDiscovery extends Observable implements PeerDisco
       } catch (InterruptedException e) {
         break;
       }
-      if (result.getType() == ResultType.ERROR) {
-        deleteKnownPeer(result.getMessage().getDestinationAddress());
+      try {
+        result.getResult();
+      } catch (AddressNotPresentException | InterruptedException | IOException e) {
+        deleteKnownPeer(result.getMsg().getDestinationAddress());
       }
     }
   }

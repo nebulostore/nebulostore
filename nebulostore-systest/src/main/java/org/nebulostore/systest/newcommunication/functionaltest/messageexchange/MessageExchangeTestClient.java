@@ -7,20 +7,19 @@ import java.rmi.registry.Registry;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.CommunicationFacade;
 import org.nebulostore.communication.messages.CommMessage;
+import org.nebulostore.communication.naming.AddressNotPresentException;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.communication.routing.MessageListener;
+import org.nebulostore.communication.routing.SendResult;
 import org.nebulostore.systest.newcommunication.functionaltest.messageexchange.PingPongMessage.Type;
-import org.nebulostore.utils.CompletionServiceReader;
-import org.nebulostore.utils.ContextedException;
-import org.nebulostore.utils.SingleCompletionServiceFactory;
 
 /**
  * Client for message exchange test.
@@ -43,9 +42,6 @@ public class MessageExchangeTestClient implements Callable<TestResult> {
   private final CommAddress localCommAddress_;
   private final CommunicationFacade commFacade_;
 
-  private final SingleCompletionServiceFactory<CommMessage> msgSendComplServiceFactory_;
-  private final CompletionServiceReader<CommMessage> msgSendComplServiceReader_;
-
   private final Collection<CommAddress> failedPings_;
   private final Collection<CommAddress> receivedPongs_;
 
@@ -53,6 +49,8 @@ public class MessageExchangeTestClient implements Callable<TestResult> {
 
   private final PongListener pongListener_;
   private final PongResponder pongResponder_;
+
+  private final BlockingQueue<SendResult> sendResults_;
 
   private TestController testController_;
 
@@ -66,15 +64,14 @@ public class MessageExchangeTestClient implements Callable<TestResult> {
     localCommAddress_ = localCommAddress;
     commFacade_ = commFacade;
 
-    msgSendComplServiceFactory_ = new SingleCompletionServiceFactory<>();
-    msgSendComplServiceReader_ = msgSendComplServiceFactory_.getCompletionServiceReader();
-
     failedPings_ = new LinkedList<CommAddress>();
     receivedPongs_ = Collections.synchronizedList(new LinkedList<CommAddress>());
     expectedPongs_ = new LinkedList<CommAddress>();
 
     pongListener_ = new PongListener();
     pongResponder_ = new PongResponder();
+
+    sendResults_ = new LinkedBlockingQueue<SendResult>();
   }
 
   @Override
@@ -94,17 +91,16 @@ public class MessageExchangeTestClient implements Callable<TestResult> {
       throws InterruptedException {
     Collection<CommAddress> sentPings = new LinkedList<>();
     for (int i = 0; i < otherClients.size(); ++i) {
-      Future<CommMessage> future = msgSendComplServiceReader_.take();
+      SendResult result = sendResults_.take();
+      CommMessage msg = result.getMsg();
       try {
-        CommMessage msg = future.get();
+        result.getResult();
         LOGGER.debug(String.format("Message to: %s has been sent successfully.",
             msg.getDestinationAddress().toString()));
         expectedPongs_.add(msg.getDestinationAddress());
         sentPings.add(msg.getDestinationAddress());
-      } catch (ExecutionException e) {
-        ContextedException contextException = (ContextedException) e.getCause();
-        CommMessage commMsg = (CommMessage) contextException.getContext();
-        LOGGER.debug(String.format("Could not send ping to: %s.", commMsg.getDestinationAddress()),
+      } catch (AddressNotPresentException | InterruptedException | IOException e) {
+        LOGGER.debug(String.format("Could not send ping to: %s.", msg.getDestinationAddress()),
             e);
       }
     }
@@ -119,7 +115,7 @@ public class MessageExchangeTestClient implements Callable<TestResult> {
     LOGGER.info("runTest -> send messages");
     for (CommAddress recipient: otherClients) {
       commFacade_.sendMessage(new PingPongMessage(localCommAddress_, recipient, Type.PING),
-          msgSendComplServiceFactory_);
+          sendResults_);
     }
 
     LOGGER.info("runTest -> aggregateSendConfirmations");

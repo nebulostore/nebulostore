@@ -13,7 +13,6 @@ import com.google.inject.name.Named;
 import org.apache.log4j.Logger;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
-import org.nebulostore.utils.CompletionServiceFactory;
 
 /**
  * This object transfers messages to their destination. Either by sending it to network
@@ -87,7 +86,7 @@ public class Router implements Runnable {
    * @return Future which on failure may throw {@link AddressNotPresentException},
    *  {@code InterruptedException} and {@code IOException}.
    */
-  public Future<CommMessage> sendMessage(CommMessage msg) {
+  public MessageSendFuture sendMessage(CommMessage msg) {
     attachLocalCommAddress(msg);
     return msgSender_.sendMessage(msg);
   }
@@ -102,36 +101,24 @@ public class Router implements Runnable {
    * @return Future which on failure may throw {@link AddressNotPresentException},
    *  {@code InterruptedException} and {@code IOException}.
    */
-  public Future<CommMessage> sendMessage(CommMessage msg, BlockingQueue<SendResult> resultQueue) {
+  public MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> resultQueue) {
     attachLocalCommAddress(msg);
     return msgSender_.sendMessage(msg, resultQueue);
   }
 
-  /**
-   * Send message over network using CompletionService returned by {@link CompletionServiceFactory}.
-   *
-   * @see MessageSender
-   *
-   * @param msg
-   * @param complServiceFactory completion service factory to use.
-   * @return Future which on failure may throw {@link AddressNotPresentException},
-   *  {@code InterruptedException} and {@code IOException}.
-   */
-  public Future<CommMessage> sendMessage(CommMessage msg,
-      CompletionServiceFactory<CommMessage> complServiceFactory) {
-    attachLocalCommAddress(msg);
-    return msgSender_.sendMessage(msg, complServiceFactory);
-  }
-
-  public void start() throws IOException {
+  public void startUp() throws IOException {
+    LOGGER.debug("startUp()");
     thisFuture_ = executor_.submit(this);
-    listenerService_.start();
+    listenerService_.startUp();
+    msgSender_.startUp();
   }
 
   public void shutDown() throws InterruptedException {
+    LOGGER.debug("shutDown()");
     msgSender_.shutDown();
-    listenerService_.stop();
+    listenerService_.shutDown();
     thisFuture_.cancel(true);
+    LOGGER.debug("shutDown(): void");
   }
 
   private void attachLocalCommAddress(CommMessage msg) {

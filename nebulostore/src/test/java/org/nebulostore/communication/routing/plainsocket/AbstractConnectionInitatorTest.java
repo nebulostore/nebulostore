@@ -6,7 +6,6 @@ import java.net.Socket;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.nebulostore.communication.routing.ConnectionInitiator;
 
 import static org.junit.Assert.assertEquals;
 
@@ -17,7 +16,7 @@ import static org.junit.Assert.assertEquals;
  */
 public abstract class AbstractConnectionInitatorTest {
   protected ConnectionInitiator initiator_;
-  private static final int CONN_INIT_TEST_PORT = 3001;
+  private static final int CONN_INIT_TEST_PORT = 3002;
   private static InetSocketAddress localhostSocketAddr_;
 
   @BeforeClass

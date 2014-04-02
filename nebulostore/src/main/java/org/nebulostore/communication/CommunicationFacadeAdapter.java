@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -24,9 +23,11 @@ import org.nebulostore.appcore.modules.Module;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.messages.CommPeerFoundMessage;
 import org.nebulostore.communication.messages.ErrorCommMessage;
+import org.nebulostore.communication.naming.AddressNotPresentException;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.communication.routing.MessageListener;
 import org.nebulostore.communication.routing.MessageMatcher;
+import org.nebulostore.communication.routing.SendResult;
 import org.nebulostore.dht.messages.DHTMessage;
 import org.nebulostore.dht.messages.InDHTMessage;
 import org.nebulostore.dht.messages.OutDHTMessage;
@@ -34,9 +35,6 @@ import org.nebulostore.dht.messages.ReconfigureDHTMessage;
 import org.nebulostore.replicaresolver.BDBPeerToReplicaResolverAdapter;
 import org.nebulostore.replicaresolver.ReplicaResolver;
 import org.nebulostore.replicaresolver.ReplicaResolverFactory;
-import org.nebulostore.utils.CompletionServiceReader;
-import org.nebulostore.utils.ContextedException;
-import org.nebulostore.utils.SingleCompletionServiceFactory;
 
 /**
  * @author Grzegorz Milka
@@ -49,8 +47,7 @@ public class CommunicationFacadeAdapter extends Module {
 
   private final AtomicBoolean isEnding_;
 
-  private final SingleCompletionServiceFactory<CommMessage> msgSendComplFactory_;
-  private final CompletionServiceReader<CommMessage> msgSendComplReader_;
+  private final BlockingQueue<SendResult> sendResults_;
 
   private final MsgSendMonitor msgSendMonitor_;
   private Future<?> msgSendMonitorFuture_;
@@ -92,8 +89,7 @@ public class CommunicationFacadeAdapter extends Module {
     msgVisitor_ = new CommFacadeAdapterMsgVisitor();
 
     isEnding_ = new AtomicBoolean(false);
-    msgSendComplFactory_ = new SingleCompletionServiceFactory<>();
-    msgSendComplReader_ = msgSendComplFactory_.getCompletionServiceReader();
+    sendResults_ = new LinkedBlockingQueue<>();
 
     msgSendMonitor_ = new MsgSendMonitor();
     localCommAddress_ = localCommAddress;
@@ -195,7 +191,7 @@ public class CommunicationFacadeAdapter extends Module {
       if (((CommMessage) msg).getDestinationAddress() == null) {
         LOGGER.warn("Null destination address set for " + msg + ". Dropping the message.");
       } else {
-        commFacade_.sendMessage(msg, msgSendComplFactory_);
+        commFacade_.sendMessage(msg, sendResults_);
       }
       return null;
     }
@@ -222,21 +218,19 @@ public class CommunicationFacadeAdapter extends Module {
     @Override
     public void run() {
       while (true) {
-        Future<CommMessage> future;
+        SendResult result;
         try {
-          future = msgSendComplReader_.take();
+          result = sendResults_.take();
         } catch (InterruptedException e) {
           break;
         }
         try {
-          future.get();
+          result.getResult();
+        } catch (AddressNotPresentException | IOException e) {
+          LOGGER.warn(String.format("sendMessage(%s) -> error", result.getMsg()), e);
+          outQueue_.add(new ErrorCommMessage(result.getMsg(), e));
         } catch (InterruptedException e) {
           break;
-        } catch (ExecutionException e) {
-          ContextedException conE = (ContextedException) e.getCause();
-          CommMessage faultyMessage = (CommMessage) conE.getContext();
-          LOGGER.warn(String.format("sendMessage(%s) -> error", faultyMessage), conE.getCause());
-          outQueue_.add(new ErrorCommMessage(faultyMessage, (Exception) conE.getCause()));
         }
       }
     }
