@@ -1,6 +1,7 @@
 package org.nebulostore.systest.pingpong;
 
-import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.communication.address.CommAddress;
@@ -11,14 +12,14 @@ import org.nebulostore.crypto.CryptoUtils;
 
 /**
  * Sets up PingPong test.
- * @author szymonmatejczyk
+ * @author szymonmatejczyk, lukaszsiczek
  */
 public final class PingPongServer extends ConductorServer {
   private static Logger logger_ = Logger.getLogger(PingPongServer.class);
-  private static final int NUM_PHASES = 2;
-  private static final int NUM_CLIENTS = 2;
+  private static final int NUM_PHASES = 6;
+  private static final int NUM_CLIENTS = 15;
   private static final int INITIAL_SLEEP = 2000;
-  private static final int TIMEOUT_SEC = 60;
+  private static final int TIMEOUT_SEC = 240;
 
   public PingPongServer() {
     super(NUM_PHASES, NUM_CLIENTS, TIMEOUT_SEC, "PingPongClient_" + CryptoUtils.getRandomString(),
@@ -28,16 +29,17 @@ public final class PingPongServer extends ConductorServer {
   @Override
   public void initClients() {
     sleep(INITIAL_SLEEP);
-    Iterator<CommAddress> i = clients_.iterator();
-    CommAddress pingAddress = i.next();
-    logger_.debug("Initializing ping: " + pingAddress.toString());
-    CommAddress pongAddress = i.next();
-    logger_.debug("Initializing pong: " + pongAddress.toString());
-
-    networkQueue_.add(new InitMessage(clientsJobId_, null, pingAddress,
-        new PingClient(jobId_, commAddress_, NUM_PHASES, pongAddress)));
-    networkQueue_.add(new InitMessage(clientsJobId_, null, pongAddress,
-        new PongClient(jobId_, commAddress_, NUM_PHASES)));
+    CommAddress[] clients = clients_.toArray(new CommAddress[NUM_CLIENTS]);
+    for (int i = 0; i < clients.length; ++i) {
+      logger_.debug("Initializing ping-pong client: " + clients[i].toString());
+      List<CommAddress> children = new LinkedList<CommAddress>();
+      if (2 * i + 2 < NUM_CLIENTS) {
+        children.add(clients[2 * i + 1]);
+        children.add(clients[2 * i + 2]);
+      }
+      networkQueue_.add(new InitMessage(clientsJobId_, null, clients[i],
+                new PingPongClient(jobId_, commAddress_, NUM_PHASES, children, i)));
+    }
   }
 
   @Override

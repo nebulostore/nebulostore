@@ -2,7 +2,9 @@ package org.nebulostore.conductor;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -34,11 +36,13 @@ import org.nebulostore.timer.Timer;
  * Writing tests:
  *
  *   1. Remember to set visitors for each phase.
- *   2. Don't forget to put phaseFinished in every visitor
+ *   2. Don't forget to call phaseFinished() in every visitor
  *   3. By default you should define visitor for each phase. However, you can override
  *      getVisitor() method to use visitors differently(ex. more than once).
  *   4. Don't forget to write server(ServerTestingModule) that will initialize
  *      TestingModules on peers side and will be gathering results.
+ *   5. Don't send any messages in a new phase until you received TicMessage from the server.
+ *   6. When you receive TicMessage(n+1), you can assume that every peer have finished n-th phase.
  */
 public abstract class ConductorClient extends JobModule implements Serializable {
   private static final long serialVersionUID = -1686614265302231592L;
@@ -50,6 +54,9 @@ public abstract class ConductorClient extends JobModule implements Serializable 
 
   protected Provider<Timer> timers_;
   protected int phase_;
+
+  private boolean canSendMessages_;
+  private Queue<Message> waitingMessages_ = new LinkedList<Message>();
 
   public ConductorClient(String serverJobId, int numPhases, CommAddress serverCommAddress) {
     serverJobId_ = serverJobId;
@@ -66,13 +73,39 @@ public abstract class ConductorClient extends JobModule implements Serializable 
    * Called after receiving Tic Message, which means that all peer have finished previous phase.
    */
   protected void advancedToNextPhase() {
+    canSendMessages_ = true;
     inQueue_.add(new NewPhaseMessage());
+  }
+
+  private void sendWaitingMessages() {
+    logger_.debug(String.format("Send %d waiting messages", waitingMessages_.size()));
+    while (!waitingMessages_.isEmpty()) {
+      Message message = waitingMessages_.poll();
+      networkQueue_.add(message);
+      if (message instanceof TocMessage) {
+        ++phase_;
+      }
+    }
+  }
+
+  protected boolean sendMessage(Message message) {
+    if (canSendMessages_) {
+      networkQueue_.add(message);
+      return true;
+    } else {
+      logger_.debug(String.format("Wait for send message: %s", message.toString()));
+      waitingMessages_.add(message);
+      return false;
+    }
   }
 
   protected void phaseFinished() {
     logger_.debug("Phase finished. Sending TocMessage");
-    networkQueue_.add(new TocMessage(serverJobId_, null, server_, phase_));
-    ++phase_;
+    sendMessage(new TocMessage(serverJobId_, null, server_, phase_));
+    if (waitingMessages_.isEmpty()) {
+      ++phase_;
+      canSendMessages_ = false;
+    }
   }
 
   protected void endWithError(String message) {
@@ -141,7 +174,11 @@ public abstract class ConductorClient extends JobModule implements Serializable 
           message.getPhase());
       if (message.getPhase() == phase_) {
         logger_.debug("TicMessage - executing phase " + phase_);
-        advancedToNextPhase();
+        if (!waitingMessages_.isEmpty()) {
+          sendWaitingMessages();
+        } else {
+          advancedToNextPhase();
+        }
       }
       return null;
     }
@@ -185,6 +222,7 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     public Void visit(InitMessage message) {
       jobId_ = message.getId();
       logger_.debug("Test client initialized: " + message.getHandler().getClass().getSimpleName());
+      canSendMessages_ = true;
       phaseFinished();
       return null;
     }
@@ -196,7 +234,24 @@ public abstract class ConductorClient extends JobModule implements Serializable 
   }
 
   /**
-   * Visotor that waits @param timeout_ to finish phase.
+   * Empty visitor.
+   *
+   * @author lukaszsiczek
+   */
+  protected class EmptyVisitor extends TestingModuleVisitor {
+    public EmptyVisitor() {
+    }
+
+    @Override
+    public Void visit(NewPhaseMessage message) {
+      logger_.debug("Ignore Phase no: " + phase_);
+      phaseFinished();
+      return null;
+    }
+  }
+
+  /**
+   * Visitor that waits @param timeout_ to finish phase.
    */
   public class DelayingVisitor extends TestingModuleVisitor {
     protected final long timeout_;

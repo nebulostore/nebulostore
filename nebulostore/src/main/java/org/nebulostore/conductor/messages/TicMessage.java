@@ -34,4 +34,10 @@ public class TicMessage extends CommMessage {
     return visitor.visit(this);
   }
 
+  @Override
+  public String toString() {
+    return "TicMessage{" +
+        "phase_=" + phase_ +
+        "} " + super.toString();
+  }
 }

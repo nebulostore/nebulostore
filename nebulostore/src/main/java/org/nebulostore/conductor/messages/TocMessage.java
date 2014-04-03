@@ -33,4 +33,11 @@ public class TocMessage extends CommMessage {
   public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
     return visitor.visit(this);
   }
+
+  @Override
+  public String toString() {
+    return "TocMessage{" +
+        "phase_=" + phase_ +
+        "} " + super.toString();
+  }
 }

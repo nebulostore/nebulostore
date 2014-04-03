@@ -1,9 +1,10 @@
 #!/bin/bash
 
 SCRIPT_NAME=./_local-test.sh
-declare -a PEERS=(3 6 6 8 14 6 3 3)
-N_TESTS=8
+declare -a PEERS=(3 16 6 6 8 14 6 3 3)
+N_TESTS=9
 declare -a TITLES=(\
+    'basic ping-pong test'\
     'ping-pong test'\
     'read-write test'\
     'lists test'\
@@ -31,25 +32,25 @@ else
 fi
 
 case $N in
-    0) for ((i=1; i<=7; ++i)); do echo "*** Test $i - ${TITLES[$((i-1))]}"; $0 $i; done;;
+    0) for ((i=1; i<=8; ++i)); do echo "*** Test $i - ${TITLES[$((i-1))]}"; $0 $i; done;;
     1) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
-           org.nebulostore.systest.pingpong.PingPongServer\
+           org.nebulostore.systest.basictest.BasicPingPongServer\
            ${PEERS[0]} 1;;
     2) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
-           org.nebulostore.systest.readwrite.ReadWriteServer\
+           org.nebulostore.systest.pingpong.PingPongServer\
            ${PEERS[1]} 1;;
     3) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
-           org.nebulostore.systest.lists.ListsServer\
+           org.nebulostore.systest.readwrite.ReadWriteServer\
            ${PEERS[2]} 1;;
     4) $SCRIPT_NAME\
-           org.nebulostore.systest.performance.PerfTestingPeer\
-           org.nebulostore.systest.performance.PerfTestingPeerConfiguration\
+           org.nebulostore.systest.TestingPeer\
+           org.nebulostore.systest.TestingPeerConfiguration\
            org.nebulostore.systest.lists.ListsServer\
            ${PEERS[3]} 1;;
     5) $SCRIPT_NAME\
@@ -58,20 +59,25 @@ case $N in
            org.nebulostore.systest.lists.ListsServer\
            ${PEERS[4]} 1;;
     6) $SCRIPT_NAME\
+           org.nebulostore.systest.performance.PerfTestingPeer\
+           org.nebulostore.systest.performance.PerfTestingPeerConfiguration\
+           org.nebulostore.systest.lists.ListsServer\
+           ${PEERS[5]} 1;;
+    7) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.readwrite.ReadWriteWithTimeConfiguration\
            org.nebulostore.systest.readwrite.ReadWriteServer\
-           ${PEERS[1]} 1 ../../../test.data;;
-    7) $SCRIPT_NAME\
-           org.nebulostore.systest.TestingPeer\
-           org.nebulostore.systest.TestingPeerConfiguration\
-           org.nebulostore.systest.networkmonitor.NetworkMonitorTestServer\
-           ${PEERS[6]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
+           ${PEERS[6]} 1 ../../../test.data;;
     8) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
-           org.nebulostore.systest.broker.BrokerTestServer\
+           org.nebulostore.systest.networkmonitor.NetworkMonitorTestServer\
            ${PEERS[7]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
+    9) $SCRIPT_NAME\
+           org.nebulostore.systest.TestingPeer\
+           org.nebulostore.systest.TestingPeerConfiguration\
+           org.nebulostore.systest.broker.BrokerTestServer\
+           ${PEERS[8]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
 esac
 
 cd ${EXEC_DIR}

@@ -1,4 +1,4 @@
-package org.nebulostore.systest.pingpong;
+package org.nebulostore.systest.basictest;
 
 import java.math.BigInteger;
 
