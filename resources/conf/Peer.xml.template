@@ -160,6 +160,16 @@
             resources/conf/cling.logging
         </cling-config>
     </communication>
+    <persistance>
+        <sql-keyvalue-store>
+            <host>naan.mimuw.edu.pl</host>
+            <port>5432</port>
+            <database>postgres</database>
+            <user>postgres</user>
+            <password>PASS</password>
+            <update_key type="Boolean">true</update_key>
+        </sql-keyvalue-store>
+    </persistance>
     <systest>
         <is-server type="Boolean">
             false
