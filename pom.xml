@@ -12,6 +12,7 @@
     <modules>
         <module>nebulostore</module>
         <module>nebulostore-systest</module>
+        <module>nebulostore-benchmarks</module>
     </modules>
 
     <properties>
