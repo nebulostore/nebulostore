@@ -5,7 +5,6 @@ import java.lang.reflect.InvocationTargetException;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.log4j.Logger;

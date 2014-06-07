@@ -14,20 +14,19 @@ cd $(dirname $0)
 
 source _utils.sh
 
+PEERNAME="org.nebulostore.gui.GUIController"
+PEERCONF="org.nebulostore.gui.GUIConfiguration"
 JAR_DIR="../build/jar"
-PEERS_NUM=4
-COMMON_ARGS="--class-name=org.nebulostore.gui.GUIController --bootstrap/address=localhost --bootstrap-server-tomp2p-port=10301 --bootstrap-port=10201"
+PEER_NUM=4
 
-./_build-and-deploy.sh -p $PEERS_NUM
+./_build-and-deploy.sh -p $PEER_NUM -m peer
 
+# Generate and copy config files.
+./_generate-config-files.sh -p $PEERNAME -c $PEERCONF -n $PEER_NUM -m $((PEER_NUM-1)) -b localhost
 
-for ((i=1; i<=$PEERS_NUM; i++))
+for ((i=1; i<=$PEER_NUM; i++))
 do
-    PARAMS="$COMMON_ARGS --app-key=$i$i --bootstrap/mode=client --comm-cli-port=1010$i --tomp2p-port=1030$i --bdb-peer/type=proxy"
-    generateConfigFile "$PARAMS" $JAR_DIR/$i/resources/conf
+    mv ../Peer.xml.$i ../build/jar/$i/resources/conf/Peer.xml
 done
-
-PARAMS="$COMMON_ARGS --app-key=11 --bootstrap/mode=server --comm-cli-port=10101 --tomp2p-port=10301 --bdb-peer/type=storage-holder"
-generateConfigFile "$PARAMS" $JAR_DIR/1/resources/conf
 
 cd ${EXEC_DIR}
