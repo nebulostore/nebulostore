@@ -1,23 +1,14 @@
 This directory contains files with information about nodes in planet lab:
-    all_nodes.txt - Contains a simply copy/paste of all nodes in planetlab slice
-        from their website together with their metadata.
 
-    get_bootable_nodes.sh - Processes all_nodes.txt for all nodes with
-        bootable flag. Writes to output to bootable_nodes.txt
+    allnodes.py - contacts planet-lab API to get info for bootable_nodes.txt,
+        the current list of nodes in our planet-lab slice that are
+        in state 'boot'. Save stdout to bootable_nodes.txt
 
-    hosts-all.txt - File based on bootable_nodes.txt in which we place all hosts
-        that we might want to use (not necesarily working). Place
-            roti.mimuw.edu.pl
-            prata.mimuw.edu.pl
-        on top and perhaps shuffle it.
+    hostavailabilitytest/test_host_availability.sh -i bootable_nodes.txt -
+        run java throughput tests on bootable_nodes.txt;
+        save stdout to hosts.txt
 
-        This file is used for various host filtering scripts.
-
-    hosts.txt - List of all valid, working hosts, used for testing.
-
-
-    host-selection.sh - Filters hosts-all.txt for hosts with JRE installed
-
-    hostavailibilitytest/ - More thorough filter checking for connectivity of
-        hosts.
-
+    hosts.txt - List of all working hosts used for testing.
+        roti.mimuw.edu.pl
+        prata.mimuw.edu.pl
+        should be at the top of the list

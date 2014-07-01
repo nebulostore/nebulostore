@@ -4,6 +4,8 @@ import argparse
 
 log = logging.getLogger("allnodes")
 
+tophosts = ['roti.mimuw.edu.pl', 'prata.mimuw.edu.pl']
+
 def prepare_auth(username, password):
     api_server = xmlrpclib.ServerProxy('https://www.planet-lab.eu/PLCAPI/', allow_none=True)
 
@@ -43,5 +45,9 @@ if __name__ == '__main__':
     (auth, api_server) = prepare_auth(args.username, args.password)
     node_hostnames = slice_hosts(auth, api_server, args.slice)
     booted_hostnames = filter_booted(auth, api_server, node_hostnames, )
+    for tophost in tophosts:
+        if tophost in booted_hostnames:
+            print tophost
+            booted_hostnames.remove(tophost)
     for hostname in booted_hostnames:
         print hostname
