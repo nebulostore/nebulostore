@@ -34,8 +34,10 @@ function generateConfigFile() {
 function buildNebulostore() {
     EXEC_DIR=$(pwd)
     cd ../
-    mvn clean install -P$1
+    mvn clean install
+    ret_code=$?
     cd $EXEC_DIR
+    return $ret_code
 }
 
 function generateReadMe() {

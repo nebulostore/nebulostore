@@ -32,6 +32,10 @@ fi
 # Build peers.
 echo "BUILDING ..."
 ./_build-and-deploy.sh -p $PEER_NUM -m peer > /dev/null
+if [ $? != 0 ]; then
+    echo "BUILD FAILED!"
+    exit 1
+fi
 
 # Generate and copy config files.
 ./_generate-config-files.sh -p $PEERNAME -c $PEERCONF -t $TESTNAME -n $PEER_NUM\

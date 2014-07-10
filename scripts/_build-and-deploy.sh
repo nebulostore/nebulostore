@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Build and copy PEERS_NUM peers with resources to JAR_DIR/i/.
-# Optional parameters: -p number_of_peers -m maven_profile_name
+# Optional parameters: -p number_of_peers
 EXEC_DIR=$(pwd)
 cd $(dirname $0)
 
@@ -12,7 +12,6 @@ while getopts ":p:m:" OPTION
 do
   case $OPTION in
     p) PEERS_NUM=$OPTARG;;
-    m) MAVEN_TARGET=$OPTARG;;
    # DEFAULT
    *)
        ARG=$(($OPTIND-1)); echo "Unknown option option chosen: ${!ARG}.";
@@ -22,13 +21,16 @@ done
 : ${PEERS_NUM=4}
 MAVEN_JAR="../nebulostore-systest/target/$SYSTEST_JAR_NAME"
 MAVEN_LIB="../nebulostore-systest/target/lib"
-: ${MAVEN_TARGET="peer"}
 BUILD_DIR="../build"
 JAR_DIR="../build/jar"
 JAR="Nebulostore.jar"
 
 rm -rf $BUILD_DIR
-buildNebulostore $MAVEN_TARGET
+buildNebulostore
+if [ $? != 0 ]; then
+    echo "Build failed!"
+    exit 1
+fi
 
 echo "Building done. Copying..."
 

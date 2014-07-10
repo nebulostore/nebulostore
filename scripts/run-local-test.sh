@@ -79,5 +79,7 @@ case $N in
            org.nebulostore.systest.broker.BrokerTestServer\
            ${PEERS[8]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
 esac
+EXIT_CODE=$?
 
 cd ${EXEC_DIR}
+exit $EXIT_CODE
