@@ -134,6 +134,7 @@ do
          --systest/is-server=$IS_SERVER\
          --num-test-participants=$TEST_CLIENTS_NUM\
          --systest/data-file=$DATA_FILE \
+         --rest-api/server-config/port=14$PADDED\
          --bdb-peer/holder-comm-address=00000000-0000-0000-0001-000000000000 < ../Peer.xml.base > ../Peer.xml.$i
 done
 

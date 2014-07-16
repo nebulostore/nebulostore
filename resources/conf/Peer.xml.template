@@ -214,4 +214,11 @@
             test.data
         </data-file>
     </systest>
+    <rest-api>
+        <enabled type="Boolean">false</enabled>
+        <server-config>
+            <host>http://localhost</host>
+            <port type="Integer">14000</port>
+        </server-config>
+    </rest-api>
 </peer>
