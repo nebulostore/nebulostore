@@ -1,11 +1,16 @@
 package org.nebulostore.systest.textinterface;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.util.Scanner;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import asg.cliche.Command;
+import asg.cliche.InputConverter;
+import asg.cliche.Param;
+import asg.cliche.ShellFactory;
+import asg.cliche.ShellManageable;
 
 import com.google.inject.Inject;
 
@@ -18,38 +23,49 @@ import org.nebulostore.appcore.model.NebuloObjectFactory;
 import org.nebulostore.peers.Peer;
 
 /**
- * This is a very simple text interface to interact with NebuloStore.
+ * A simple text interface to interact with NebuloStore.
  *
- * Commands:
- *    $ end
- *          Ends application.
- *    $ putkey (appKey)
- *          Executes putkey(appKey)
- *    $ write (appKey) (objectId) (content)
- *          Writes content (no spaces) to file.
- *    $ read (appKey) (objectId) (destination_path)
- *          Reads file and saves the content to destination_path.
- *    $ delete (appKey) (objectId)
- *          Deletes the file.
- *    $ subscribe (appKey) (objectId)
- *          Adds my subscription to the file.
- *
- *
- *    Default values when parameters are not given:
- *          appKey = 9999
- *          objectId = 123   (first chunk id = 124)
- *          content = "poprawna_zawartosc_pliku"
- *          destination_path = "pliczek"
  *
  * @author Bolek Kulbabinski
+ * @author Krzysztof Rzadca
  */
-public final class TextInterface extends Peer {
-  private static final String DEFAULT_APPKEY = "22";
-  private static final String DEFAULT_OBJECT_ID = "123";
-  private static final String DEFAULT_CONTENT = "poprawna zawartosc pliku\n";
-  private static final String DEFAULT_FILE_NAME = "plik.txt";
-
+public final class TextInterface extends Peer implements ShellManageable {
   private NebuloObjectFactory objectFactory_;
+
+  public static final InputConverter[] CLI_INPUT_CONVERTERS = {
+    new InputConverter() {
+      public Object convertInput(String original, Class toClass)
+          throws Exception {
+        if (toClass.equals(AppKey.class)) {
+          return new AppKey(new BigInteger(original));
+        } else {
+          return null;
+        }
+      }
+    },
+    new InputConverter() {
+      public Object convertInput(String original, Class toClass)
+          throws Exception {
+        if (toClass.equals(ObjectId.class)) {
+          return new ObjectId(new BigInteger(original));
+        } else {
+          return null;
+        }
+      }
+    },
+  };
+
+  @Override
+  public void cliEnterLoop() {
+    return;
+  }
+
+  @Override
+  public void cliLeaveLoop() {
+    System.out.println("closing nebulostore");
+    quitNebuloStore();
+    System.out.println("closing completed");
+  }
 
   public TextInterface() {
     objectFactory_ = null;
@@ -70,206 +86,129 @@ public final class TextInterface extends Peer {
   @Override
   protected void runActively() {
     register(appKey_);
-    inputLoop();
-  }
-
-  protected void inputLoop() {
-    try (Scanner in = new Scanner(System.in, "UTF-8")) {
+    try {
+      ShellFactory.createConsoleShell("nebulo", "nebulostore shell.\n" +
+          "Type ?list to see available commands.\n" +
+          "Type exit to quit the application", this)
+          .commandLoop();
+    } catch (NullPointerException np) {
+      // because of a bug in asg.cliche, empty stdin results in NPE
+      System.out.println("Running non-interactively. Kill with a signal");
+      info();
       while (true) {
-        System.out.print("$ ");
-        String line = in.nextLine();
-        String[] tokens = line.split(" ");
-        if (tokens[0].equals("end")) {
-          quitNebuloStore();
+        Date date = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        String formattedDate = sdf.format(date);
+        System.out.println("[" + formattedDate + "] still alive");
+        try {
+          Thread.sleep(60000);
+        } catch (InterruptedException ie) {
           break;
-        } else if ("putkey".equals(tokens[0])) {
-          putKey(tokens);
-        } else if ("write".equals(tokens[0])) {
-          write(tokens);
-        } else if ("read".equals(tokens[0])) {
-          read(tokens);
-        } else if ("delete".equals(tokens[0])) {
-          delete(tokens);
-        } else if ("subscribe".equals(tokens[0])) {
-          subscribe(tokens);
-        } else if ("rmsub".equals(tokens[0])) {
-          removeSubscription(tokens);
-        } else if (tokens[0].equals("")) {
-          continue;
-        } else {
-          System.out.println("Unknown command (type \"end\" to exit)");
         }
       }
-    } catch (IOException e) {
-      e.printStackTrace();
+    } catch (IOException ieo) {
+      ieo.printStackTrace();
+      System.out.println("Quitting Nebulostore");
+      quitNebuloStore();
+      System.out.println("Done");
     }
   }
 
-  private void removeSubscription(String[] tokens) {
-    if (!validateParametersNumber(tokens, 3)) {
-      return;
-    }
-    NebuloFile file = getNebuloFile(tokens[1], tokens[2]);
-    if (file != null) {
-      try {
-        file.removeSubscription();
-      } catch (NebuloException e) {
-        System.out.println("Subscription removal failed.");
-      }
-    }
+  @Command(description = "Show nebulo parameters of this instance")
+  public void info() {
+    System.out.println("appKey: " + appKey_);
+    System.out.println("commAddress: " + commAddress_);
   }
 
-  /**
-   * putkey (appKey).
-   */
-  private void putKey(String[] input) {
-    String[] tokens = input;
-    if (tokens.length == 1) {
-      tokens = new String[2];
-      tokens[1] = DEFAULT_APPKEY;
-    }
-    super.register(new AppKey(new BigInteger(tokens[1])));
-  }
-
-  /**
-   * = read (appkey) (objectId) (destination_path).
-   *
-   * @throws IOException
-   */
-  private void read(String[] input) throws IOException {
-    String[] tokens = input;
-    if (tokens.length == 1) {
-      tokens = new String[4];
-      tokens[1] = DEFAULT_APPKEY;
-      tokens[2] = DEFAULT_OBJECT_ID;
-      tokens[3] = DEFAULT_FILE_NAME;
-    }
-    NebuloFile file = getNebuloFile(tokens[1], tokens[2]);
+  @Command(description = "Download a nebulo file and show it contents")
+  public void read(
+      @Param(name = "appkey", description = "app key part of the file name") AppKey appKey,
+      @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId) {
+    NebuloFile file = getNebuloFile(appKey, objectId);
     if (file == null) {
       return;
     }
-
+    int currpos = 0;
+    int bufSize = 100;
     byte[] data;
-    try {
-      data = file.read(0, 100);
-    } catch (NebuloException exception) {
-      System.out.println("Got exception from 'read()': " + exception.getMessage());
-      return;
-    }
+    do {
+      try {
+        data = file.read(currpos, bufSize);
+        currpos += data.length;
+        String str = new String(data, StandardCharsets.UTF_8);
+        System.out.print(str);
+      } catch (NebuloException exception) {
+        System.out.println("Got exception from 'read()' at position " + currpos);
+        exception.printStackTrace();
+        return;
+      }
+    } while (data.length > 0);
+    System.out.println();
+  }
 
-    System.out.println("Successfully received file!");
-    FileOutputStream fos = null;
+
+  @Command(description = "Create and write a nebulo file with specified contents")
+  public void write(
+      @Param(name = "appkey", description = "app key part of the file name") AppKey appKey,
+      @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId,
+      @Param(name = "content", description = "content of the file") String... content) {
+    NebuloFile file;
     try {
-      fos = new FileOutputStream(tokens[3]);
-      fos.write(data);
-    } catch (FileNotFoundException exception) {
-      System.out.println("Cannot write file!");
-    } catch (IOException exception) {
-      System.out.println("Cannot write file!");
-    } finally {
-      if (fos != null) {
-        fos.close();
+      file = (NebuloFile) objectFactory_.fetchExistingNebuloObject(
+          new NebuloAddress(appKey, objectId));
+      System.out.println("Successfully fetched existing file");
+    } catch (NebuloException e) {
+      file = objectFactory_.createNewNebuloFile(new NebuloAddress(appKey, objectId));
+      System.out.println("Successfully created new file");
+    }
+    int currpos = 0;
+    for (String s : content) {
+      String str;
+      if (currpos != 0) {
+        str = " " + s;
+      } else {
+        str = s;
+      }
+      try {
+        int bytesWritten = file.write(str.getBytes(StandardCharsets.UTF_8), currpos);
+        System.out.println("Successfully written " + bytesWritten + " bytes at pos " + currpos);
+        currpos += bytesWritten;
+      } catch (NebuloException exception) {
+        System.out.println("Got exception from 'write()' " +
+            " pos " + currpos + " content token: " + str);
+        exception.printStackTrace();
       }
     }
   }
 
-  /**
-   * write (appkey) (objectId) (content).
-   */
-  private void write(String[] input) {
-    String[] tokens = input;
-    if (tokens.length == 1) {
-      tokens = new String[4];
-      tokens[1] = DEFAULT_APPKEY;
-      tokens[2] = DEFAULT_OBJECT_ID;
-      tokens[3] = DEFAULT_CONTENT;
-    }
-    NebuloFile file;
-    try {
-      file = (NebuloFile) objectFactory_.fetchExistingNebuloObject(new NebuloAddress(new AppKey(
-          new BigInteger(tokens[1])), new ObjectId(new BigInteger(tokens[2]))));
-      System.out.println("Successfully fetched existing file");
-    } catch (NebuloException exception) {
-      file = objectFactory_.createNewNebuloFile(new NebuloAddress(new AppKey(new BigInteger(
-          tokens[1])), new ObjectId(new BigInteger(tokens[2]))));
-      System.out.println("Successfully created new file.");
-    }
-    try {
-      int bytesWritten = file.write(tokens[3].getBytes("UTF-8"), 0);
-      System.out.println("Successfully written " + bytesWritten + " bytes.");
-    } catch (NebuloException exception) {
-      System.out.println("Got exception from 'write()': " + exception.getMessage());
-      return;
-    } catch (UnsupportedEncodingException exception) {
-      System.out.println("Got UnsupportedEncodingException from 'write()': " +
-          exception.getMessage());
-      return;
-    }
-    // file.sync(); // This is currently done automatically in write().
-  }
 
-  /**
-   * delete (appkey) (objectId).
-   */
-  private void delete(String[] input) {
-    String[] tokens = input;
-    if (tokens.length == 1) {
-      tokens = new String[3];
-      tokens[1] = DEFAULT_APPKEY;
-      tokens[2] = DEFAULT_OBJECT_ID;
-    }
-    NebuloFile file = getNebuloFile(tokens[1], tokens[2]);
+  @Command(description = "Delete a nebulo file")
+  public void delete(
+      @Param(name = "appkey", description = "app key part of the file name") AppKey appKey,
+      @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId) {
+    NebuloFile file = getNebuloFile(appKey, objectId);
     if (file == null) {
       return;
     }
 
     try {
       file.delete();
-      System.out.println("Successfully deleted file!");
+      System.out.println("Successfully deleted file");
     } catch (NebuloException exception) {
-      System.out.println("Got exception from 'delete()': " + exception.getMessage());
+      System.out.println("Got exception from 'delete()':\n");
+      exception.printStackTrace();
       return;
     }
   }
 
-  /**
-   * subscribe (appkey) (objectId).
-   */
-  private void subscribe(String[] tokens) {
-    if (!validateParametersNumber(tokens, 3)) {
-      return;
-    }
-    NebuloFile file = getNebuloFile(tokens[1], tokens[2]);
-    if (file != null) {
-      subscribeWithExceptionHandling(file);
-    }
-  }
 
-  private boolean validateParametersNumber(String[] tokens, int paramsNumber) {
-    if (tokens.length != 3) {
-      System.out.println("Invalid parameters number. Required : " + paramsNumber + " params for " +
-          tokens[0] + "operation.");
-      return false;
-    }
-    return true;
-  }
-
-  private void subscribeWithExceptionHandling(NebuloFile file) {
+  protected NebuloFile getNebuloFile(AppKey appKey, ObjectId objectId) {
     try {
-      file.subscribe();
-    } catch (NebuloException e) {
-      System.out.println("Subscription failed.");
-    }
-  }
-
-  private NebuloFile getNebuloFile(String appKeyString, String objectIdString) {
-    try {
-      AppKey appKey = new AppKey(new BigInteger(appKeyString));
-      ObjectId objectId = new ObjectId(new BigInteger(objectIdString));
       return (NebuloFile) objectFactory_.fetchExistingNebuloObject(new NebuloAddress(appKey,
           objectId));
     } catch (NebuloException exception) {
-      System.out.println("Got exception from 'fromAddress()': " + exception.getMessage());
+      System.out.println("Got exception from 'fromAddress()' for " + appKey + " " + objectId);
+      exception.printStackTrace();
       return null;
     }
   }
