@@ -1,7 +1,11 @@
 package org.nebulostore.communication.messages;
 
+import java.util.concurrent.BlockingQueue;
+
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.communication.routing.errorresponder.EmptyErrorResponder;
+import org.nebulostore.communication.routing.errorresponder.ErrorResponder;
 
 /**
  * Created as a base class for all messages that are being sent over communication layer.
@@ -38,6 +42,10 @@ public abstract class CommMessage extends Message {
 
   public void setDestinationAddress(CommAddress destAddress) {
     commDestAddress_ = destAddress;
+  }
+
+  public ErrorResponder generateErrorResponder(BlockingQueue<Message> dispatcherQueue) {
+    return new EmptyErrorResponder();
   }
 
   @Override

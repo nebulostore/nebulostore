@@ -1,4 +1,4 @@
-package org.nebulostore.async.messages;
+package org.nebulostore.broker;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
@@ -27,6 +27,7 @@ public class BrokerErrorMessage extends Message {
     error_ = error;
   }
 
+  @Override
   public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
     return visitor.visit(this);
   }

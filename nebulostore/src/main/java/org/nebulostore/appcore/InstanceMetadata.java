@@ -1,7 +1,8 @@
 package org.nebulostore.appcore;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.nebulostore.appcore.addressing.AppKey;
@@ -20,31 +21,25 @@ public class InstanceMetadata implements Serializable, Mergeable {
   /* Id of user, that this metadata applies to. */
   private final AppKey owner_;
 
-  CommAddress currentAddress_;
   /* Communication addresses of peers that store messages for @instance. */
-  List<CommAddress> inboxHolders_;
+  private final Set<CommAddress> synchroGroup_ = new HashSet<>();
+
+  /* Communication addresses of peers for which @instance store messages. */
+  private final Set<CommAddress> recipients_ = new HashSet<>();
 
   private final ConcurrentLinkedQueue<PeerConnectionSurvey> statistics_ =
       new ConcurrentLinkedQueue<PeerConnectionSurvey>();
 
-  public InstanceMetadata(AppKey owner, List<CommAddress> inboxHolders) {
+  public InstanceMetadata(AppKey owner) {
     owner_ = owner;
-    inboxHolders_ = inboxHolders;
   }
 
-  public InstanceMetadata(AppKey owner, CommAddress currentAddress,
-      List<CommAddress> inboxHolders) {
-    owner_ = owner;
-    currentAddress_ = currentAddress;
-    inboxHolders_ = inboxHolders;
+  public Set<CommAddress> getSynchroGroup() {
+    return synchroGroup_;
   }
 
-  public List<CommAddress> getInboxHolders() {
-    return inboxHolders_;
-  }
-
-  public CommAddress getCurrentAddress() {
-    return currentAddress_;
+  public Set<CommAddress> getRecipients() {
+    return recipients_;
   }
 
   @Override
@@ -52,8 +47,9 @@ public class InstanceMetadata implements Serializable, Mergeable {
     // TODO(SZM): remove duplicated old statistics - design issue
     if (other instanceof InstanceMetadata) {
       InstanceMetadata o = (InstanceMetadata) other;
-      inboxHolders_.addAll(o.inboxHolders_);
-      //TODO
+      synchroGroup_.addAll(o.synchroGroup_);
+      recipients_.addAll(o.recipients_);
+      // TODO
     }
     return this;
   }
@@ -64,7 +60,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
 
   @Override
   public String toString() {
-    return "InstanceMetadata: owner: " + owner_.toString() + " current address: " +
-      currentAddress_.toString() + " synchro-peer num: " + inboxHolders_.size();
+    return "InstanceMetadata: owner: " + owner_.toString() + " synchro-peers num: " +
+        synchroGroup_.size();
   }
 }

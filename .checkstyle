@@ -4,7 +4,10 @@
   <local-check-config name="NebuloCheck" location="resources/checkstyle/checks.xml" type="project" description="Our config file for CheckStyle plugin">
     <additional-data name="protect-config-file" value="false"/>
   </local-check-config>
-  <fileset name="all" enabled="true" check-config-name="NebuloCheck" local="true">
+  <local-check-config name="Nebulo" location="resources/checkstyle/checks_maven.xml" type="project" description="">
+    <additional-data name="protect-config-file" value="false"/>
+  </local-check-config>
+  <fileset name="all" enabled="true" check-config-name="Nebulo" local="true">
     <file-match-pattern match-pattern="." include-pattern="true"/>
   </fileset>
 </fileset-config>

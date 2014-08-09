@@ -2,11 +2,14 @@ package org.nebulostore.peers;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.base.Functions;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Names;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.api.DeleteNebuloObjectModule;
@@ -19,6 +22,10 @@ import org.nebulostore.appcore.model.NebuloObjectFactoryImpl;
 import org.nebulostore.appcore.model.ObjectDeleter;
 import org.nebulostore.appcore.model.ObjectGetter;
 import org.nebulostore.appcore.model.ObjectWriter;
+import org.nebulostore.async.AsyncMessagesContext;
+import org.nebulostore.async.peerselection.AlwaysAcceptingSynchroPeerSelectionModule;
+import org.nebulostore.async.peerselection.SynchroPeerSelectionModule;
+import org.nebulostore.async.peerselection.SynchroPeerSelectionModuleFactory;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.broker.ContractsEvaluator;
 import org.nebulostore.broker.ContractsSelectionAlgorithm;
@@ -56,17 +63,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(CommAddress.class).toInstance(
         new CommAddress(config_.getString("communication.comm-address", "")));
 
-    BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<Message>();
-    BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<Message>();
-
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(networkQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
+    configureQueues();
 
     bind(NebuloObjectFactory.class).to(NebuloObjectFactoryImpl.class);
     bind(ObjectGetter.class).to(GetNebuloObjectModule.class);
@@ -81,6 +78,7 @@ public class PeerConfiguration extends GenericConfiguration {
     configureBroker();
     configureCommunicationPeer();
     configureNetworkMonitor();
+    configureAsyncMessaging();
     configurePeer();
     configureReplicator(appKey);
   }
@@ -124,4 +122,29 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(NetworkMonitor.class).to(NetworkMonitorImpl.class).in(Scopes.SINGLETON);
     bind(ConnectionTestMessageHandler.class).to(DefaultConnectionTestMessageHandler.class);
   }
+
+  protected void configureAsyncMessaging() {
+    bind(AsyncMessagesContext.class).toInstance(new AsyncMessagesContext());
+    bind(ScheduledExecutorService.class).annotatedWith(
+        Names.named("async.scheduled-executor-service")).toInstance(
+        Executors.newScheduledThreadPool(1));
+    install(new FactoryModuleBuilder().implement(SynchroPeerSelectionModule.class,
+        AlwaysAcceptingSynchroPeerSelectionModule.class).build(
+        SynchroPeerSelectionModuleFactory.class));
+  }
+
+  protected void configureQueues() {
+    BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<Message>();
+    BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<Message>();
+
+    bind(new TypeLiteral<BlockingQueue<Message>>() {
+    }).annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() {
+    }).annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(networkQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() {
+    }).annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() {
+    }).annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
+  }
+
 }

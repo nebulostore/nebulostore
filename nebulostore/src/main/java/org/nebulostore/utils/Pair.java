@@ -66,4 +66,10 @@ public class Pair<A, B> implements Serializable {
     result = prime * result + ((second_ == null) ? 0 : second_.hashCode());
     return result;
   }
+
+  @Override
+  public String toString() {
+    return "Pair<" + first_.getClass() + ", " + second_.getClass() + ">: (" + first_ +
+        ", " + second_ + ")";
+  }
 }

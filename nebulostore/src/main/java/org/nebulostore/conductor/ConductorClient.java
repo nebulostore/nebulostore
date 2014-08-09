@@ -56,7 +56,7 @@ public abstract class ConductorClient extends JobModule implements Serializable 
   protected int phase_;
 
   private boolean canSendMessages_;
-  private Queue<Message> waitingMessages_ = new LinkedList<Message>();
+  private final Queue<Message> waitingMessages_ = new LinkedList<Message>();
 
   public ConductorClient(String serverJobId, int numPhases, CommAddress serverCommAddress) {
     serverJobId_ = serverJobId;

@@ -6,16 +6,12 @@ import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 
 /**
- * ACK message send by peer that succesfully received asynchronous messages.
+ * ACK message sent by peer that succesfully received asynchronous messages.
  * @author szymonmatejczyk
  */
 public class GotAsynchronousMessagesMessage extends CommMessage {
-  CommAddress recipient_;
 
-  public GotAsynchronousMessagesMessage(String jobId,
-      CommAddress sourceAddress, CommAddress destAddress) {
-    super(jobId, sourceAddress, destAddress);
-  }
+  CommAddress recipient_;
 
   private static final long serialVersionUID = 3450313559562082115L;
 

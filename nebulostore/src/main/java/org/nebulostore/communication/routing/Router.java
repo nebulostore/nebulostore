@@ -13,6 +13,7 @@ import com.google.inject.name.Named;
 import org.apache.log4j.Logger;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.communication.routing.errorresponder.ErrorResponder;
 
 /**
  * This object transfers messages to their destination. Either by sending it to network
@@ -92,18 +93,40 @@ public class Router implements Runnable {
   }
 
   /**
+   * Send message over network and call errorRessponder in case of error.
+   *
+   * @see MessageSender
+   *
+   * @param msg
+   * @param errorResponder
+   *          object that responds to an error
+   * @return Future which on failure may throw {@link AddressNotPresentException},
+   *         {@code InterruptedException} and {@code IOException}.
+   */
+
+  public MessageSendFuture sendMessage(CommMessage msg, ErrorResponder errorResponder) {
+    return sendMessage(msg, null, errorResponder);
+  }
+
+  /**
    * Send message over network and add result to queue.
    *
    * @see MessageSender
    *
    * @param msg
-   * @param resultQueue queue to which add result
+   * @param resultQueue
+   *          queue to which add result
    * @return Future which on failure may throw {@link AddressNotPresentException},
-   *  {@code InterruptedException} and {@code IOException}.
+   *         {@code InterruptedException} and {@code IOException}.
    */
   public MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> resultQueue) {
+    return sendMessage(msg, resultQueue, null);
+  }
+
+  public MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> resultQueue,
+      ErrorResponder errorResponder) {
     attachLocalCommAddress(msg);
-    return msgSender_.sendMessage(msg, resultQueue);
+    return msgSender_.sendMessage(msg, resultQueue, errorResponder);
   }
 
   public void startUp() throws IOException {

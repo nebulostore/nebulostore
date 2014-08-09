@@ -1,31 +1,24 @@
 package org.nebulostore.async;
 
+import java.util.Set;
+
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.appcore.InstanceMetadata;
-import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.async.messages.AsynchronousMessagesMessage;
-import org.nebulostore.async.messages.DeleteNebuloObjectMessage;
-import org.nebulostore.async.messages.UpdateNebuloObjectMessage;
 import org.nebulostore.communication.naming.CommAddress;
-import org.nebulostore.dht.messages.ErrorDHTMessage;
-import org.nebulostore.dht.messages.GetDHTMessage;
-import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.timer.TimeoutMessage;
 import org.nebulostore.timer.Timer;
 
-
 /**
- * Class used to handle GetAsynchronousMessagesInMessage.
- * Retrieves asynchronous messages from synchro peers by creating GetAsynchronousMessagesModule for
- * each synchro-peer.
+ * Class that retrieves asynchronous messages from synchro-peers by creating
+ * GetAsynchronousMessagesModule for each synchro-peer.
+ *
  * @author szymonmatejczyk
  */
 public class RetrieveAsynchronousMessagesModule extends JobModule {
@@ -37,9 +30,17 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
   private Timer timer_;
   private AsyncMessagesContext context_;
 
+  private final Set<CommAddress> synchroGroup_;
+  private final CommAddress synchroGroupOwner_;
+
+  public RetrieveAsynchronousMessagesModule(Set<CommAddress> synchroGroup,
+      CommAddress synchroGroupOwner) {
+    synchroGroup_ = synchroGroup;
+    synchroGroupOwner_ = synchroGroupOwner;
+  }
+
   @Inject
-  public void setDependencies(CommAddress address, Timer timer,
-      AsyncMessagesContext context) {
+  public void setDependencies(CommAddress address, Timer timer, AsyncMessagesContext context) {
     timer_ = timer;
     myAddress_ = address;
     context_ = context;
@@ -49,86 +50,59 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
   protected void processMessage(Message message) throws NebuloException {
     message.accept(visitor_);
   }
-  private final RAMVisitor visitor_ = new RAMVisitor();
+
+  private final RADVisitor visitor_ = new RADVisitor();
 
   /**
    * Visitor.
+   *
    * @author szymonmatejczyk
    */
-  protected class RAMVisitor extends MessageVisitor<Void> {
-    /** Start of download of AM. Requests for Metadata containing inboxHolders. */
+  protected class RADVisitor extends MessageVisitor<Void> {
     public Void visit(JobInitMessage message) {
-      logger_.debug("Started asynchronous-messages retrieval.");
-      jobId_ = message.getId();
-      GetDHTMessage m = new GetDHTMessage(jobId_, myAddress_.toKeyDHT());
-      networkQueue_.add(m);
       timer_.schedule(jobId_, INSTANCE_TIMEOUT);
-      return null;
-    }
-
-    public Void visit(ErrorDHTMessage message) {
-      error(jobId_, new NebuloException("Unable to get synchro peers from DHT."));
-      return null;
-    }
-
-    public Void visit(ValueDHTMessage message) {
-      if (message.getKey().equals(myAddress_.toKeyDHT()) &&
-          (message.getValue().getValue() instanceof InstanceMetadata)) {
-        InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
-        context_.setMyInboxHolders(metadata.getInboxHolders());
-        logger_.debug("Retrieving AM from " + context_.getMyInboxHolders().size() + " peers.");
-        //TODO(szm): timeouts
-        for (CommAddress inboxHolder : context_.getMyInboxHolders()) {
-          GetAsynchronousMessagesModule messagesModule =
-              new GetAsynchronousMessagesModule(networkQueue_, inQueue_, inboxHolder);
+      for (CommAddress inboxHolder : synchroGroup_) {
+        if (!inboxHolder.equals(myAddress_)) {
+          GetAsynchronousMessagesModule messagesModule = new GetAsynchronousMessagesModule(
+              networkQueue_, inQueue_, inboxHolder, synchroGroupOwner_);
           JobInitMessage initializingMessage = new JobInitMessage(messagesModule);
-          context_.getWaitingForMessages().add(initializingMessage.getId());
+          context_.getWaitingForMessages(jobId_).add(initializingMessage.getId());
+          outQueue_.add(initializingMessage);
         }
-        if (context_.getMyInboxHolders().size() == 0) {
-          endJobModule();
-        }
+      }
+      if (synchroGroup_.size() == 0) {
+        endJobModule();
       }
       return null;
     }
 
     public Void visit(AsynchronousMessagesMessage message) {
-      if (!context_.getWaitingForMessages().remove(message.getId())) {
-        logger_.warn("Received not expected message.");
+      if (!context_.getWaitingForMessages(jobId_).remove(message.getId())) {
+        logger_.warn("Received a message that was not expected.");
       }
+
 
       if (message.getMessages() == null) {
         logger_.debug("Empty AMM received.");
-      } else {
-        for (AsynchronousMessage m : message.getMessages()) {
-          // TODO(szm): Prevent message duplicates
-          if (m instanceof UpdateNebuloObjectMessage) {
-            // TODO(szm): update file
-            logger_.debug("Received update file asynchronous message " +
-                ((UpdateNebuloObjectMessage) m).getMessageId());
-          } else if (m instanceof DeleteNebuloObjectMessage) {
-            NebuloAddress address = ((DeleteNebuloObjectMessage) m).getObjectId();
-            logger_.debug("Received delete asynchronous message " + address);
-            // TODO(szm): delete file
-          } else {
-            error(message.getId(), new NebuloException("Unknown AsynchronousMessage type."));
-          }
+      } else if (message.getRecipient().equals(myAddress_)) {
+        for (Message msg : message.getMessages()) {
+          outQueue_.add(msg);
         }
+      } else {
+        //TODO (pm) Store new asynchronous messages for other peers
+        hashCode();
       }
-      if (context_.getWaitingForMessages().isEmpty()) {
+
+      if (context_.getWaitingForMessages(jobId_).isEmpty()) {
         endJobModule();
       }
       return null;
     }
 
     public Void visit(TimeoutMessage message) {
-      logger_.debug("Timeout in RetrieveAsynchronousMessagesModule.");
+      logger_.warn("Timeout in RetrieveAsynchronousDataModule.");
       endJobModule();
       return null;
-    }
-
-    private void error(String jobId, NebuloException error) {
-      logger_.warn("Unable to retrive asynchronous messages: " + error.getMessage());
-      endJobModule();
     }
   }
 }
