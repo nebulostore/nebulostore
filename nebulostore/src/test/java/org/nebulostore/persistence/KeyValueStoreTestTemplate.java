@@ -32,8 +32,8 @@ public abstract class KeyValueStoreTestTemplate {
   @Test
   public void shouldPerformTransaction() throws Exception {
     KeyValueStore<String> store = getKeyValueStore();
-    store.put("one", "abc");
-    store.performTransaction("one", new Function<String, String>() {
+    store.put("three", "abc");
+    store.performTransaction("three", new Function<String, String>() {
 
       @Override
       public String apply(String value) {
@@ -42,6 +42,21 @@ public abstract class KeyValueStoreTestTemplate {
 
     });
 
-    Assert.assertEquals("abcabc", store.get("one"));
+    Assert.assertEquals("abcabc", store.get("three"));
+  }
+
+  @Test
+  public void shouldPerformTransactionOnNullObject() throws Exception {
+    KeyValueStore<String> store = getKeyValueStore();
+    store.performTransaction("four", new Function<String, String>() {
+
+      @Override
+      public String apply(String value) {
+        return value == null ? "abcd" : value;
+      }
+
+    });
+
+    Assert.assertEquals("abcd", store.get("four"));
   }
 }

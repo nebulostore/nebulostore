@@ -72,7 +72,12 @@ public class FileStore<T> implements KeyValueStore<T> {
       throws IOException {
     lockMap_.lock(key);
     try {
-      T oldValue = deserializer_.apply(doRead(key));
+      T oldValue;
+      try {
+        oldValue = deserializer_.apply(doRead(key));
+      } catch (IOException e) {
+        oldValue = null;
+      }
       doWrite(key, serializer_.apply(function.apply(oldValue)));
     } catch (IOException e) {
       throw new IOException("Unable to perform transaction", e);
