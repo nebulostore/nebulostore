@@ -1,5 +1,7 @@
 package org.nebulostore.crypto;
 
+import com.google.common.base.Charsets;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,8 +19,6 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-
-import com.google.common.base.Charsets;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
@@ -117,6 +117,11 @@ public final class CryptoUtils {
   public static double nextDouble() {
     return RANDOM.nextDouble();
   }
+  
+  public static int nextInt(int n) {
+    return RANDOM.nextInt(n);
+  }
+  
 
   public static String objectToXml(Object object, boolean pretty, Class<?>... context)
       throws NebuloException {

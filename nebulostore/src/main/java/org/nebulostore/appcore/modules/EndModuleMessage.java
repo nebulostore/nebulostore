@@ -10,6 +10,14 @@ import org.nebulostore.appcore.messaging.MessageVisitor;
  */
 public class EndModuleMessage extends Message {
   private static final long serialVersionUID = -1756129179954128771L;
+  
+  public EndModuleMessage() {
+    super();
+  }
+
+  public EndModuleMessage(String jobId) {
+    super(jobId);
+  }
 
   public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
     return visitor.visit(this);

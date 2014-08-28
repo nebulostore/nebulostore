@@ -11,6 +11,17 @@ def patch(filename, patchFilename):
   patchLeaves(baseTree, patchTree.getroot(), "")
   baseTree.write(sys.stdout)
 
+def addByPath(baseTree, path, text):
+  nodes = path[1:].split("/")
+  curNode = baseTree.getroot()
+  for nodeName in nodes:
+    el = curNode.find(nodeName)
+    if el is None:
+      el = ET.SubElement(curNode, nodeName)
+      curNode.append(el)
+    curNode = el
+  curNode.text = text
+
 def patchLeaves(baseTree, node, path):
   if (len(list(node)) == 0):
     matchingNodes = baseTree.findall("." + path)
@@ -19,7 +30,9 @@ def patchLeaves(baseTree, node, path):
     else:
       target = baseTree.find("." + path)
       if (target is None):
-        raise RuntimeError("Base tree node not found: <root>" + path)
+      #raise RuntimeError("Base tree node not found: <root>" + path)
+        addByPath(baseTree, path, node.text)
+        print("New element: " + path + " added.\n")
       else:
         target.text = node.text
   else:

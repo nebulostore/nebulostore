@@ -1,0 +1,17 @@
+<peer>
+	<class-name>
+		SimpleActivePeer
+	</class-name>
+	<configuration-class-name>
+		SimpleActivePeerConfiguration
+	</configuration-class-name>
+	<random-activity-module>
+		<database-hostname>naan.mimuw.edu.pl</database-hostname>
+		<database-port>5432</database-port>
+		<database-name>labTest</database-name>
+		<database-username>testerLabowy1</database-username>
+		<database-password>ne8u|o</database-password>
+		<action-period-millis>1000</action-period-millis>
+		<running-time-mins>10</running-time-mins>
+	</random-activity-module>
+</peer>
