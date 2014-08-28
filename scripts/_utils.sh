@@ -103,6 +103,6 @@ tell app "Terminal"
 end tell
 EOF
     else
-        gnome-terminal -e "$1"
+        gnome-terminal -e "$1" &
     fi
 }
