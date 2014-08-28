@@ -26,7 +26,6 @@ import org.nebulostore.communication.routing.MessageMatcher;
 import org.nebulostore.communication.routing.MessageSendFuture;
 import org.nebulostore.communication.routing.Router;
 import org.nebulostore.communication.routing.SendResult;
-import org.nebulostore.communication.routing.errorresponder.ErrorResponder;
 
 
 /**
@@ -108,9 +107,8 @@ public class CommunicationFacade {
     return router_.sendMessage(message);
   }
 
-  public MessageSendFuture sendMessage(CommMessage message, BlockingQueue<SendResult> results,
-      ErrorResponder errorResponder) {
-    return router_.sendMessage(message, results, errorResponder);
+  public MessageSendFuture sendMessage(CommMessage message, BlockingQueue<SendResult> results) {
+    return router_.sendMessage(message, results);
   }
 
   public void startUp() throws IOException {

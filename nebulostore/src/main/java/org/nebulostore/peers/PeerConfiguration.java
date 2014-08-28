@@ -27,6 +27,7 @@ import org.nebulostore.async.peerselection.AlwaysAcceptingSynchroPeerSelectionMo
 import org.nebulostore.async.peerselection.SynchroPeerSelectionModule;
 import org.nebulostore.async.peerselection.SynchroPeerSelectionModuleFactory;
 import org.nebulostore.broker.Broker;
+import org.nebulostore.broker.BrokerContext;
 import org.nebulostore.broker.ContractsEvaluator;
 import org.nebulostore.broker.ContractsSelectionAlgorithm;
 import org.nebulostore.broker.GreedyContractsSelection;
@@ -42,6 +43,10 @@ import org.nebulostore.persistence.FileStore;
 import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.ReplicatorImpl;
 import org.nebulostore.replicator.core.Replicator;
+import org.nebulostore.rest.BrokerResource;
+import org.nebulostore.rest.NetworkMonitorResource;
+import org.nebulostore.rest.RestModule;
+import org.nebulostore.rest.RestModuleImpl;
 import org.nebulostore.subscription.api.SimpleSubscriptionNotificationHandler;
 import org.nebulostore.subscription.api.SubscriptionNotificationHandler;
 import org.nebulostore.timer.Timer;
@@ -74,6 +79,7 @@ public class PeerConfiguration extends GenericConfiguration {
 
     bind(Timer.class).to(TimerImpl.class);
 
+
     configureAdditional();
     configureBroker();
     configureCommunicationPeer();
@@ -81,6 +87,7 @@ public class PeerConfiguration extends GenericConfiguration {
     configureAsyncMessaging();
     configurePeer();
     configureReplicator(appKey);
+    configureRestModule();
   }
 
   private void configureReplicator(AppKey appKey) {
@@ -116,6 +123,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(Broker.class).to(ValuationBasedBroker.class).in(Scopes.SINGLETON);
     bind(ContractsSelectionAlgorithm.class).to(GreedyContractsSelection.class);
     bind(ContractsEvaluator.class).to(OnlySizeContractsEvaluator.class);
+    bind(BrokerContext.class).toInstance(new BrokerContext());
   }
 
   protected void configureNetworkMonitor() {
@@ -147,4 +155,9 @@ public class PeerConfiguration extends GenericConfiguration {
     }).annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
   }
 
+  protected void configureRestModule() {
+    bind(BrokerResource.class);
+    bind(NetworkMonitorResource.class);
+    bind(RestModule.class).to(RestModuleImpl.class);
+  }
 }

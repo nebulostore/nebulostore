@@ -140,4 +140,12 @@ public final class BrokerContext {
     }
   }
 
+  public Map<CommAddress, List<Contract>> getContractList() {
+    readLock_.lock();
+    try {
+      return new TreeMap<CommAddress, List<Contract>>(contractMap_);
+    } finally {
+      readLock_.unlock();
+    }
+  }
 }

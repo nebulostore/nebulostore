@@ -5,12 +5,13 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Function;
-
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class SQLKeyValueStoreTest extends KeyValueStoreTestTemplate {
 
   private static final String CONFIGURATION_PATH = System.getProperty("user.dir") +

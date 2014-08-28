@@ -62,13 +62,12 @@ public class CommunicationFacadeAdapter extends Module {
   private final CommMessageListener msgListener_ = new CommMessageListener();
   private final CommMessageMatcher msgMatcher_ = new CommMessageMatcher();
 
-
-  //TODO change bdb
+  // TODO change bdb
   /**
    * DHT module available to higher layers.
    *
-   * Note that it was implemented by Marcin and I(grzegorzmilka) left it mostly
-   * as is. Only BDB works.
+   * Note that it was implemented by Marcin and I(grzegorzmilka) left it mostly as is. Only BDB
+   * works.
    */
   private Module dhtPeer_;
   private final BlockingQueue<Message> dhtPeerInQueue_;
@@ -159,7 +158,7 @@ public class CommunicationFacadeAdapter extends Module {
     dhtPeerInQueue_.add(new EndModuleMessage());
   }
 
-/**
+  /**
    * Message Visitor for {@link CommunicationFacadeAdapter}.
    *
    * @author Grzegorz Milka
@@ -173,8 +172,9 @@ public class CommunicationFacadeAdapter extends Module {
 
     public Void visit(ReconfigureDHTMessage msg) {
       LOGGER.warn("Got reconfigure request with jobId: " + msg.getId());
-      /*reconfigureDHT(((ReconfigureDHTMessage) msg).getProvider(),
-          (ReconfigureDHTMessage) msg);*/
+      /*
+       * reconfigureDHT(((ReconfigureDHTMessage) msg).getProvider(), (ReconfigureDHTMessage) msg);
+       */
       return null;
     }
 
@@ -195,7 +195,8 @@ public class CommunicationFacadeAdapter extends Module {
       if (msg.getDestinationAddress() == null) {
         LOGGER.warn("Null destination address set for " + msg + ". Dropping the message.");
       } else {
-        commFacade_.sendMessage(msg, sendResults_, msg.generateErrorResponder(dispatcherQueue_));
+        commFacade_.sendMessage(msg, sendResults_).addObserver(
+            msg.generateErrorResponder(dispatcherQueue_));
       }
       return null;
     }

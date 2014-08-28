@@ -6,9 +6,12 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import org.apache.log4j.Logger;
@@ -45,6 +48,7 @@ import org.nebulostore.utils.Pair;
  * @author Bolek Kulbabinski
  */
 public class ReplicatorImpl extends Replicator {
+
   private static Logger logger_ = Logger.getLogger(ReplicatorImpl.class);
 
   private static final int UPDATE_TIMEOUT_SEC = 10;
@@ -52,6 +56,8 @@ public class ReplicatorImpl extends Replicator {
   private static final int GET_OBJECT_TIMEOUT_SEC = 10;
 
   private static final String METADATA_SUFFIX = ".meta";
+  private static final String TMP_SUFFIX = ".tmp.";
+  private static final String INDEX_ID = "object.index";
 
   private static LockMap lockMap_ = new LockMap();
 
@@ -60,7 +66,35 @@ public class ReplicatorImpl extends Replicator {
 
   @Inject
   public ReplicatorImpl(@Named("ReplicatorStore") KeyValueStore<byte[]> store) {
+    super(getOrCreateStoredObjectsIndex(store));
     store_ = store;
+  }
+
+  private static Set<String> getOrCreateStoredObjectsIndex(KeyValueStore<byte[]> store) {
+    try {
+      final byte[] empty = toJson(new HashSet<String>());
+      store.performTransaction(INDEX_ID, new Function<byte[], byte[]>() {
+        @Override
+        public byte[] apply(byte[] existing) {
+          return existing == null ? empty : existing;
+        }
+      });
+    } catch (IOException e) {
+      logger_.error("Could not initialize index!", e);
+      return new HashSet<>();
+    }
+    return fromJson(store.get(INDEX_ID));
+  }
+
+  private static byte[] toJson(Set<String> set) {
+    Gson gson = new Gson();
+    return gson.toJson(set).getBytes(Charsets.UTF_8);
+  }
+
+  private static Set<String> fromJson(byte[] json) {
+    Gson gson = new Gson();
+    return gson.fromJson(new String(json, Charsets.UTF_8),
+        new TypeToken<Set<String>>() { } .getType());
   }
 
   /**
@@ -264,7 +298,7 @@ public class ReplicatorImpl extends Replicator {
         logger_.debug("storing new file");
       }
 
-      String tmpKey = objectId.toString() + ".tmp." + transactionToken;
+      String tmpKey = objectId.toString() + TMP_SUFFIX + transactionToken;
       store_.put(tmpKey, encryptedObject.getEncryptedData());
       return QueryToStoreResult.OK;
     } catch (IOException e) {
@@ -278,9 +312,11 @@ public class ReplicatorImpl extends Replicator {
     logger_.debug("Commit storing object " + objectId.toString());
 
     try {
-      String tmpKey = objectId.toString() + ".tmp." + transactionToken;
+      String objId = objectId.toString();
+      String tmpKey = objId + TMP_SUFFIX + transactionToken;
       byte[] bytes = store_.get(tmpKey);
-      store_.put(objectId.toString(), bytes);
+      store_.put(objId, bytes);
+      addToIndex(objId);
 
       Set<String> newVersions = new HashSet<String>(previousVersions);
       newVersions.add(currentVersion);
@@ -298,13 +334,32 @@ public class ReplicatorImpl extends Replicator {
   public void abortUpdateObject(ObjectId objectId, String transactionToken) {
     logger_.debug("Aborting transaction " + objectId.toString());
     try {
-      String tmpKey = objectId.toString() + ".tmp." + transactionToken;
+      String tmpKey = objectId.toString() + TMP_SUFFIX + transactionToken;
       store_.delete(tmpKey);
+      removeFromIndex(objectId.toString());
     } catch (IOException e) {
       // TODO: dirty state here
       logger_.warn("unable to delete file", e);
     } finally {
       lockMap_.unlock(objectId.toString());
+    }
+  }
+
+  private void addToIndex(String objId) {
+    storedObjectsIds_.add(objId);
+    saveIndex();
+  }
+
+  private void removeFromIndex(String objId) {
+    storedObjectsIds_.remove(objId);
+    saveIndex();
+  }
+
+  private void saveIndex() {
+    try {
+      store_.put(INDEX_ID, toJson(storedObjectsIds_));
+    } catch (IOException e) {
+      logger_.error("Could not save index!", e);
     }
   }
 
@@ -338,6 +393,7 @@ public class ReplicatorImpl extends Replicator {
     try {
       store_.delete(objectId.toString());
       store_.delete(objectId.toString() + METADATA_SUFFIX);
+      removeFromIndex(objectId.toString());
     } catch (IOException e) {
       throw new DeleteObjectException("Unable to delete file.", e);
     } finally {

@@ -21,6 +21,7 @@ import org.nebulostore.communication.CommunicationPeerFactory;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.Dispatcher;
 import org.nebulostore.networkmonitor.NetworkMonitor;
+import org.nebulostore.rest.RestModuleImpl;
 import org.nebulostore.timer.Timer;
 
 /**
@@ -53,6 +54,9 @@ public class Peer extends AbstractPeer {
 
   private int registrationTimeout_;
 
+  private Thread restThread_;
+  private boolean isRestEnabled_;
+
   @Inject
   public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherInQueue,
                               @Named("CommunicationPeerInQueue")
@@ -68,8 +72,10 @@ public class Peer extends AbstractPeer {
                               NetworkMonitor networkMonitor,
                               Injector injector,
                               @Named("peer.registration-timeout") int registrationTimeout,
-                              AsyncMessagingModule asyncMessagingModule) {
-    dispatcherInQueue_ = dispatcherInQueue;
+                              AsyncMessagingModule asyncMessagingModule,
+                              RestModuleImpl restModule,
+                              @Named("rest-api.enabled") boolean isRestEnabled) {
+    dispatcherInQueue_ = dispatcherQueue;
     networkInQueue_ = networkQueue;
     commPeerInQueue_ = commPeerInQueue;
     commPeerOutQueue_ = commPeerOutQueue;
@@ -82,12 +88,16 @@ public class Peer extends AbstractPeer {
     injector_ = injector;
     registrationTimeout_ = registrationTimeout;
     asyncMessagingModule_ = asyncMessagingModule;
+    isRestEnabled_ = isRestEnabled;
 
     // Create core threads.
     Runnable dispatcher = new Dispatcher(dispatcherInQueue_, networkInQueue_, injector_);
     dispatcherThread_ = new Thread(dispatcher, "Dispatcher");
     Runnable commPeer = commPeerFactory_.newCommunicationPeer(commPeerInQueue_, commPeerOutQueue_);
     networkThread_ = new Thread(commPeer, "CommunicationPeer");
+    if (isRestEnabled_) {
+      restThread_ = new Thread(restModule, "Rest Thread");
+    }
   }
 
   public void quitNebuloStore() {
@@ -180,6 +190,9 @@ public class Peer extends AbstractPeer {
   protected void startCoreThreads() {
     networkThread_.start();
     dispatcherThread_.start();
+    if (isRestEnabled_) {
+      restThread_.start();
+    }
   }
 
   protected void joinCoreThreads() {
@@ -187,6 +200,9 @@ public class Peer extends AbstractPeer {
     try {
       networkThread_.join();
       dispatcherThread_.join();
+      if (isRestEnabled_) {
+        restThread_.join();
+      }
     } catch (InterruptedException exception) {
       logger_.fatal("Interrupted");
       return;

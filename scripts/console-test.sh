@@ -3,20 +3,20 @@
 # Instructions:
 #
 # 1. Run scripts/console-test.sh from 'trunk' level.
-# 2. You can run up to 4 local instances.
-#    On terminal nr i (1,2,3 or 4) run: (the app key will be 11, 22, etc.)
-#       cd build/jar/i/
-#       java -jar Nebulostore.jar
-# 3. Wait 40 sec (!) for all peers to find each other.
-# 4. Play with it using write, read or delete.
-#    For example:
+# 2. This script runs (by default) 4 interactive terminals on the localhost
+# 3. Play with interactive terminals, for example:
 #    On terminal 2:
-#       write 33 123 zawartosc
+#       write 33 123 whatever in the file
 #    On terminal 1:
-#       read 33 123 plik.txt
-#       (check if plik.txt contains "zawartosc")
-# 5. Details about commands and file names can be found in
-#    TextInterface.java - feel free to experiment!
+#       read 33 123 
+#       (expected output: "whetever in the file")
+# 4. To exit interactive terminals, 
+#    type: exit
+#    wait for some time
+#    hit enter when prompted
+
+
+PEER_NUM=4
 
 EXEC_DIR=$(pwd)
 cd $(dirname $0)
@@ -24,19 +24,39 @@ cd $(dirname $0)
 source _utils.sh
 
 JAR_DIR="../build/jar"
-PEERS_NUM=4
-COMMON_ARGS="--class-name=org.nebulostore.systest.textinterface.TextInterface --bootstrap/address=localhost --bootstrap-server-tomp2p-port=10301 --bootstrap-port=10201"
+PEERNAME="org.nebulostore.systest.textinterface.TextInterface"
+PEERCONF="org.nebulostore.systest.textinterface.TextInterfaceConfiguration"
+BOOTSTRAP_SLEEP=2
 
-./_build-and-deploy.sh -p $PEERS_NUM
+echo "["`date +"%T"`"] BUILDING ..."
+./_build-and-deploy.sh -p $PEER_NUM
+if [ $? != 0 ]; then
+    echo "BUILD FAILED!"
+    exit 1
+fi
 
-for ((i=1; i<=$PEERS_NUM; i++))
+echo "["`date +"%T"`"] COPYING ..."
+./_generate-config-files.sh -p $PEERNAME -c $PEERCONF -n $PEER_NUM\
+    -m $PEER_NUM -b localhost
+
+for ((i=1; i<=$PEER_NUM; i++))
 do
-    PARAMS="$COMMON_ARGS --app-key=$i$i --bootstrap/mode=client --comm-cli-port=1010$i\
-      --tomp2p-port=1030$i --bdb-peer/type=proxy"
-    generateConfigFile "$PARAMS" $JAR_DIR/$i/resources/conf
+    mv ../Peer.xml.$i ../build/jar/$i/resources/conf/Peer.xml
 done
 
-PARAMS="$COMMON_ARGS --app-key=11 --bootstrap/mode=server --comm-cli-port=10101 --tomp2p-port=10301 --bdb-peer/type=storage-holder"
-generateConfigFile "$PARAMS" $JAR_DIR/1/resources/conf
-
+echo "["`date +"%T"`"] RUNNING INTERACTIVE TERMINALS ..."
 cd ${EXEC_DIR}
+
+BOOTSTRAP=true
+echo "["`date +"%T"`"] STARTING UI PEERS ..."
+for ((i=1; i<=$PEER_NUM; i++))
+do
+    cd build/jar/$i
+    execInNewTerminalWindow "java -jar Nebulostore.jar"
+    cd ${EXEC_DIR}
+    if [ "$BOOTSTRAP" = true ] ; then
+        sleep $BOOTSTRAP_SLEEP
+        BOOTSTRAP=false
+        echo "["`date +"%T"`"] finished bootstrap sleep"
+    fi
+done

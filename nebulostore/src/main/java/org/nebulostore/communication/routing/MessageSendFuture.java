@@ -1,6 +1,7 @@
 package org.nebulostore.communication.routing;
 
 import java.io.IOException;
+import java.util.Observer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -44,4 +45,8 @@ public interface MessageSendFuture {
   boolean isCancelled();
 
   boolean isDone();
+
+  SendResult getResult();
+
+  void addObserver(Observer o);
 }

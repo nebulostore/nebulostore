@@ -20,6 +20,7 @@ import org.nebulostore.appcore.modules.Module;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.communication.routing.SendResult;
 import org.nebulostore.communication.routing.errorresponder.ErrorResponder;
 import org.nebulostore.conductor.messages.FinishMessage;
 import org.nebulostore.conductor.messages.TicMessage;
@@ -88,11 +89,7 @@ public class AsyncTestCommunicationOverlay extends Module {
             // we have to send an asynchronous message
             for (final CommMessage msg : messagesToSend) {
               final ErrorResponder errorResponder = msg.generateErrorResponder(outQueue_);
-              if (errorResponder.isQuickNonBlockingTask()) {
-                errorResponder.run();
-              } else {
-                new Thread(errorResponder).start();
-              }
+              errorResponder.handleError(new SendResult(msg));
             }
           }
         }

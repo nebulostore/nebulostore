@@ -148,7 +148,12 @@ public class SQLKeyValueStore<T> implements KeyValueStore<T> {
       throws IOException {
     startTransaction();
     try {
-      T oldVal = executeSelectKey(key);
+      T oldVal;
+      try {
+        oldVal = executeSelectKey(key);
+      } catch (IOException e) {
+        oldVal = null;
+      }
       T newVal = function.apply(oldVal);
       update(key, newVal);
       commitTransaction();

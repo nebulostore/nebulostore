@@ -115,7 +115,7 @@ public class MessageExchangeTestClient implements Callable<TestResult> {
     LOGGER.info("runTest -> send messages");
     for (CommAddress recipient: otherClients) {
       commFacade_.sendMessage(new PingPongMessage(localCommAddress_, recipient, Type.PING),
-          sendResults_, null);
+          sendResults_);
     }
 
     LOGGER.info("runTest -> aggregateSendConfirmations");

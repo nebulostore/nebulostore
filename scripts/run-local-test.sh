@@ -1,8 +1,8 @@
 #!/bin/bash
 
 SCRIPT_NAME=./_local-test.sh
-declare -a PEERS=(3 16 6 6 8 14 6 3 3 4)
-N_TESTS=10
+declare -a PEERS=(3 16 6 6 8 14 6 3 3 2 4)
+N_TESTS=11
 declare -a TITLES=(\
     'basic ping-pong test'\
     'ping-pong test'\
@@ -13,6 +13,7 @@ declare -a TITLES=(\
     'read-write time measure test'\
     'network monitor test'\
     'broker test'\
+    'rest test'\
     'asynchronous messages test'\
     )
 
@@ -33,7 +34,7 @@ else
 fi
 
 case $N in
-    0) for ((i=1; i<=8; ++i)); do echo "*** Test $i - ${TITLES[$((i-1))]}"; $0 $i; done;;
+    0) for ((i=1; i<=9; ++i)); do echo "*** Test $i - ${TITLES[$((i-1))]}"; $0 $i; done;;
     1) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
@@ -80,10 +81,15 @@ case $N in
            org.nebulostore.systest.broker.BrokerTestServer\
            ${PEERS[8]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
     10) $SCRIPT_NAME\
+           org.nebulostore.peers.Peer\
+           org.nebulostore.peers.PeerConfiguration\
+           org.nebulostore.systest.pingpong.PingPongServer\
+           ${PEERS[9]} 1;;
+    11) $SCRIPT_NAME\
            org.nebulostore.systest.async.AsyncTestingPeer\
            org.nebulostore.systest.async.AsyncTestingPeerConfiguration\
            org.nebulostore.systest.async.AsyncTestServer\
-           ${PEERS[9]} 1;;  
+           ${PEERS[10]} 1;;  
 esac
 EXIT_CODE=$?
 

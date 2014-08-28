@@ -2,6 +2,8 @@ package org.nebulostore.communication.routing;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -18,7 +20,6 @@ import org.apache.log4j.Logger;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.AddressNotPresentException;
 import org.nebulostore.communication.naming.CommAddressResolver;
-import org.nebulostore.communication.routing.errorresponder.ErrorResponder;
 
 public class MessageSenderAdapter implements MessageSender {
   private static final Logger LOGGER = Logger.getLogger(MessageSenderAdapter.class);
@@ -44,7 +45,7 @@ public class MessageSenderAdapter implements MessageSender {
    */
   @Override
   public MessageSendFuture sendMessage(CommMessage msg) {
-    return sendMessage(msg, (ErrorResponder) null);
+    return sendMessage(msg, null);
   }
 
   /**
@@ -59,27 +60,8 @@ public class MessageSenderAdapter implements MessageSender {
    */
   @Override
   public MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> results) {
-    return sendMessage(msg, results, null);
-  }
-
-  /**
-   * Send message over network and call error responder in case of an error.
-   *
-   * @param msg
-   * @param errorResponder
-   *          error responder run in case of an error
-   * @return {@link MessageSendFuture}
-   */
-  @Override
-  public MessageSendFuture sendMessage(CommMessage msg, ErrorResponder errorResponder) {
-    return sendMessage(msg, null, errorResponder);
-  }
-
-  @Override
-  public MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> results,
-      ErrorResponder errorResponder) {
     LOGGER.debug("sendMessage(" + msg + ")");
-    MessageSenderCallable sendTask = new MessageSenderCallable(msg, results, errorResponder);
+    MessageSenderCallable sendTask = new MessageSenderCallable(msg, results);
     executor_.submit(sendTask);
     return sendTask;
   }
@@ -112,24 +94,22 @@ public class MessageSenderAdapter implements MessageSender {
   /**
    * Simple runnable which handles sending CommMessage over network.
    */
-  private class MessageSenderCallable implements Callable<SendResult>, MessageSendFuture {
+  private class MessageSenderCallable extends Observable implements MessageSendFuture,
+      Callable<SendResult> {
     private final CommMessage commMsg_;
     private final BlockingQueue<SendResult> resultQueue_;
-    private final ErrorResponder errorResponder_;
     private SendResult result_;
 
     private final AtomicBoolean isCancelled_;
     private final AtomicBoolean isDone_;
 
     public MessageSenderCallable(CommMessage msg) {
-      this(msg, null, null);
+      this(msg, null);
     }
 
-    public MessageSenderCallable(CommMessage msg, BlockingQueue<SendResult> resultQueue,
-        ErrorResponder errorResponder) {
+    public MessageSenderCallable(CommMessage msg, BlockingQueue<SendResult> resultQueue) {
       commMsg_ = msg;
       resultQueue_ = resultQueue;
-      errorResponder_ = errorResponder;
 
       isCancelled_ = new AtomicBoolean(false);
       isDone_ = new AtomicBoolean(false);
@@ -216,25 +196,32 @@ public class MessageSenderAdapter implements MessageSender {
         if (resultQueue_ != null) {
           resultQueue_.add(result_);
         }
-        try {
-          result_.getResult();
-        } catch (IOException | AddressNotPresentException | InterruptedException e) {
-          if (errorResponder_ != null && errorResponder_.isQuickNonBlockingTask()) {
-            errorResponder_.run();
-          } else {
-            new Thread(errorResponder_).start();
-          }
-        }
       }
       synchronized (this) {
         isDone_.set(true);
         this.notifyAll();
+        notifyObservers();
       }
       return result_;
     }
 
     private byte[] serialize(CommMessage commMsg) {
       return SerializationUtils.serialize(commMsg);
+    }
+
+    @Override
+    public SendResult getResult() {
+      return result_;
+    }
+
+    @Override
+    public void addObserver(Observer o) {
+      synchronized (this) {
+        super.addObserver(o);
+        if (isDone_.get()) {
+          notifyObservers();
+        }
+      }
     }
   }
 }

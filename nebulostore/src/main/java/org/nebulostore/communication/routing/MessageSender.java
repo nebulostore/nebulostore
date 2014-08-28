@@ -5,7 +5,6 @@ import java.util.concurrent.BlockingQueue;
 
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.AddressNotPresentException;
-import org.nebulostore.communication.routing.errorresponder.ErrorResponder;
 
 /**
  * Sends given messages to intended recipients.
@@ -27,19 +26,6 @@ public interface MessageSender {
    * @return {@link MessageSendFuture}
    */
   MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> results);
-
-  /**
-   * Send message over network and run error responder in case of an error.
-   *
-   * @param msg
-   * @param results
-   *          queue to which send result of the operation.
-   * @return {@link MessageSendFuture}
-   */
-  MessageSendFuture sendMessage(CommMessage msg, ErrorResponder errorResponder);
-
-  MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> results,
-      ErrorResponder errorResponder);
 
   void sendMessageSynchronously(CommMessage msg) throws AddressNotPresentException,
       InterruptedException, IOException;

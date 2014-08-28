@@ -90,3 +90,19 @@ function concatIfNotEmpty() {
     fi
     echo "$1 $2"
 }
+
+function execInNewTerminalWindow() {
+    if [ -e /usr/bin/osascript ]; then
+        CURR_DIR=$(pwd)
+        escaped_cmd=${1//\"/\\\"}
+        echo $escaped_cmd
+        osascript <<EOF
+tell app "Terminal"
+   do script "cd $CURR_DIR; $escaped_cmd"
+   close
+end tell
+EOF
+    else
+        gnome-terminal -e "$1"
+    fi
+}
