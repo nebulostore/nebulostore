@@ -19,11 +19,12 @@
 #   -v comm_module_version
 #   -d [data_file]
 #   -f [config_patch_file]
+#   -r rest_api_port_default
 
 EXEC_DIR=$(pwd)
 cd $(dirname $0)
 
-while getopts ":p:c:t:n:m:i:b:d:h:v:f:" OPTION
+while getopts ":p:c:t:n:m:i:b:d:h:v:f:r:" OPTION
 do
   case $OPTION in
     p) PEERNAME=$OPTARG;;
@@ -38,6 +39,7 @@ do
     h) HOST_LIST=$OPTARG;;
     v) COMM_MODULE=$OPTARG;;
     f) CONFIG_TEMPLATE_PATCH=$OPTARG;;
+    r) REST_API_PORT_DEFAULT=$OPTARG;;
     # DEFAULT
     *)
        ARG=$(($OPTIND-1));
@@ -113,6 +115,13 @@ do
     fi
 
     PADDED=`printf "%03d" $i`
+
+    if [[ -z "$REST_API_PORT_DEFAULT" ]]; then
+        REST_API_PORT=14$PADDED
+    else
+        REST_API_PORT=$REST_API_PORT_DEFAULT
+    fi
+
     ../resources/conf/generate_config.py $COMMON_ARGS \
          --app-key=$i$i \
          --class-name=$PEERNAME \
@@ -134,7 +143,7 @@ do
          --systest/is-server=$IS_SERVER\
          --num-test-participants=$TEST_CLIENTS_NUM\
          --systest/data-file=$DATA_FILE \
-         --rest-api/server-config/port=14$PADDED\
+         --rest-api/server-config/port=$REST_API_PORT\
          --bdb-peer/holder-comm-address=00000000-0000-0000-0001-000000000000 < ../Peer.xml.base > ../Peer.xml.$i
 done
 

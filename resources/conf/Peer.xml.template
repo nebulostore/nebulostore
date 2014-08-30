@@ -217,7 +217,7 @@
     <rest-api>
         <enabled type="Boolean">false</enabled>
         <server-config>
-            <host>http://localhost</host>
+            <host>http://0.0.0.0</host>
             <port type="Integer">14000</port>
         </server-config>
     </rest-api>

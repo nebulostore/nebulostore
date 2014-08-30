@@ -4,6 +4,7 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 
 import org.nebulostore.broker.Broker;
+import org.nebulostore.broker.BrokerContext;
 import org.nebulostore.broker.ContractsEvaluator;
 import org.nebulostore.broker.ContractsSelectionAlgorithm;
 import org.nebulostore.broker.GreedyContractsSelection;
@@ -43,5 +44,6 @@ public class TestingPeerConfiguration extends PeerConfiguration {
     bind(Broker.class).to(ValuationBasedBrokerWithContextOpened.class).in(Scopes.SINGLETON);
     bind(ContractsSelectionAlgorithm.class).to(GreedyContractsSelection.class);
     bind(ContractsEvaluator.class).to(OnlySizeContractsEvaluator.class);
+    bind(BrokerContext.class).toInstance(new BrokerContext());
   }
 }

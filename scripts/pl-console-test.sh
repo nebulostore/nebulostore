@@ -42,7 +42,7 @@ if [ $? != 0 ]; then
     exit 1
 fi
 ./_generate-config-files.sh -p $PEERNAME -c $PEERCONF -t "ignored-for-console" -n $PEER_NUM\
-    -m 0 -i 0 -b $BOOTSTRAP_PEER -h $HOST_LIST
+    -m 0 -i 0 -b $BOOTSTRAP_PEER -h $HOST_LIST -r 14000
 
 
 echo "["`date +"%T"`"] COPYING ..."

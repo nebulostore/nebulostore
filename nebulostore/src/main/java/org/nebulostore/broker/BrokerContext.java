@@ -1,6 +1,7 @@
 package org.nebulostore.broker;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -143,7 +144,7 @@ public final class BrokerContext {
   public Map<CommAddress, List<Contract>> getContractList() {
     readLock_.lock();
     try {
-      return new TreeMap<CommAddress, List<Contract>>(contractMap_);
+      return Collections.unmodifiableMap(contractMap_);
     } finally {
       readLock_.unlock();
     }
