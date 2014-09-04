@@ -40,6 +40,8 @@ public class Peer extends AbstractPeer {
   protected AsyncMessagingModule asyncMessagingModule_;
   protected BlockingQueue<Message> dispatcherInQueue_;
   protected BlockingQueue<Message> networkInQueue_;
+  protected BlockingQueue<Message> commPeerInQueue_;
+  protected BlockingQueue<Message> commPeerOutQueue_;
 
   protected AppKey appKey_;
   protected Broker broker_;
@@ -58,6 +60,10 @@ public class Peer extends AbstractPeer {
   @Inject
   public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherInQueue,
                               @Named("NetworkQueue") BlockingQueue<Message> networkQueue,
+                              @Named("CommunicationPeerInQueue")
+                                BlockingQueue<Message> commPeerInQueue,
+                              @Named("CommunicationPeerOutQueue")
+                                BlockingQueue<Message> commPeerOutQueue,
                               Broker broker,
                               AppKey appKey,
                               CommAddress commAddress,
@@ -71,6 +77,8 @@ public class Peer extends AbstractPeer {
                               @Named("rest-api.enabled") boolean isRestEnabled) {
     dispatcherInQueue_ = dispatcherInQueue;
     networkInQueue_ = networkQueue;
+    commPeerInQueue_ = commPeerInQueue;
+    commPeerOutQueue_ = commPeerOutQueue;
     broker_ = broker;
     appKey_ = appKey;
     commAddress_ = commAddress;
@@ -85,7 +93,7 @@ public class Peer extends AbstractPeer {
     // Create core threads.
     Runnable dispatcher = new Dispatcher(dispatcherInQueue_, networkInQueue_, injector_);
     dispatcherThread_ = new Thread(dispatcher, "Dispatcher");
-    Runnable commPeer = commPeerFactory_.newCommunicationPeer(networkInQueue_, dispatcherInQueue_);
+    Runnable commPeer = commPeerFactory_.newCommunicationPeer(commPeerInQueue_, commPeerOutQueue_);
     networkThread_ = new Thread(commPeer, "CommunicationPeer");
     if (isRestEnabled_) {
       restThread_ = new Thread(restModule, "Rest Thread");
@@ -94,7 +102,7 @@ public class Peer extends AbstractPeer {
 
   public void quitNebuloStore() {
     if (networkInQueue_ != null) {
-      networkInQueue_.add(new EndModuleMessage());
+      commPeerInQueue_.add(new EndModuleMessage());
     }
     if (dispatcherInQueue_ != null) {
       dispatcherInQueue_.add(new EndModuleMessage());
@@ -176,7 +184,7 @@ public class Peer extends AbstractPeer {
   }
 
   protected void runAsyncMessaging() {
-    asyncMessagingModule_.startUp();
+    asyncMessagingModule_.runThroughDispatcher();
   }
 
   protected void startCoreThreads() {
