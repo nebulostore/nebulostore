@@ -145,14 +145,14 @@ public class PeerConfiguration extends GenericConfiguration {
     BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<Message>();
     BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<Message>();
 
-    bind(new TypeLiteral<BlockingQueue<Message>>() {
-    }).annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() {
-    }).annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(networkQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() {
-    }).annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() {
-    }).annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(networkQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
   }
 
   protected void configureRestModule() {

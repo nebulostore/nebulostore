@@ -23,7 +23,7 @@ import org.nebulostore.utils.Pair;
 /**
  * Response for GetAsynchronousDataMessage.
  *
- * @author szymonmatejczyk
+ * @author Piotr Malicki
  */
 public class RespondWithAsynchronousMessagesModule extends JobModule {
 

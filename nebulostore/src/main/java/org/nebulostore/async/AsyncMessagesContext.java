@@ -29,11 +29,10 @@ import org.nebulostore.utils.Pair;
 /**
  * Persistent data shared by parts of asynchronous messages module.
  *
- * @author szymon
  * @author Piotr Malicki
  *
  */
-public class AsyncMessagesContext {
+public final class AsyncMessagesContext {
 
   private static final Logger LOGGER = Logger.getLogger(AsyncMessagesContext.class);
   private static final Long REFRESH_TIME_MILIS = 5000L;
