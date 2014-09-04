@@ -31,7 +31,7 @@ fi
 
 # Build peers.
 echo "BUILDING ..."
-./_build-and-deploy.sh -p $PEER_NUM -m peer > /dev/null
+./_build-and-deploy.sh -p $PEER_NUM > build.log
 if [ $? != 0 ]; then
     echo "BUILD FAILED!"
     exit 1
