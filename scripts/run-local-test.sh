@@ -2,7 +2,7 @@
 
 SCRIPT_NAME=./_local-test.sh
 declare -a PEERS=(3 16 6 6 8 14 6 3 3 2)
-N_TESTS=10
+N_TESTS=${#PEERS[@]}
 declare -a TITLES=(\
     'basic ping-pong test'\
     'ping-pong test'\
@@ -33,7 +33,19 @@ else
 fi
 
 case $N in
-    0) for ((i=1; i<=9; ++i)); do echo "*** Test $i - ${TITLES[$((i-1))]}"; $0 $i; done;;
+    0) cd $EXEC_DIR
+       for ((i=1; i<=$N_TESTS; ++i))
+       do
+           echo "*** Test $i - ${TITLES[$((i-1))]}"
+           $0 $i
+           exit_code=$?
+           if [ "$exit_code" -ne 0 ]; then
+               echo "*** TEST $i FAILED; exiting;"
+               exit $exit_code
+           fi
+       done
+       cd $(dirname $0)
+       ;;
     1) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
