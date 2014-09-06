@@ -7,10 +7,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import javax.sql.DataSource;
+
 import com.google.common.base.Function;
+import org.h2.jdbcx.JdbcConnectionPool;
 
 public class SQLKeyValueStore<T> implements KeyValueStore<T> {
 
+  private static final String TABLE_NAME = "keyvaluestore";
   private final Function<T, byte[]> serializer_;
   private final Function<byte[], T> deserializer_;
   private Connection connection_;
@@ -31,6 +35,26 @@ public class SQLKeyValueStore<T> implements KeyValueStore<T> {
     }
   }
 
+  /**
+   * Use an in-memory H2 database.
+   */
+  public SQLKeyValueStore(Function<T, byte[]> serializer, Function<byte[], T> deserializer)
+      throws IOException {
+    canUpdateKeys_ = true;
+    serializer_ = serializer;
+    deserializer_ = deserializer;
+    try {
+      DataSource ds = JdbcConnectionPool.create("jdbc:h2:mem:test", "user", "password");
+      connection_ = ds.getConnection();
+      connection_.createStatement().execute("SET MODE PostgreSQL");
+      connection_.createStatement().execute("DROP ALL OBJECTS");
+      connection_.createStatement().execute(
+          "CREATE TABLE keyvaluestore (key_str VARCHAR(255) PRIMARY KEY, value BINARY )");
+    } catch (SQLException e) {
+      throw new IOException(e.getMessage());
+    }
+  }
+
   @Override
   public void put(String key, T value) throws IOException {
     T oldVal = get(key);
@@ -39,7 +63,7 @@ public class SQLKeyValueStore<T> implements KeyValueStore<T> {
     } else if (oldVal != null) {
       throw new IOException("Object with key " + key + " already exists in the database!");
     } else {
-      String sql = "INSERT INTO \"KeyValueStore\" (key_str, value) VALUES (?, ?)";
+      String sql = "INSERT INTO " + TABLE_NAME + " (key_str, value) VALUES (?, ?)";
       try {
         PreparedStatement preparedStatement = connection_.prepareStatement(sql);
         try {
@@ -56,8 +80,7 @@ public class SQLKeyValueStore<T> implements KeyValueStore<T> {
   }
 
   public T executeSelectKey(String key) throws IOException {
-    String sql = "SELECT value FROM \"KeyValueStore\" WHERE key_str = ? " +
-        "ORDER BY id DESC LIMIT 1 FOR UPDATE";
+    String sql = "SELECT value FROM " + TABLE_NAME + " WHERE key_str = ? ";
     try {
       PreparedStatement preparedStatement = connection_.prepareStatement(sql);
       try {
@@ -86,7 +109,7 @@ public class SQLKeyValueStore<T> implements KeyValueStore<T> {
 
   @Override
   public void delete(String key) throws IOException {
-    String sql = "DELETE FROM \"KeyValueStore\" WHERE key_str = ?";
+    String sql = "DELETE FROM " + TABLE_NAME + " WHERE key_str = ?";
     try {
       PreparedStatement preparedStatement = connection_.prepareStatement(sql);
       try {
@@ -128,7 +151,7 @@ public class SQLKeyValueStore<T> implements KeyValueStore<T> {
   }
 
   private void update(String key, T value) throws IOException {
-    String sql = "UPDATE \"KeyValueStore\" SET value = ? WHERE key_str = ?";
+    String sql = "UPDATE " + TABLE_NAME + " SET value = ? WHERE key_str = ?";
     try {
       PreparedStatement preparedStatement = connection_.prepareStatement(sql);
       try {
@@ -155,7 +178,7 @@ public class SQLKeyValueStore<T> implements KeyValueStore<T> {
         oldVal = null;
       }
       T newVal = function.apply(oldVal);
-      update(key, newVal);
+      put(key, newVal);
       commitTransaction();
     } catch (IOException e) {
       rollbackTransaction();
