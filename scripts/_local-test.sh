@@ -57,7 +57,7 @@ run_clients() {
     for ((i=2; i<=$PEER_NUM; i++))
     do
         cd $i
-        java -jar Nebulostore.jar &
+        java -jar Nebulostore.jar > logs/stdout.log 2> logs/stderr.log &
         cd ..
     done
 }
@@ -65,7 +65,7 @@ run_clients &
 
 EXIT_CODE=0
 cd 1
-java -jar Nebulostore.jar
+java -jar Nebulostore.jar > logs/stdout.log 2> logs/stderr.log
 if [ $? -ne 0 ]; then
   EXIT_CODE=1
 fi

@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
-
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
@@ -37,12 +36,13 @@ public class NetworkMonitorImpl extends NetworkMonitor {
    */
   private Provider<RandomPeersGossipingModule> randomPeersGossipingModuleProvider_;
 
-  private static final String CONFIGURAION_PREFIX = "networkmonitor.";
+  private static final String CONFIGURATION_PREFIX = "networkmonitor.";
 
   private final Set<CommAddress> knownPeers_ = new HashSet<CommAddress>();
   private final List<CommAddress> knownPeersVector_ = new Vector<CommAddress>();
 
-  private Set<CommAddress> randomPeersSample_ = new HashSet<CommAddress>();
+  private Set<CommAddress> randomPeersSample_ =
+      Collections.synchronizedSet(new HashSet<CommAddress>());
   private CommAddress commAddress_;
 
   protected BlockingQueue<Message> dispatcherQueue_;
@@ -62,7 +62,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
       CommAddress commAddress, Timer timer,
       Provider<RandomPeersGossipingModule> randomPeersGossipingModuleProvider,
       Provider<ConnectionTestMessageHandler> connectionTestMessageHandlerProvider,
-      @Named(CONFIGURAION_PREFIX + "statistics-update-interval-millis") long
+      @Named(CONFIGURATION_PREFIX + "statistics-update-interval-millis") long
         statisticsUpdateIntervalMillis) {
     dispatcherQueue_ = dispatcherQueue;
     commAddress_ = commAddress;
@@ -100,7 +100,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
   }
 
   @Override
-  public List<CommAddress> getKnownPeers() {
+  public synchronized List<CommAddress> getKnownPeers() {
     return new ArrayList<CommAddress>(knownPeersVector_);
   }
 
@@ -120,15 +120,15 @@ public class NetworkMonitorImpl extends NetworkMonitor {
   }
 
   @Override
-  public Set<CommAddress> getRandomPeersSample() {
+  public synchronized Set<CommAddress> getRandomPeersSample() {
     return randomPeersSample_;
   }
 
   @Override
-  public void setRandomPeersSample(Set<CommAddress> randomPeersSample) {
+  public synchronized void setRandomPeersSample(Set<CommAddress> randomPeersSample) {
     logger_.debug("Set random peers sample size: " + randomPeersSample.size() + " was: " +
         randomPeersSample_.size());
-    randomPeersSample_ = randomPeersSample;
+    randomPeersSample_ = Collections.synchronizedSet(randomPeersSample);
   }
 
   /**
