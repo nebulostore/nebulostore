@@ -8,12 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
@@ -37,6 +34,8 @@ public final class AsyncMessagesContext {
   private static final Logger LOGGER = Logger.getLogger(AsyncMessagesContext.class);
   private static final Long REFRESH_TIME_MILIS = 5000L;
   private static final int SET_UPDATE_TIMEOUT_MILIS = 1000;
+
+  private boolean initialized_;
 
   /**
    * Messages waiting to be retrieved by peers.
@@ -69,19 +68,6 @@ public final class AsyncMessagesContext {
 
   private CommAddress myAddress_;
 
-  private final ReadWriteLock inboxHoldersReadWriteLock_ = new ReentrantReadWriteLock();
-  private final Lock inboxHoldersReadLock_ = inboxHoldersReadWriteLock_.readLock();
-  private final Lock inboxHoldersWriteLock_ = inboxHoldersReadWriteLock_.writeLock();
-
-  private final ReadWriteLock messagesReadWriteLock_ = new ReentrantReadWriteLock();
-  private final Lock messagesReadLock_ = messagesReadWriteLock_.readLock();
-  private final Lock messagesWriteLock_ = messagesReadWriteLock_.writeLock();
-
-  /**
-   * JobId of jobs we are waiting for response from.
-   */
-  private final Map<String, Set<String>> waitingForMessages_ = new ConcurrentHashMap<>();
-
   private BlockingQueue<Message> dispatcherQueue_;
 
   @Inject
@@ -93,27 +79,50 @@ public final class AsyncMessagesContext {
 
   /**
    * Initializes inbox holders map with <myAddress_, empty set> as the only pair and clears
-   * recipient set. Use this method with inbox holders map write rights acquired.
+   * recipient set.
    */
-  public void initialize() {
+  public synchronized void initialize() {
     inboxHoldersMap_.clear();
     inboxHoldersMap_.put(myAddress_, new HashSet<CommAddress>());
     recipients_.clear();
+    initialized_ = true;
   }
 
   /**
-   * Returns synchro group of given peer. If the group is not in cache or is not fresh, it will be
-   * downloaded from DHT. Inbox holders write rights are needed when calling this method.
+   * Initializes context with given synchro peer set of the current instance and its recipient set.
+   *
+   * @param mySynchroPeers
+   * @param myRecipients
+   */
+  public synchronized void
+      initialize(Set<CommAddress> mySynchroPeers, Set<CommAddress> myRecipients) {
+    inboxHoldersMap_.put(myAddress_, Sets.newHashSet(mySynchroPeers));
+    recipients_.addAll(myRecipients);
+    initialized_ = true;
+  }
+
+  /**
+   * Returns boolean value indicating if context has been initialized.
+   *
+   * @return
+   */
+  public synchronized boolean isInitialized() {
+    return initialized_;
+  }
+
+  /**
+   * Returns a copy of given peer's synchro group. If the group is not in cache or is not fresh, it
+   * will be downloaded from DHT.
    *
    * @param peer
    *          Peer synchro group of which should be returned
    * @return synchro group of peer
    */
-  public Set<CommAddress> getSynchroGroupForPeer(CommAddress peer) {
+  public synchronized Set<CommAddress> getSynchroGroupForPeerCopy(CommAddress peer) {
     // TODO (pm) check if this method does not execute too long
     if (peer.equals(myAddress_)) {
       // Inbox holders set of the current instance is almost always up-to-date.
-      return inboxHoldersMap_.get(myAddress_);
+      return Sets.newHashSet(inboxHoldersMap_.get(myAddress_));
     }
     if (!inboxHoldersMap_.containsKey(peer) || !inboxHoldersTimestamps_.containsKey(peer) ||
         new Date().getTime() - inboxHoldersTimestamps_.get(peer) > REFRESH_TIME_MILIS) {
@@ -121,117 +130,133 @@ public final class AsyncMessagesContext {
           new SynchroPeerSetReturningJobModule(peer);
       dispatcherQueue_.add(new JobInitMessage(getSynchroPeerSetModule));
       try {
-        Set<CommAddress> synchroGroup = getSynchroPeerSetModule
-            .getResult(SET_UPDATE_TIMEOUT_MILIS);
-        inboxHoldersMap_.put(peer, synchroGroup);
-        inboxHoldersTimestamps_.put(peer, new Date().getTime());
-        return synchroGroup;
+        Set<CommAddress> synchroGroup = getSynchroPeerSetModule.getResult(SET_UPDATE_TIMEOUT_MILIS);
+        if (synchroGroup != null) {
+          inboxHoldersMap_.put(peer, synchroGroup);
+          inboxHoldersTimestamps_.put(peer, new Date().getTime());
+        }
+        return synchroGroup == null ? null : Sets.newHashSet(synchroGroup);
       } catch (NebuloException e) {
         LOGGER.warn("Exception while updating synchro peer set cache: " + e.getMessage());
         return null;
       }
     } else {
-      return inboxHoldersMap_.get(peer);
+      return Sets.newHashSet(inboxHoldersMap_.get(peer));
     }
   }
 
-  public void acquireInboxHoldersReadRights() {
-    inboxHoldersReadLock_.lock();
-    LOGGER.debug("Read rights for inbox holders map acquired.");
+  /**
+   * Check if peer is present in current instance's recipients set.
+   *
+   * @param peer
+   * @return
+   */
+  public synchronized boolean containsRecipient(CommAddress peer) {
+    return recipients_.contains(peer);
   }
 
-  public void freeInboxHoldersReadRights() {
-    inboxHoldersReadLock_.unlock();
-    LOGGER.debug("Read rights for inbox holders map freed.");
-  }
-
-  public void acquireInboxHoldersWriteRights() {
-    inboxHoldersWriteLock_.lock();
-    LOGGER.debug("Write rights for inbox holders map acquired.");
-
-  }
-
-  public void freeInboxHoldersWriteRights() {
-    inboxHoldersWriteLock_.unlock();
-    LOGGER.debug("Write rights for inbox holders map freed.");
+  public synchronized void addRecipient(CommAddress peer) {
+    recipients_.add(peer);
   }
 
   /**
-   * Get the set of recipients. You should have at least read lock for inbox holders
-   * acquired before calling this method.
+   * Add all synchro peers from the synchroPeers set to the set of synchro peers of current
+   * instance.
+   *
+   * @param synchroPeers
+   * @param peer
+   */
+  public synchronized void addAllSynchroPeers(Set<CommAddress> synchroPeers) {
+    inboxHoldersMap_.get(myAddress_).addAll(synchroPeers);
+  }
+
+  /**
+   * Get a copy of the set of recipients.
    *
    * @return set of recipients
    */
-  public Set<CommAddress> getRecipients() {
-    return recipients_;
+  public synchronized Set<CommAddress> getRecipientsCopy() {
+    return Sets.newHashSet(recipients_);
   }
 
   /**
-   * Add a message to the set of asynchronous messages for given peer. Write rights for messages are
-   * required when calling this method.
+   * Add a message to the set of asynchronous messages for given peer.
    *
    * @param recipient
    *          peer message of which will be added
    * @param message
    *          message to add
    */
-  public void addWaitingAsyncMessage(CommAddress recipient, AsynchronousMessage message) {
+  public synchronized void
+      addWaitingAsyncMessage(CommAddress recipient, AsynchronousMessage message) {
     if (waitingAsynchronousMessagesMap_.get(recipient) == null) {
       waitingAsynchronousMessagesMap_.put(recipient, new LinkedList<AsynchronousMessage>());
     }
     waitingAsynchronousMessagesMap_.get(recipient).add(message);
   }
 
-  public void acquireMessagesReadRights() {
-    messagesReadLock_.lock();
-  }
-
-  public void freeMessagesReadRights() {
-    messagesReadLock_.unlock();
-  }
-
-  public void acquireMessagesWriteRights() {
-    messagesWriteLock_.lock();
-  }
-
-  public void freeMessagesWriteRights() {
-    messagesWriteLock_.unlock();
-  }
-
   /**
-   * Get waiting messages map. This method assumes that read or write lock for messages is acquired.
+   * Check if addressPair is present in waitingForAck set. If it is not the case, method adds it to
+   * the set and returns false. Otherwise it returns true.
    *
-   * @return waiting messages map
+   * @param addressPair
+   * @return
    */
-  public Map<CommAddress, List<AsynchronousMessage>> getWaitingAsynchronousMessagesMap() {
-    return waitingAsynchronousMessagesMap_;
-  }
-
-  /**
-   * Get the whole set of peers from which we are waiting for ack message. Read or write rights are
-   * needed when calling this method.
-   *
-   * @return the whole set of peers from which we are waiting for ack message
-   */
-  public Set<Pair<CommAddress, CommAddress>> getWaitingForAck() {
-    return waitingForAck_;
-  }
-
-  /**
-   * Get job ids of modules from which we are waiting for messages and were started by the module
-   * with identifier jobId.
-   *
-   * @param jobId
-   *          Job Id of asking module
-   * @return set of job ids
-   */
-  public Set<String> getWaitingForMessages(String jobId) {
-    Set<String> waitingForMessages = waitingForMessages_.get(jobId);
-    if (waitingForMessages == null) {
-      waitingForMessages = new ConcurrentSkipListSet<>();
-      waitingForMessages_.put(jobId, waitingForMessages);
+  public synchronized boolean testAndAddWaitingForAck(Pair<CommAddress, CommAddress> addressPair) {
+    if (!waitingForAck_.contains(addressPair)) {
+      waitingForAck_.add(addressPair);
+      return false;
     }
-    return waitingForMessages;
+
+    return true;
+  }
+
+  /**
+   * Get a copy of list of waiting asynchronous messages for peer.
+   *
+   * @param peer
+   * @return
+   */
+  public synchronized List<AsynchronousMessage> getMessagesForPeerListCopy(CommAddress peer) {
+    List<AsynchronousMessage> result = waitingAsynchronousMessagesMap_.get(peer);
+    if (result == null) {
+      return Lists.newLinkedList();
+    }
+    return Lists.newLinkedList(result);
+  }
+
+  /**
+   * Remove given entry from the set of entries waiting for ack. Returns true if entry was present
+   * in this set.
+   *
+   * @param entry
+   * @return
+   */
+  public synchronized boolean removeAckWaitingEntry(Pair<CommAddress, CommAddress> entry) {
+    return waitingForAck_.remove(entry);
+  }
+
+  /**
+   * Remove all asynchronous messages sent for given peer. Returns a list of all removed messages.
+   *
+   * @param peer
+   * @return
+   */
+  public synchronized List<AsynchronousMessage> removeWaitingMessagesForPeer(CommAddress peer) {
+    return waitingAsynchronousMessagesMap_.remove(peer);
+  }
+
+  /**
+   * Store message in the set of asynchronous messages of given peer.
+   *
+   * @param peer
+   * @param message
+   */
+  public synchronized void storeAsynchronousMessage(CommAddress peer, AsynchronousMessage message) {
+    if (!waitingAsynchronousMessagesMap_.containsKey(peer)) {
+      waitingAsynchronousMessagesMap_.put(peer, new LinkedList<AsynchronousMessage>());
+    }
+    waitingAsynchronousMessagesMap_.get(peer).add(message);
   }
 
 }

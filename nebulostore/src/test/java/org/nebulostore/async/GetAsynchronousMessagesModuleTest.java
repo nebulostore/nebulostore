@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.async.messages.AsynchronousMessagesMessage;
@@ -14,15 +17,26 @@ import org.nebulostore.async.messages.GotAsynchronousMessagesMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.JobEndedMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.timer.Timer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Simple unit test for GetAsynchronousMessagesModule.
+ *
  * @author szymonmatejczyk
  */
 public final class GetAsynchronousMessagesModuleTest {
+
+  @Mock
+  private Timer timer_;
+
+  @Before
+  public void beforeTests() {
+    MockitoAnnotations.initMocks(this);
+  }
 
   @Test
   public void testSimple() {
@@ -31,11 +45,11 @@ public final class GetAsynchronousMessagesModuleTest {
     BlockingQueue<Message> outQueue = new LinkedBlockingQueue<Message>();
 
     CommAddress synchroPeerAddress = CommAddress.getZero();
-
     GetAsynchronousMessagesModule module = new GetAsynchronousMessagesModule(networkQueue,
         outQueue, synchroPeerAddress, CommAddress.getZero());
     module.setInQueue(inQueue);
     module.setOutQueue(outQueue);
+    module.setDependencies(CommAddress.getZero(), timer_);
 
     new Thread(module).start();
     module.runThroughDispatcher();
@@ -45,19 +59,19 @@ public final class GetAsynchronousMessagesModuleTest {
     try {
       msg = outQueue.take();
     } catch (InterruptedException exception) {
-      assert false;
+      fail();
       return;
     }
     assertTrue(msg instanceof JobInitMessage);
 
     String jobId = ((JobInitMessage) msg).getId();
-
     inQueue.add(msg);
+
 
     try {
       msg = networkQueue.take();
     } catch (InterruptedException exception) {
-      assert false;
+      fail();
       return;
     }
 
@@ -75,7 +89,7 @@ public final class GetAsynchronousMessagesModuleTest {
     try {
       msg = networkQueue.take();
     } catch (InterruptedException exception) {
-      assert false;
+      fail();
       return;
     }
 
@@ -85,7 +99,7 @@ public final class GetAsynchronousMessagesModuleTest {
     try {
       msg = outQueue.take();
     } catch (InterruptedException exception) {
-      assert false;
+      fail();
       return;
     }
 
@@ -97,12 +111,11 @@ public final class GetAsynchronousMessagesModuleTest {
     try {
       msg = outQueue.take();
     } catch (InterruptedException exception) {
-      assert false;
+      fail();
       return;
     }
 
     assertTrue(msg instanceof JobEndedMessage);
     assertEquals(((JobEndedMessage) msg).getId(), jobId);
   }
-
 }

@@ -1,7 +1,5 @@
 package org.nebulostore.async;
 
-import java.util.LinkedList;
-
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
@@ -9,7 +7,6 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.async.messages.StoreAsynchronousMessage;
 
 /**
@@ -43,21 +40,17 @@ public class StoreAsynchronousMessagesModule extends JobModule {
    */
   protected class SAMVisitor extends MessageVisitor<Void> {
     public Void visit(StoreAsynchronousMessage message) {
-      context_.acquireInboxHoldersReadRights();
-      if (context_.getRecipients().contains(message.getRecipient())) {
-        context_.acquireMessagesWriteRights();
-        if (!context_.getWaitingAsynchronousMessagesMap().containsKey(message.getRecipient())) {
-          context_.getWaitingAsynchronousMessagesMap().put(message.getRecipient(),
-              new LinkedList<AsynchronousMessage>());
+      if (context_.isInitialized()) {
+        if (context_.containsRecipient(message.getRecipient())) {
+          context_.storeAsynchronousMessage(message.getRecipient(), message.getMessage());
+        } else {
+          logger_.warn("Received message to store for synchro-peer, but current instance is not" +
+              " included in its synchro-group.");
         }
-        context_.getWaitingAsynchronousMessagesMap().get(message.getRecipient()).
-            add(message.getMessage());
-        context_.freeMessagesWriteRights();
       } else {
-        logger_.warn("Received message to store for synchro-peer, but current instance is not" +
-            " included in its synchro-group.");
+        logger_.warn("Async messages context has not yet been initialized, ending the module");
+        endJobModule();
       }
-      context_.freeInboxHoldersReadRights();
       return null;
     }
   }

@@ -14,8 +14,8 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.JobInitMessage;
 
 /**
- * Module that synchronizes asynchronous messages with other synchro-peers from each
- * synchro-peer group.
+ * Module that synchronizes asynchronous messages with other synchro-peers from each synchro-peer
+ * group.
  *
  * @author Piotr Malicki
  *
@@ -44,24 +44,24 @@ public class SynchronizeAsynchronousMessagesModule extends JobModule {
 
     public Void visit(JobInitMessage msg) {
       LOGGER.info("Starting synchronization of asynchronous messages.");
-      jobId_ = msg.getId();
-      context_.acquireInboxHoldersReadRights();
+      if (context_.isInitialized()) {
+        jobId_ = msg.getId();
+        outQueue_.add(new JobInitMessage(new RetrieveAsynchronousMessagesModule(context_
+            .getSynchroGroupForPeerCopy(myAddress_), myAddress_)));
 
-      LOGGER.debug("Our context in synchronization: " +
-          context_.getSynchroGroupForPeer(myAddress_));
-      outQueue_.add(new JobInitMessage(new RetrieveAsynchronousMessagesModule(Sets
-          .newHashSet(context_.getSynchroGroupForPeer(myAddress_)), myAddress_)));
-
-      for (final CommAddress peer : context_.getRecipients()) {
-        Set<CommAddress> synchroGroup = context_.getSynchroGroupForPeer(peer);
-        if (synchroGroup == null) {
-          LOGGER.warn("Cannot get synchro group of peer " + peer + " from cache and DHT");
-        } else {
-          outQueue_.add(new JobInitMessage(new RetrieveAsynchronousMessagesModule(Sets
-              .newHashSet(synchroGroup), peer)));
+        for (final CommAddress peer : context_.getRecipientsCopy()) {
+          Set<CommAddress> synchroGroup = context_.getSynchroGroupForPeerCopy(peer);
+          if (synchroGroup == null) {
+            LOGGER.warn("Cannot get synchro group of peer " + peer + " from cache and DHT");
+          } else {
+            outQueue_.add(new JobInitMessage(new RetrieveAsynchronousMessagesModule(Sets
+                .newHashSet(synchroGroup), peer)));
+          }
         }
+      } else {
+        LOGGER.warn("Async messages context has not yet been initialized, ending the module");
+        endJobModule();
       }
-      context_.freeInboxHoldersReadRights();
       return null;
     }
   }

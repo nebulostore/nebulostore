@@ -101,11 +101,6 @@ public class AsyncMessagingModule extends JobModule {
 
       startSynchronizationService();
 
-      /*
-       * TODO (pm) Make sure that this module will be first to acquire write rights for inbox
-       * holders map
-       */
-      context_.acquireInboxHoldersWriteRights();
       networkQueue_.add(new GetDHTMessage(jobId_, myAddress_.toKeyDHT()));
       return null;
     }
@@ -115,9 +110,9 @@ public class AsyncMessagingModule extends JobModule {
           message.getKey().equals(myAddress_.toKeyDHT())) {
         if (message.getValue().getValue() instanceof InstanceMetadata) {
           InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
-          context_.getSynchroGroupForPeer(myAddress_).addAll(metadata.getSynchroGroup());
-          context_.getRecipients().addAll(metadata.getRecipients());
-          context_.freeInboxHoldersWriteRights();
+          LOGGER.debug("Received InstanceMetadata with synchro-set: " + metadata.getSynchroGroup() +
+              " and recipients: " + metadata.getRecipients());
+          context_.initialize(metadata.getSynchroGroup(), metadata.getRecipients());
           state_ = ModuleState.RUNNING;
         } else {
           LOGGER.warn("Received wrong type of message from DHT");
@@ -132,7 +127,6 @@ public class AsyncMessagingModule extends JobModule {
       // no instance metadata in DHT, create empty context
       if (state_.equals(ModuleState.INITIALIZING)) {
         context_.initialize();
-        context_.freeInboxHoldersWriteRights();
         state_ = ModuleState.RUNNING;
       } else {
         LOGGER.warn("Received " + message.getClass() + " that was not expected");

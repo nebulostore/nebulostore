@@ -83,16 +83,21 @@ public class ChangeSynchroPeerSetModule extends JobModule {
     public Void visit(JobInitMessage message) {
       logger_.info("Starting ChangeSynchroPeerSetModule module with synchro-peers to add: " +
           synchroPeersToAdd_ + "and synchro-peers to remove: " + synchroPeersToRemove_);
-      jobId_ = message.getId();
-      if (synchroPeersToAdd_ != null) {
-        for (CommAddress synchroPeer : synchroPeersToAdd_) {
-          networkQueue_.add(new AddAsSynchroPeerMessage(jobId_, myAddress_, synchroPeer));
+      if (context_.isInitialized()) {
+        jobId_ = message.getId();
+        if (synchroPeersToAdd_ != null) {
+          for (CommAddress synchroPeer : synchroPeersToAdd_) {
+            networkQueue_.add(new AddAsSynchroPeerMessage(jobId_, myAddress_, synchroPeer));
+          }
         }
+
+        // TODO (pm) remove peers from synchroPeersToRemove_
+
+        timer_.schedule(jobId_, TIME_LIMIT);
+      } else {
+        logger_.warn("Async messages context has not yet been initialized, ending the module");
+        endJobModule();
       }
-
-      //TODO (pm) remove peers from synchroPeersToRemove_
-
-      timer_.schedule(jobId_, TIME_LIMIT);
       return null;
     }
 
@@ -123,9 +128,7 @@ public class ChangeSynchroPeerSetModule extends JobModule {
     }
 
     public Void visit(OkDHTMessage message) {
-      context_.acquireInboxHoldersWriteRights();
-      context_.getSynchroGroupForPeer(myAddress_).addAll(addedPeers_);
-      context_.freeInboxHoldersWriteRights();
+      context_.addAllSynchroPeers(addedPeers_);
       endJobModule();
       return null;
     }

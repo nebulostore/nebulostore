@@ -1,5 +1,6 @@
 package org.nebulostore.async;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -28,7 +29,6 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
 
   private CommAddress myAddress_;
   private Timer timer_;
-  private AsyncMessagesContext context_;
 
   private final Set<CommAddress> synchroGroup_;
   private final CommAddress synchroGroupOwner_;
@@ -40,10 +40,9 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
   }
 
   @Inject
-  public void setDependencies(CommAddress address, Timer timer, AsyncMessagesContext context) {
+  public void setDependencies(CommAddress address, Timer timer) {
     timer_ = timer;
     myAddress_ = address;
-    context_ = context;
   }
 
   @Override
@@ -51,36 +50,41 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
     message.accept(visitor_);
   }
 
-  private final RADVisitor visitor_ = new RADVisitor();
+  private final RAMVisitor visitor_ = new RAMVisitor();
 
   /**
    * Visitor.
    *
    * @author szymonmatejczyk
    */
-  protected class RADVisitor extends MessageVisitor<Void> {
+  protected class RAMVisitor extends MessageVisitor<Void> {
+
+    private final Set<String> waitingForMessages_ = new HashSet<>();
+
     public Void visit(JobInitMessage message) {
       timer_.schedule(jobId_, INSTANCE_TIMEOUT);
       for (CommAddress inboxHolder : synchroGroup_) {
         if (!inboxHolder.equals(myAddress_)) {
-          GetAsynchronousMessagesModule messagesModule = new GetAsynchronousMessagesModule(
-              networkQueue_, inQueue_, inboxHolder, synchroGroupOwner_);
+          GetAsynchronousMessagesModule messagesModule =
+              new GetAsynchronousMessagesModule(networkQueue_, inQueue_, inboxHolder,
+                  synchroGroupOwner_);
           JobInitMessage initializingMessage = new JobInitMessage(messagesModule);
-          context_.getWaitingForMessages(jobId_).add(initializingMessage.getId());
+          waitingForMessages_.add(initializingMessage.getId());
           outQueue_.add(initializingMessage);
         }
       }
-      if (synchroGroup_.size() == 0) {
+
+      if (waitingForMessages_.isEmpty()) {
         endJobModule();
       }
       return null;
     }
 
     public Void visit(AsynchronousMessagesMessage message) {
-      if (!context_.getWaitingForMessages(jobId_).remove(message.getId())) {
+      if (!waitingForMessages_.remove(message.getId())) {
         logger_.warn("Received a message that was not expected.");
+        return null;
       }
-
 
       if (message.getMessages() == null) {
         logger_.debug("Empty AMM received.");
@@ -89,18 +93,18 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
           outQueue_.add(msg);
         }
       } else {
-        //TODO (pm) Store new asynchronous messages for other peers
+        // TODO (pm) Store new asynchronous messages for other peers
         hashCode();
       }
 
-      if (context_.getWaitingForMessages(jobId_).isEmpty()) {
+      if (waitingForMessages_.isEmpty()) {
         endJobModule();
       }
       return null;
     }
 
     public Void visit(TimeoutMessage message) {
-      logger_.warn("Timeout in RetrieveAsynchronousDataModule.");
+      logger_.warn("Timeout in RetrieveAsynchronousMessagesModule.");
       endJobModule();
       return null;
     }

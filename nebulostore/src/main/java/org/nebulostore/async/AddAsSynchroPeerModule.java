@@ -44,26 +44,28 @@ public class AddAsSynchroPeerModule extends JobModule {
   protected class AddAsSynchroPeerVisitor extends MessageVisitor<Void> {
 
     public Void visit(AddAsSynchroPeerMessage message) {
+      if (context_.isInitialized()) {
       messageJobId_ = message.getId();
       recipient_ = message.getSourceAddress();
       InstanceMetadata metadata = new InstanceMetadata(appKey_);
       metadata.getRecipients().add(message.getSourceAddress());
       networkQueue_.add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(metadata)));
+      } else {
+        logger_.warn("Async messages context has not yet been initialized, ending the module");
+        endJobModule();
+      }
       return null;
     }
 
     public Void visit(OkDHTMessage message) {
+      context_.addRecipient(recipient_);
       networkQueue_.add(new AddedAsSynchroPeerMessage(messageJobId_, myAddress_, recipient_));
-      context_.acquireInboxHoldersWriteRights();
-      context_.getRecipients().add(recipient_);
-      context_.freeInboxHoldersWriteRights();
       endJobModule();
       return null;
     }
 
     public Void visit(ErrorDHTMessage message) {
-      logger_
-          .warn("Adding current instance as a synchro-peer of peer " + recipient_ + " failed.");
+      logger_.warn("Adding current instance as a synchro-peer of peer " + recipient_ + " failed.");
       return null;
     }
   }

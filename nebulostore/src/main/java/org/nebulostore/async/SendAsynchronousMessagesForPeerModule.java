@@ -22,6 +22,7 @@ import org.nebulostore.dispatcher.JobInitMessage;
  * Sends asynchronous message to all peers' synchro-peers.
  *
  * We give no guarantee on asynchronous messages.
+ *
  * @author szymonmatejczyk
  *
  */
@@ -33,8 +34,8 @@ public class SendAsynchronousMessagesForPeerModule extends JobModule {
   private CommAddress myAddress_;
   private AsyncMessagesContext context_;
 
-  public SendAsynchronousMessagesForPeerModule(CommAddress recipient,
-      AsynchronousMessage message, BlockingQueue<Message> dispatcherQueue) {
+  public SendAsynchronousMessagesForPeerModule(CommAddress recipient, AsynchronousMessage message,
+      BlockingQueue<Message> dispatcherQueue) {
     recipient_ = recipient;
     message_ = message;
     outQueue_ = dispatcherQueue;
@@ -59,8 +60,13 @@ public class SendAsynchronousMessagesForPeerModule extends JobModule {
    */
   public class SendAsynchronousMessagesForPeerModuleVisitor extends MessageVisitor<Void> {
     public Void visit(JobInitMessage message) {
-      jobId_ = message.getId();
-      networkQueue_.add(new GetDHTMessage(jobId_, recipient_.toKeyDHT()));
+      if (context_.isInitialized()) {
+        jobId_ = message.getId();
+        networkQueue_.add(new GetDHTMessage(jobId_, recipient_.toKeyDHT()));
+      } else {
+        logger_.warn("Async messages context has not yet been initialized, ending the module");
+        endJobModule();
+      }
       return null;
     }
 
@@ -70,12 +76,10 @@ public class SendAsynchronousMessagesForPeerModule extends JobModule {
         InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
         for (CommAddress inboxHolder : metadata.getSynchroGroup()) {
           if (inboxHolder.equals(myAddress_)) {
-            context_.acquireMessagesWriteRights();
             context_.addWaitingAsyncMessage(recipient_, message_);
-            context_.freeMessagesWriteRights();
           } else if (!inboxHolder.equals(recipient_)) {
-            networkQueue_.add(new StoreAsynchronousMessage(jobId_, null, inboxHolder,
-              recipient_, message_));
+            networkQueue_.add(new StoreAsynchronousMessage(jobId_, null, inboxHolder, recipient_,
+                message_));
           }
         }
       }
