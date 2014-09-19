@@ -2,6 +2,8 @@ package org.nebulostore.communication.routing;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -73,6 +75,7 @@ public class MessageSenderAdapter implements MessageSender {
     result.getResult();
   }
 
+  @Override
   public void startUp() {
   }
 
@@ -81,6 +84,7 @@ public class MessageSenderAdapter implements MessageSender {
    *
    * @throws InterruptedException
    */
+  @Override
   public void shutDown() throws InterruptedException {
     executor_.shutdown();
     executor_.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -90,7 +94,8 @@ public class MessageSenderAdapter implements MessageSender {
   /**
    * Simple runnable which handles sending CommMessage over network.
    */
-  private class MessageSenderCallable implements Callable<SendResult>, MessageSendFuture {
+  private class MessageSenderCallable extends Observable implements MessageSendFuture,
+      Callable<SendResult> {
     private final CommMessage commMsg_;
     private final BlockingQueue<SendResult> resultQueue_;
     private SendResult result_;
@@ -195,12 +200,28 @@ public class MessageSenderAdapter implements MessageSender {
       synchronized (this) {
         isDone_.set(true);
         this.notifyAll();
+        notifyObservers();
       }
       return result_;
     }
 
     private byte[] serialize(CommMessage commMsg) {
       return SerializationUtils.serialize(commMsg);
+    }
+
+    @Override
+    public SendResult getResult() {
+      return result_;
+    }
+
+    @Override
+    public void addObserver(Observer o) {
+      synchronized (this) {
+        super.addObserver(o);
+        if (isDone_.get()) {
+          notifyObservers();
+        }
+      }
     }
   }
 }

@@ -1,7 +1,5 @@
 package org.nebulostore.appcore;
 
-import java.util.LinkedList;
-
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
@@ -19,8 +17,9 @@ import org.nebulostore.dht.messages.PutDHTMessage;
 import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 
+
 /**
- * Module checks if InstaceMetadata is already in DHT. If not tries to load it from disk(todo) and
+ * Module checks if InstanceMetadata is already in DHT. If not tries to load it from disk(todo) and
  * if it's not there, puts empty InstanceMetadata in DHT.
  *
  * Return true if new InstanceMetada was put into DHT and false if it already was there.
@@ -74,12 +73,13 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
       if (state_ == State.WAITING_FOR_RESPONSE) {
         logger_.debug("Unable to retrive InstanceMetadata from DHT, putting new.");
         // TODO(szm): read from file if exists
-        networkQueue_.add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(
-            new InstanceMetadata(appKey_, myAddress_, new LinkedList<CommAddress>()))));
+        networkQueue_
+          .add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(new InstanceMetadata(
+            appKey_))));
         state_ = State.PUT_DHT;
       } else if (state_ == State.PUT_DHT) {
         logger_.error("Unable to put InstanceMetadata to DHT. " +
-            message.getException().getMessage());
+          message.getException().getMessage());
         endWithError(message.getException());
       } else {
         logger_.warn("Received unexpected ErrorDHTMessage.");

@@ -20,7 +20,7 @@ public abstract class MessageVisitor<R> {
 
   /* Common action for all messages that are not handled. */
   protected R visitDefault(Message message) throws NebuloException {
-    throw new UnsupportedMessageException(message.getClass().getName());
+    throw new UnsupportedMessageException(message.getClass().getName() + " in " + getClass());
   }
 
   public R visit(Object message) throws NebuloException {
@@ -48,7 +48,7 @@ public abstract class MessageVisitor<R> {
       }
       return visitDefault((Message) message);
     } else {
-      throw new UnsupportedMessageException(message.getClass().getName());
+      throw new UnsupportedMessageException(message.getClass().getName() + " in " + getClass());
     }
   }
 }

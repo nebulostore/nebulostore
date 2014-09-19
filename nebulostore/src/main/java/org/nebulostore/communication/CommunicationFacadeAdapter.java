@@ -62,17 +62,17 @@ public class CommunicationFacadeAdapter extends Module {
   private final CommMessageListener msgListener_ = new CommMessageListener();
   private final CommMessageMatcher msgMatcher_ = new CommMessageMatcher();
 
-
-  //TODO change bdb
+  // TODO change bdb
   /**
    * DHT module available to higher layers.
    *
-   * Note that it was implemented by Marcin and I(grzegorzmilka) left it mostly
-   * as is. Only BDB works.
+   * Note that it was implemented by Marcin and I(grzegorzmilka) left it mostly as is. Only BDB
+   * works.
    */
   private Module dhtPeer_;
   private final BlockingQueue<Message> dhtPeerInQueue_;
   private Thread dhtPeerThread_;
+  private final BlockingQueue<Message> dispatcherQueue_;
 
   @AssistedInject
   public CommunicationFacadeAdapter(
@@ -81,7 +81,8 @@ public class CommunicationFacadeAdapter extends Module {
       CommunicationFacade commFacade,
       @Named("communication.local-comm-address") CommAddress localCommAddress,
       @Named("communication.main-executor") ExecutorService executor,
-      ReplicaResolverFactory replicaResolverFactory) {
+      ReplicaResolverFactory replicaResolverFactory,
+      @Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue) {
 
     super(inQueue, outQueue);
     commFacade_ = commFacade;
@@ -95,6 +96,8 @@ public class CommunicationFacadeAdapter extends Module {
     localCommAddress_ = localCommAddress;
     contractMapFactory_ = replicaResolverFactory;
     executor_ = executor;
+
+    dispatcherQueue_ = dispatcherQueue;
 
     dhtPeerInQueue_ = new LinkedBlockingQueue<Message>();
   }
@@ -155,7 +158,7 @@ public class CommunicationFacadeAdapter extends Module {
     dhtPeerInQueue_.add(new EndModuleMessage());
   }
 
-/**
+  /**
    * Message Visitor for {@link CommunicationFacadeAdapter}.
    *
    * @author Grzegorz Milka
@@ -169,8 +172,9 @@ public class CommunicationFacadeAdapter extends Module {
 
     public Void visit(ReconfigureDHTMessage msg) {
       LOGGER.warn("Got reconfigure request with jobId: " + msg.getId());
-      /*reconfigureDHT(((ReconfigureDHTMessage) msg).getProvider(),
-          (ReconfigureDHTMessage) msg);*/
+      /*
+       * reconfigureDHT(((ReconfigureDHTMessage) msg).getProvider(), (ReconfigureDHTMessage) msg);
+       */
       return null;
     }
 
@@ -188,10 +192,11 @@ public class CommunicationFacadeAdapter extends Module {
     }
 
     public Void visit(CommMessage msg) {
-      if (((CommMessage) msg).getDestinationAddress() == null) {
+      if (msg.getDestinationAddress() == null) {
         LOGGER.warn("Null destination address set for " + msg + ". Dropping the message.");
       } else {
-        commFacade_.sendMessage(msg, sendResults_);
+        commFacade_.sendMessage(msg, sendResults_).addObserver(
+            msg.generateErrorResponder(dispatcherQueue_));
       }
       return null;
     }

@@ -38,7 +38,7 @@ public class StoreAsynchronousMessage extends CommMessage {
   }
 
   @Override
-  public JobModule getHandler() throws NebuloException {
+  public JobModule getHandler() {
     return new StoreAsynchronousMessagesModule();
   }
 }

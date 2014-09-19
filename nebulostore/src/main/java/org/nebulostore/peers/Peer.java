@@ -15,16 +15,13 @@ import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.modules.EndModuleMessage;
-import org.nebulostore.async.AddSynchroPeerModule;
-import org.nebulostore.async.RetrieveAsynchronousMessagesModule;
+import org.nebulostore.async.AsyncMessagingModule;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.communication.CommunicationPeerFactory;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.Dispatcher;
-import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.rest.RestModuleImpl;
-import org.nebulostore.timer.MessageGenerator;
 import org.nebulostore.timer.Timer;
 
 /**
@@ -40,8 +37,11 @@ public class Peer extends AbstractPeer {
 
   protected Thread dispatcherThread_;
   protected Thread networkThread_;
+  protected AsyncMessagingModule asyncMessagingModule_;
   protected BlockingQueue<Message> dispatcherInQueue_;
   protected BlockingQueue<Message> networkInQueue_;
+  protected BlockingQueue<Message> commPeerInQueue_;
+  protected BlockingQueue<Message> commPeerOutQueue_;
 
   protected AppKey appKey_;
   protected Broker broker_;
@@ -58,8 +58,12 @@ public class Peer extends AbstractPeer {
   private boolean isRestEnabled_;
 
   @Inject
-  public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
+  public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherInQueue,
                               @Named("NetworkQueue") BlockingQueue<Message> networkQueue,
+                              @Named("CommunicationPeerInQueue")
+                                BlockingQueue<Message> commPeerInQueue,
+                              @Named("CommunicationPeerOutQueue")
+                                BlockingQueue<Message> commPeerOutQueue,
                               Broker broker,
                               AppKey appKey,
                               CommAddress commAddress,
@@ -68,10 +72,13 @@ public class Peer extends AbstractPeer {
                               NetworkMonitor networkMonitor,
                               Injector injector,
                               @Named("peer.registration-timeout") int registrationTimeout,
+                              AsyncMessagingModule asyncMessagingModule,
                               RestModuleImpl restModule,
                               @Named("rest-api.enabled") boolean isRestEnabled) {
-    dispatcherInQueue_ = dispatcherQueue;
+    dispatcherInQueue_ = dispatcherInQueue;
     networkInQueue_ = networkQueue;
+    commPeerInQueue_ = commPeerInQueue;
+    commPeerOutQueue_ = commPeerOutQueue;
     broker_ = broker;
     appKey_ = appKey;
     commAddress_ = commAddress;
@@ -80,12 +87,13 @@ public class Peer extends AbstractPeer {
     networkMonitor_ = networkMonitor;
     injector_ = injector;
     registrationTimeout_ = registrationTimeout;
+    asyncMessagingModule_ = asyncMessagingModule;
     isRestEnabled_ = isRestEnabled;
 
     // Create core threads.
     Runnable dispatcher = new Dispatcher(dispatcherInQueue_, networkInQueue_, injector_);
     dispatcherThread_ = new Thread(dispatcher, "Dispatcher");
-    Runnable commPeer = commPeerFactory_.newCommunicationPeer(networkInQueue_, dispatcherInQueue_);
+    Runnable commPeer = commPeerFactory_.newCommunicationPeer(commPeerInQueue_, commPeerOutQueue_);
     networkThread_ = new Thread(commPeer, "CommunicationPeer");
     if (isRestEnabled_) {
       restThread_ = new Thread(restModule, "Rest Thread");
@@ -94,7 +102,7 @@ public class Peer extends AbstractPeer {
 
   public void quitNebuloStore() {
     if (networkInQueue_ != null) {
-      networkInQueue_.add(new EndModuleMessage());
+      commPeerInQueue_.add(new EndModuleMessage());
     }
     if (dispatcherInQueue_ != null) {
       dispatcherInQueue_.add(new EndModuleMessage());
@@ -176,18 +184,7 @@ public class Peer extends AbstractPeer {
   }
 
   protected void runAsyncMessaging() {
-    // Periodically checking asynchronous messages starting from now.
-    peerTimer_.scheduleRepeatedJob(injector_.getProvider(RetrieveAsynchronousMessagesModule.class),
-        0L, RetrieveAsynchronousMessagesModule.EXECUTION_PERIOD);
-
-    // Add found peer to synchro peers.
-    MessageGenerator addFoundSynchroPeer = new MessageGenerator() {
-      @Override
-      public Message generate() {
-        return new JobInitMessage(new AddSynchroPeerModule());
-      }
-    };
-    networkMonitor_.addContextChangeMessageGenerator(addFoundSynchroPeer);
+    asyncMessagingModule_.runThroughDispatcher();
   }
 
   protected void startCoreThreads() {

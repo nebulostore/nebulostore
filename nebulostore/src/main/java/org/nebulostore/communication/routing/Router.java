@@ -97,9 +97,10 @@ public class Router implements Runnable {
    * @see MessageSender
    *
    * @param msg
-   * @param resultQueue queue to which add result
+   * @param resultQueue
+   *          queue to which add result
    * @return Future which on failure may throw {@link AddressNotPresentException},
-   *  {@code InterruptedException} and {@code IOException}.
+   *         {@code InterruptedException} and {@code IOException}.
    */
   public MessageSendFuture sendMessage(CommMessage msg, BlockingQueue<SendResult> resultQueue) {
     attachLocalCommAddress(msg);

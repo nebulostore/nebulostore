@@ -2,11 +2,14 @@ package org.nebulostore.peers;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.base.Functions;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Names;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -20,6 +23,10 @@ import org.nebulostore.appcore.model.NebuloObjectFactoryImpl;
 import org.nebulostore.appcore.model.ObjectDeleter;
 import org.nebulostore.appcore.model.ObjectGetter;
 import org.nebulostore.appcore.model.ObjectWriter;
+import org.nebulostore.async.AsyncMessagesContext;
+import org.nebulostore.async.peerselection.AlwaysAcceptingSynchroPeerSelectionModule;
+import org.nebulostore.async.peerselection.SynchroPeerSelectionModule;
+import org.nebulostore.async.peerselection.SynchroPeerSelectionModuleFactory;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.broker.BrokerContext;
 import org.nebulostore.broker.ContractsEvaluator;
@@ -54,6 +61,9 @@ import org.nebulostore.timer.TimerImpl;
  */
 public class PeerConfiguration extends GenericConfiguration {
 
+  private static final int ASYNC_MODULE_SYNC_THREAD_POOL_SIZE = 1;
+  private static final int ASYNC_MODULE_CACHE_REFRESH_THREAD_POOL_SIZE = 1;
+
   @Override
   protected void configureAll() {
     bind(XMLConfiguration.class).toInstance(config_);
@@ -63,17 +73,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(CommAddress.class).toInstance(
         new CommAddress(config_.getString("communication.comm-address", "")));
 
-    BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<Message>();
-    BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<Message>();
-
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(networkQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
-    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
+    configureQueues();
 
     bind(NebuloObjectFactory.class).to(NebuloObjectFactoryImpl.class);
     bind(ObjectGetter.class).to(GetNebuloObjectModule.class);
@@ -89,6 +89,7 @@ public class PeerConfiguration extends GenericConfiguration {
     configureBroker();
     configureCommunicationPeer();
     configureNetworkMonitor();
+    configureAsyncMessaging();
     configurePeer();
     configureReplicator(appKey);
     configureRestModule();
@@ -133,6 +134,37 @@ public class PeerConfiguration extends GenericConfiguration {
   protected void configureNetworkMonitor() {
     bind(NetworkMonitor.class).to(NetworkMonitorImpl.class).in(Scopes.SINGLETON);
     bind(ConnectionTestMessageHandler.class).to(DefaultConnectionTestMessageHandler.class);
+  }
+
+  protected void configureAsyncMessaging() {
+    bind(AsyncMessagesContext.class).toInstance(new AsyncMessagesContext());
+    bind(ScheduledExecutorService.class).annotatedWith(
+        Names.named("async.sync-executor")).toInstance(
+        Executors.newScheduledThreadPool(ASYNC_MODULE_SYNC_THREAD_POOL_SIZE));
+    bind(ScheduledExecutorService.class).annotatedWith(
+        Names.named("async.cache-refresh-executor")).toInstance(
+        Executors.newScheduledThreadPool(ASYNC_MODULE_CACHE_REFRESH_THREAD_POOL_SIZE));
+    configureAsyncSelectionModule();
+  }
+
+  protected void configureAsyncSelectionModule() {
+    install(new FactoryModuleBuilder().implement(SynchroPeerSelectionModule.class,
+        AlwaysAcceptingSynchroPeerSelectionModule.class).build(
+        SynchroPeerSelectionModuleFactory.class));
+  }
+
+  protected void configureQueues() {
+    BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<Message>();
+    BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<Message>();
+
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(networkQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
   }
 
   protected void configureRestModule() {

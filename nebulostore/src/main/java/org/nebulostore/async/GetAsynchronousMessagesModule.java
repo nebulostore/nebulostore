@@ -9,43 +9,58 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
+import org.nebulostore.async.messages.AsyncModuleErrorMessage;
 import org.nebulostore.async.messages.AsynchronousMessagesMessage;
 import org.nebulostore.async.messages.GetAsynchronousMessagesMessage;
 import org.nebulostore.async.messages.GotAsynchronousMessagesMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.timer.TimeoutMessage;
+import org.nebulostore.timer.Timer;
 
 /**
- * Module that downloads asynchronous messages from a synchro peer and sends them to
- * resultQueue_.
+ * Module that downloads asynchronous messages from a synchro peer and sends them to resultQueue_.
+ *
  * @author szymonmatejczyk
+ * @author Piotr Malicki
  */
 public class GetAsynchronousMessagesModule extends JobModule {
   private static Logger logger_ = Logger.getLogger(GetAsynchronousMessagesModule.class);
 
-  /** Parent module. Used to return downloaded messages.
+  private static final long GET_MESSAGES_TIMEOUT_MILIS = 5000;
+
+  /**
+   * Parent module. Used to return downloaded messages.
    */
   private final BlockingQueue<Message> resultQueue_;
 
   /**
-   * Peer, from that this module downloads messages.
+   * Peer from which this module downloads messages.
    */
   private final CommAddress synchroPeer_;
+
+  /**
+   * Peer for which this module downloads messages.
+   */
+  private final CommAddress synchroGroupOwner_;
   private CommAddress myAddress_;
+  private Timer timer_;
 
   public GetAsynchronousMessagesModule(BlockingQueue<Message> networkQueue,
-      BlockingQueue<Message> resultQueue, CommAddress synchroPeer) {
+      BlockingQueue<Message> resultQueue, CommAddress synchroPeer, CommAddress synchroGroupOwner) {
     setNetworkQueue(networkQueue);
     resultQueue_ = resultQueue;
     synchroPeer_ = synchroPeer;
+    synchroGroupOwner_ = synchroGroupOwner;
   }
 
   @Inject
-  public void setCommAddress(CommAddress commAddress) {
+  public void setDependencies(CommAddress commAddress, Timer timer) {
     myAddress_ = commAddress;
+    timer_ = timer;
   }
 
-  private final GetAsynchronousMessagesVisitor visitor_ = new GetAsynchronousMessagesVisitor();
+  private final GetAsynchronousDataVisitor visitor_ = new GetAsynchronousDataVisitor();
 
   @Override
   protected void processMessage(Message message) throws NebuloException {
@@ -54,21 +69,30 @@ public class GetAsynchronousMessagesModule extends JobModule {
 
   /**
    * States.
+   *
    * @author szymonmatejczyk
    */
-  private enum STATE { NONE, WAITING_FOR_MESSAGES }
+  private enum STATE {
+    NONE, WAITING_FOR_MESSAGES
+  }
 
   /**
-   * Visitor handling this module messages.
+   * Visitor handling this module's messages.
+   *
    * @author szymonmatejczyk
    */
-  protected class GetAsynchronousMessagesVisitor extends MessageVisitor<Void> {
+  protected class GetAsynchronousDataVisitor extends MessageVisitor<Void> {
     private STATE state_ = STATE.NONE;
 
     public Void visit(JobInitMessage message) {
+      if (timer_ == null) {
+        endJobModule();
+      }
+      timer_.schedule(jobId_, GET_MESSAGES_TIMEOUT_MILIS);
       jobId_ = message.getId();
-      GetAsynchronousMessagesMessage m = new GetAsynchronousMessagesMessage(message.getId(),
-          null, synchroPeer_, myAddress_);
+      GetAsynchronousMessagesMessage m =
+          new GetAsynchronousMessagesMessage(message.getId(), myAddress_, synchroPeer_,
+              synchroGroupOwner_);
       networkQueue_.add(m);
       state_ = STATE.WAITING_FOR_MESSAGES;
       return null;
@@ -82,11 +106,25 @@ public class GetAsynchronousMessagesModule extends JobModule {
 
       GotAsynchronousMessagesMessage ackMessage =
           new GotAsynchronousMessagesMessage(message.getId(), message.getDestinationAddress(),
-              message.getSourceAddress());
+              message.getSourceAddress(), message.getRecipient());
       networkQueue_.add(ackMessage);
-      AsynchronousMessagesMessage m = new AsynchronousMessagesMessage(getJobId(), null, null,
-          message.getMessages());
+      AsynchronousMessagesMessage m =
+          new AsynchronousMessagesMessage(getJobId(), null, null, message.getMessages(),
+              synchroGroupOwner_);
       resultQueue_.add(m);
+      endJobModule();
+      return null;
+    }
+
+    public Void visit(AsyncModuleErrorMessage message) {
+      logger_.warn("Received " + message.getClass() + " from " + message.getSourceAddress() +
+          " in " + GetAsynchronousMessagesModule.class);
+      endJobModule();
+      return null;
+    }
+
+    public Void visit(TimeoutMessage message) {
+      logger_.warn("Timeout in GetAsynchronousMessagesModule.");
       endJobModule();
       return null;
     }

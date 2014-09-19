@@ -36,11 +36,13 @@ public class TextInterfaceConfiguration extends PeerConfiguration {
         Singleton.class);
   }
 
+  @Override
   protected void configureNetworkMonitor() {
     bind(NetworkMonitor.class).to(NetworkMonitorForTesting.class).in(Scopes.SINGLETON);
     bind(ConnectionTestMessageHandler.class).to(DefaultConnectionTestMessageHandler.class);
   }
 
+  @Override
   protected void configureBroker() {
     bind(Broker.class).to(ValuationBasedBrokerWithContextOpened.class).in(Scopes.SINGLETON);
     bind(ContractsSelectionAlgorithm.class).to(GreedyContractsSelection.class);

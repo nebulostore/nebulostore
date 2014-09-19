@@ -1,22 +1,22 @@
 package org.nebulostore.async;
 
-import java.util.LinkedList;
-import java.util.List;
-
 import com.google.inject.Inject;
 
+import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.async.messages.StoreAsynchronousMessage;
 
 /**
- * Module responsible for storing asynchrounous messages in this instance.
+ * Module responsible for storing asynchronous messages in this instance.
+ *
  * @author szymonmatejczyk
  */
 public class StoreAsynchronousMessagesModule extends JobModule {
+
+  private static Logger logger_ = Logger.getLogger(StoreAsynchronousMessagesModule.class);
 
   @Override
   protected void processMessage(Message message) throws NebuloException {
@@ -30,24 +30,28 @@ public class StoreAsynchronousMessagesModule extends JobModule {
     context_ = context;
   }
 
-  private SAMVisitor visitor_ = new SAMVisitor();
+  private final SAMVisitor visitor_ = new SAMVisitor();
 
   /**
    * Visitor.
+   *
    * @author szymonmatejczyk
+   * @author Piotr Malicki
    */
   protected class SAMVisitor extends MessageVisitor<Void> {
     public Void visit(StoreAsynchronousMessage message) {
-      // TODO(szm): Check if I should store this message.
-      List<AsynchronousMessage> v = context_.getWaitingAsynchronousMessages().get(
-          message.getRecipient());
-      if (v == null) {
-        List<AsynchronousMessage> list = new LinkedList<AsynchronousMessage>();
-        list.add(message.getMessage());
-        context_.getWaitingAsynchronousMessages().put(message.getRecipient(), list);
+      if (context_.isInitialized()) {
+        if (context_.containsRecipient(message.getRecipient())) {
+          context_.storeAsynchronousMessage(message.getRecipient(), message.getMessage());
+        } else {
+          logger_.warn("Received message to store for synchro-peer, but current instance is not" +
+              " included in its synchro-group.");
+        }
       } else {
-        v.add(message.getMessage());
+        logger_.warn("Async messages context has not yet been initialized, ending the module");
+        endJobModule();
       }
+      endJobModule();
       return null;
     }
   }

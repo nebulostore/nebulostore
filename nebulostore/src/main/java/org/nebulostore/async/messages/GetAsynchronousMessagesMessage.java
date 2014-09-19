@@ -3,12 +3,12 @@ package org.nebulostore.async.messages;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.async.ResponseWithAsynchronousMessagesModule;
+import org.nebulostore.async.RespondWithAsynchronousMessagesModule;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 
 /**
- * Message send, when peer wants to receive messages waiting for him.
+ * Message sent when peer wants to receive messages waiting for him.
  */
 public class GetAsynchronousMessagesMessage extends CommMessage {
   private static final long serialVersionUID = 132756955341183967L;
@@ -27,7 +27,7 @@ public class GetAsynchronousMessagesMessage extends CommMessage {
 
   @Override
   public JobModule getHandler() {
-    return new ResponseWithAsynchronousMessagesModule();
+    return new RespondWithAsynchronousMessagesModule();
   }
 
   @Override

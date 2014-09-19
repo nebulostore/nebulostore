@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_NAME=./_local-test.sh
-declare -a PEERS=(3 16 6 6 8 14 6 3 3)
+declare -a PEERS=(3 16 6 6 8 14 6 3 3 4)
 N_TESTS=${#PEERS[@]}
 declare -a TITLES=(\
     'basic ping-pong test'\
@@ -13,6 +13,7 @@ declare -a TITLES=(\
     'read-write time measure test'\
     'network monitor test'\
     'broker test'\
+    'asynchronous messages test'\
     )
 
 EXEC_DIR=$(pwd)
@@ -90,6 +91,11 @@ case $N in
            org.nebulostore.systest.TestingPeerConfiguration\
            org.nebulostore.systest.broker.BrokerTestServer\
            ${PEERS[8]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
+    10) $SCRIPT_NAME\
+           org.nebulostore.systest.async.AsyncTestingPeer\
+           org.nebulostore.systest.async.AsyncTestingPeerConfiguration\
+           org.nebulostore.systest.async.AsyncTestServer\
+           ${PEERS[9]} 1;;
 esac
 EXIT_CODE=$?
 

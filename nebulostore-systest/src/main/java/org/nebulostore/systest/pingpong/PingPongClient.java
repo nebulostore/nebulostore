@@ -30,7 +30,7 @@ public final class PingPongClient extends ConductorClient {
   private BigInteger randomNumber_;
   private final List<CommAddress> childrenAddresses_;
   private Integer receivedPongs_ = 0;
-  private int id_;
+  private final int id_;
 
   public PingPongClient(String serverJobId, CommAddress serverAddress, int numPhases,
           List<CommAddress> childrenPongAddress, int id) {
@@ -106,6 +106,7 @@ public final class PingPongClient extends ConductorClient {
    * @author lukaszsiczek
    */
   protected final class VisitorReceivedPing extends IgnoreNewPhaseVisitor {
+    @Override
     public Void visit(UserCommMessage message) {
       logger_.debug("Received PingMessage from parent.");
       randomNumber_ = (BigInteger) message.getContent();
@@ -136,6 +137,7 @@ public final class PingPongClient extends ConductorClient {
    * @author lukaszsiczek
    */
   protected final class VisitorReceivedPong extends IgnoreNewPhaseVisitor {
+    @Override
     public Void visit(UserCommMessage message) {
       BigInteger received = (BigInteger) message.getContent();
       logger_.debug("Received PongMessage from child: " + message.getSourceAddress().toString());

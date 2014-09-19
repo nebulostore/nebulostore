@@ -33,12 +33,12 @@ public final class BrokerContext {
   /**
    * Available space for contract.
    */
-  private Map<Contract, Integer> freeSpaceMap_ = new HashMap<Contract, Integer>();
+  private final Map<Contract, Integer> freeSpaceMap_ = new HashMap<Contract, Integer>();
 
   /**
    * Contract offers sent to peers, waiting for response.
    */
-  private Map<CommAddress, Contract> contractOffers_ = new HashMap<CommAddress, Contract>();
+  private final Map<CommAddress, Contract> contractOffers_ = new HashMap<CommAddress, Contract>();
 
   public void addContract(Contract contract) {
     writeLock_.lock();

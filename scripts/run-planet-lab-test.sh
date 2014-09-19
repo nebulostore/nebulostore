@@ -19,6 +19,7 @@ else
     echo "    7) performance lists test (60 peers / 50 test clients)"
     echo "    8) performance lists test (95 peers / 80 test clients)"
     echo "    9) performance lists test (120 peers / 100 test clients)"
+    echo "    10) asynchronous messages test (7 peers / 6 test clients)"
     read N
 fi
 
@@ -76,6 +77,12 @@ case $N in
            org.nebulostore.systest.performance.PerfTestingPeerConfiguration\
            org.nebulostore.systest.lists.ListsServer\
            120 100 1\
+           $HOSTS_FILE;;
+    10) $SCRIPT_NAME\
+           org.nebulostore.systest.async.AsyncTestingPeer\
+           org.nebulostore.systest.async.AsyncTestingPeerConfiguration\
+           org.nebulostore.systest.async.AsyncTestServer\
+           7 6 1\
            $HOSTS_FILE;;
 esac
 

@@ -4,7 +4,7 @@ import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.crypto.CryptoUtils;
 
 /**
- * Asynchronous message send by peers when one of them is offline.
+ * Asynchronous message sent by peers when one of them is offline.
  * @author szymonmatejczyk
  */
 public abstract class AsynchronousMessage extends Message {
