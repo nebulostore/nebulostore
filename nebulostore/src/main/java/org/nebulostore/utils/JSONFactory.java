@@ -1,9 +1,12 @@
 package org.nebulostore.utils;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 /**
  * @author lukaszsiczek
@@ -21,13 +24,11 @@ public final class JSONFactory {
     return jsonObject;
   }
 
-  public static JsonObject convertFromList(List<?> list) {
-    int i = 0;
-    JsonObject jsonObject = new JsonObject();
-    for (Object element : list) {
-      jsonObject.addProperty(Integer.toString(i), element.toString());
-      ++i;
+  public static JsonElement convertFromCollection(Collection<?> collection) {
+    JsonArray jsonArray = new JsonArray();
+    for (Object element : collection) {
+      jsonArray.add(new JsonPrimitive(element.toString()));
     }
-    return jsonObject;
+    return jsonArray;
   }
 }

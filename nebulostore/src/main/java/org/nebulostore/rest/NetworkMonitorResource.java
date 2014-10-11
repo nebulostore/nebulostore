@@ -5,7 +5,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import com.google.gson.JsonObject;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -34,7 +34,7 @@ public class NetworkMonitorResource {
   @Produces(MediaType.APPLICATION_JSON)
   public String getPeersList() {
     LOGGER.info("Start method getPeersList()");
-    JsonObject result = JSONFactory.convertFromList(networkMonitor_.getKnownPeers());
+    JsonElement result = JSONFactory.convertFromCollection(networkMonitor_.getKnownPeers());
     LOGGER.info(result.toString());
     LOGGER.info("End method getPeersList()");
     return result.toString();

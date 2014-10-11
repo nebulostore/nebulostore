@@ -24,17 +24,20 @@ public class RestModuleImpl implements RestModule {
   private int port_;
   private BrokerResource brokerResource_;
   private NetworkMonitorResource networkMonitorResource_;
+  private ReplicatorResource replicatorResource_;
 
   @Inject
   public RestModuleImpl(@Named("rest-api.server-config.host") String host,
                         @Named("rest-api.server-config.port") int port,
                         BrokerResource brokerResource,
-                        NetworkMonitorResource networkMonitorResource) {
+                        NetworkMonitorResource networkMonitorResource,
+                        ReplicatorResource replicatorResource) {
     host_ = host;
     port_ = port;
     isTerminate_ = new AtomicBoolean(false);
     brokerResource_ = brokerResource;
     networkMonitorResource_ = networkMonitorResource;
+    replicatorResource_ = replicatorResource;
   }
 
   @Override
@@ -68,6 +71,7 @@ public class RestModuleImpl implements RestModule {
         new ServerTerminationResource(isTerminate_));
     resourceConfig.register(brokerResource_);
     resourceConfig.register(networkMonitorResource_);
+    resourceConfig.register(replicatorResource_);
     return resourceConfig;
   }
 

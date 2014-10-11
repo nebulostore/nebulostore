@@ -8,6 +8,7 @@ import com.google.common.base.Functions;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+
 import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.api.DeleteNebuloObjectModule;
 import org.nebulostore.api.GetNebuloObjectModule;
@@ -38,6 +39,7 @@ import org.nebulostore.replicator.ReplicatorImpl;
 import org.nebulostore.replicator.core.Replicator;
 import org.nebulostore.rest.BrokerResource;
 import org.nebulostore.rest.NetworkMonitorResource;
+import org.nebulostore.rest.ReplicatorResource;
 import org.nebulostore.rest.RestModule;
 import org.nebulostore.rest.RestModuleImpl;
 import org.nebulostore.subscription.api.SimpleSubscriptionNotificationHandler;
@@ -136,6 +138,7 @@ public class PeerConfiguration extends GenericConfiguration {
   protected void configureRestModule() {
     bind(BrokerResource.class);
     bind(NetworkMonitorResource.class);
+    bind(ReplicatorResource.class);
     bind(RestModule.class).to(RestModuleImpl.class);
   }
 }
