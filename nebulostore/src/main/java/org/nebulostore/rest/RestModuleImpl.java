@@ -9,6 +9,7 @@ import com.google.inject.name.Named;
 
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,7 @@ public class RestModuleImpl implements RestModule {
   }
 
   private ResourceConfig configureServer() {
-    ResourceConfig resourceConfig = new ResourceConfig();
+    ResourceConfig resourceConfig = new ResourceConfig(MultiPartFeature.class);
     resourceConfig.register(
         new ServerTerminationResource(isTerminate_));
     resourceConfig.register(brokerResource_);

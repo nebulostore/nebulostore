@@ -220,5 +220,8 @@
             <host>http://0.0.0.0</host>
             <port type="Integer">14000</port>
         </server-config>
+        <replicator-write-file-form>
+            resources/web/replicator-write-file-form.html
+        </replicator-write-file-form>
     </rest-api>
 </peer>
