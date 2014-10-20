@@ -1,158 +1,181 @@
 package org.nebulostore.appcore.model;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
+import org.nebulostore.utils.Pair;
 
 /**
  * List of NebuloObjects.
  */
+/*
+ * This is a new version of the NebuloListAPI.
+ * Some of the below methods for now are exact same methods as in the old version of ListAPI;
+ * others for now are just stub methods.
+ */
 public class NebuloList extends NebuloObject implements Iterable<NebuloElement> {
   private static Logger logger_ = Logger.getLogger(NebuloList.class);
-  private static final long serialVersionUID = 8346982029337955123L;
+  private static final long serialVersionUID = 3042380556591602347L;
 
-  List<NebuloElement> elements_;
-  Set<BigInteger> removedIds_;
+  private List<NebuloElement> elements_;
 
-  /**
-   * Interface tag to symbolize that given iterator is an iterator belonging
-   * to a NebuloList object.
-   *
-   * @author Grzegorz Milka
-   *
-   */
-  public interface ListIterator extends Iterator<NebuloElement> {
-  }
+  // Epoch and epoch's range are needed to aid synchronization process.
+  private int epoch_;
+  private Pair<Integer, Integer> epochRange_;
 
-  /**
-   * List iterator.
-   */
-  private class ListIteratorImpl implements ListIterator {
-    private int currIndex_;
-    private final Iterator<NebuloElement> iterator_;
+  // Attributes:
+  boolean isPublicReadable_;
+  boolean isPublicAppendable_;
+  // The "delible" attribute specifies if "delete" operation can be performed on the list.
+  boolean delible_;
 
-    public ListIteratorImpl() {
-      currIndex_ = -1;
-      iterator_ = elements_.iterator();
-    }
+  protected NebuloList(NebuloAddress address) {
+    super(address);
+    // TODO complete
+    // constructs (creates/fetches) list with given address
 
-    @Override
-    public NebuloElement next() {
-      NebuloElement ret = iterator_.next();
-      // Only if next() does not throw exception.
-      ++currIndex_;
-      return ret;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return currIndex_ < elements_.size() - 1;
-    }
-
-    @Override
-    public void remove() {
-      if (currIndex_ < 0) {
-        throw new IllegalStateException();
-      }
-      BigInteger id = elements_.get(currIndex_).elementId_;
-      iterator_.remove();
-      removedIds_.add(id);
-    }
-  }
-
-  public NebuloList(NebuloAddress nebuloAddress) {
-    super(nebuloAddress);
     elements_ = new ArrayList<NebuloElement>();
-    removedIds_ = new TreeSet<BigInteger>();
+    epoch_ = 1;
+    epochRange_ = new Pair<Integer, Integer>(0, 0);
+    isPublicReadable_ = true;
+    isPublicAppendable_ = true;
+    delible_ = true;
   }
 
-  @Override
-  public ListIterator iterator() {
-    return new ListIteratorImpl();
+  protected NebuloList(NebuloAddress address, long fromIndex, long toIndex) {
+    super(address);
+    // TODO implement
+    // based on range constructs list which is a sublist of NebuloList with given address
   }
 
-  public void append(NebuloElement element) {
-    elements_.add(element);
+  protected NebuloList(NebuloAddress address, Comparator<NebuloElement> predicate) {
+    super(address);
+    // TODO implement
+    // based on Predicate constructs list which is a sublist of NebuloList with given address
   }
 
-  public void add(ListIterator iterator, NebuloElement element) {
-    int index = ((ListIteratorImpl) iterator).currIndex_ + 1;
-    elements_.add(index, element);
+  // Automatically synchronized.
+  // TODO will need a new communicate to replica
+  public void edit(List<NebuloElement> newSublist) {
+    // TODO implement
+    // substitutes this list on given (during construction) boundaries with a new list and
+    // automatically synchronizes this change
+  }
+
+  // Automatically synchronized.
+  // TODO will need a new communicate to replica
+  public void append(List<NebuloElement> elementsToAppend) throws NebuloException {
+    // TODO complete
+    // appends a list of new elements to the end of the list and synchronizes this update as
+    // specified
+
+    elements_.addAll(elementsToAppend);
+    sync();
+  }
+
+  // /**
+  // * Designated to be used only by replicas. Appends elements to the local copy of the list.
+  // *
+  // * @param elements elements to be appended
+  // */
+  // public void localAppend(List<NebuloElement> elements) {
+  // elements_.addAll(elements);
+  // }
+
+  // Automatically synchronized.
+  public void delete(List<NebuloElement> elementsToDelete) {
+    // TODO implement
+    // verifies if the agent requesting "delete" is an author of the Element and then if
+    // authenticated and the list is delible, put tombstones on requested for deletion entries;
+    // synchronized automatically
   }
 
   /**
-   * Tries to merge this list with other. Throws exception and does not change anything
-   * when merging is not possible (e.g. there are ordering conflicts).
-   * @param other  the other list to merge with
+   * Updates local copy with current network version (as opposed to sync() fetches network copy
+   * instead of pushing local copy).
    */
-  public void mergeWith(NebuloList other) throws ListMergeException {
-    List<NebuloElement> newList = new ArrayList<NebuloElement>();
-    Set<BigInteger> allRemoved = new TreeSet<BigInteger>();
-    allRemoved.addAll(removedIds_);
-    allRemoved.addAll(other.removedIds_);
+  public void update() {
+    // TODO implement
+    // updates local copy of the list with network copy
+  }
 
-    Set<BigInteger> myElements = new TreeSet<BigInteger>();
-    Set<BigInteger> myAdded = new TreeSet<BigInteger>();
-    Iterator<NebuloElement> myIter = elements_.iterator();
-    while (myIter.hasNext()) {
-      myElements.add(myIter.next().elementId_);
-    }
+  /**
+   * Updates local sublist based on given range.
+   */
+  public void update(int fromIndex, int toIndex) {
+    // TODO implement
+  }
 
-    int myIdx = 0;
-    int otherIdx = 0;
-    while (myIdx < elements_.size() && otherIdx < other.elements_.size()) {
-      NebuloElement myElem = elements_.get(myIdx);
-      NebuloElement otherElem = other.elements_.get(otherIdx);
-      if (myElem.equals(otherElem)) {
-        // Same element at the beginning of both lists.
-        addIfNotRemoved(newList, myElem, allRemoved);
-        myElements.remove(myElem.elementId_);
-        myAdded.add(myElem.elementId_);
-        ++myIdx;
-        ++otherIdx;
-      } else if (myElements.contains(otherElem.elementId_)) {
-        // First list's head should come first.
-        addIfNotRemoved(newList, myElem, allRemoved);
-        myElements.remove(myElem.elementId_);
-        myAdded.add(myElem.elementId_);
-        ++myIdx;
-      } else if (myAdded.contains(otherElem.elementId_)) {
-        // Cycle in merged orders.
-        throw new ListMergeException();
-      } else {
-        // Second list's head is a new element.
-        addIfNotRemoved(newList, otherElem, allRemoved);
-        ++otherIdx;
-      }
-    }
-    while (myIdx < elements_.size()) {
-      addIfNotRemoved(newList, elements_.get(myIdx++), allRemoved);
-    }
-    while (otherIdx < other.elements_.size()) {
-      NebuloElement otherElem = other.elements_.get(otherIdx);
-      if (myAdded.contains(otherElem.elementId_)) {
-        // Cycle in merged orders.
-        throw new ListMergeException();
-      } else {
-        addIfNotRemoved(newList, otherElem, allRemoved);
-        ++otherIdx;
-      }
-    }
-    elements_ = newList;
+  /**
+   * Updates local sublist based on given predicate.
+   */
+  public void update(Comparator<NebuloElement> predicate) {
+    // TODO implement
   }
 
   @Override
+  /**
+   * Returns local iterator.
+   */
+  public Iterator<NebuloElement> iterator() {
+    return elements_.listIterator();
+  }
+
+  /**
+   * Returns local iterator, starting at a specified position.
+   */
+  public ListIterator<NebuloElement> iterator(int index) {
+    return elements_.listIterator(index);
+  }
+
+  /**
+   * Returns the element at the specified position in this list.
+   * 
+   * @param index
+   *          index of the element to return
+   * @return the element at the specified position in this list
+   * @throws IndexOutOfBoundsException
+   *           - if the index is out of range (index < 0 || index >= size())
+   */
+  public NebuloElement get(int index) throws IndexOutOfBoundsException {
+    return elements_.get(index);
+  }
+
+  /**
+   * Returns the number of elements in this list. If this list contains more than Integer.MAX_VALUE
+   * elements, returns Integer.MAX_VALUE.
+   * 
+   * @return the number of elements in this list
+   */
+  public int getLocalSize() {
+    return elements_.size();
+  }
+
+  /**
+   * 
+   * @return the network size of the list
+   */
+  public int getNetworkSize() {
+    // TODO implement
+    return 0;
+  }
+
+  // Methods inherited from NebuloObject.
+
+  @Override
+  /**
+   * Attempts to conduct transaction in NebuloFile style (sends local version to replicators).
+   */
   protected void runSync() throws NebuloException {
-    logger_.info("Running sync on list.");
+    logger_.info("Running sync() on list.");
     ObjectWriter writer = objectWriterProvider_.get();
     writer.writeObject(this, previousVersions_);
 
@@ -168,8 +191,11 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   }
 
   @Override
+  /**
+   * Attempts to delete list in NebuloObject style.
+   */
   public void delete() throws NebuloException {
-    logger_.info("Running delete on list.");
+    logger_.info("Running delete() on list.");
     ObjectDeleter deleter = objectDeleterProvider_.get();
     deleter.deleteObject(address_);
     deleter.awaitResult(TIMEOUT_SEC);
@@ -203,12 +229,5 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
       return false;
     }
     return true;
-  }
-
-  private void addIfNotRemoved(List<NebuloElement> list, NebuloElement elem,
-      Set<BigInteger> removed) {
-    if (!removed.contains(elem.elementId_)) {
-      list.add(elem);
-    }
   }
 }

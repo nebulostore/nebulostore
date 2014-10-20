@@ -11,14 +11,14 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.Iterator;
 
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.ExpandVetoException;
-
-import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.AppKey;
@@ -29,10 +29,11 @@ import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.appcore.model.NebuloElement;
 import org.nebulostore.appcore.model.NebuloFile;
 import org.nebulostore.appcore.model.NebuloList;
-import org.nebulostore.appcore.model.NebuloList.ListIterator;
 import org.nebulostore.appcore.model.NebuloObject;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
 import org.nebulostore.peers.Peer;
+
+import com.google.inject.Inject;
 
 /**
  * Graphical User Interface logic.
@@ -138,7 +139,8 @@ public class GUIController extends Peer {
     for (int i = 0; i < exampleNumberOfChildren; ++i) {
       String content = "Content of child (NebuloElement) nr " +
           i + ".";
-      rootList.append(new NebuloElement(new EncryptedObject(content.getBytes(CHARSET))));
+      rootList.append(Collections.singletonList(new NebuloElement(new EncryptedObject(content
+          .getBytes(CHARSET)))));
     }
 
     // Create second level (root's children and grandchildren).
@@ -146,32 +148,35 @@ public class GUIController extends Peer {
     for (int i = 0; i < exampleNumberOfChildren; ++i) {
       String content = "Content of grandchild (NebuloElement) nr 1" +
           i + ".";
-      firstChildList.append(new NebuloElement(new EncryptedObject(content.getBytes(CHARSET))));
+      firstChildList.append(Collections.singletonList(
+          new NebuloElement(new EncryptedObject(content.getBytes(CHARSET)))));
     }
     NebuloFile file = objectFactory_.createNewNebuloFile(fileAddress);
     file.write("Example file.".getBytes("UTF-8"), 0);
-    firstChildList.append(new NebuloElement(fileAddress));
+    firstChildList.append(Collections.singletonList(new NebuloElement(fileAddress)));
 
-    rootList.append(new NebuloElement(firstChildAddress));
+    rootList.append(Collections.singletonList(new NebuloElement(firstChildAddress)));
 
     NebuloList secondChildList = objectFactory_.createNewNebuloList(secondChildAddress);
     for (int i = 0; i < exampleNumberOfChildren; ++i) {
       String content = "Content of grandchild (NebuloElement) nr 2" +
           i + ".";
-      secondChildList.append(new NebuloElement(new EncryptedObject(content.getBytes(CHARSET))));
+      secondChildList.append(Collections.singletonList(
+          new NebuloElement(new EncryptedObject(content.getBytes(CHARSET)))));
     }
 
-    rootList.append(new NebuloElement(secondChildAddress));
+    rootList.append(Collections.singletonList(new NebuloElement(secondChildAddress)));
 
     // Create third level (root's grandgrandchildren).
     NebuloList grandChildList = objectFactory_.createNewNebuloList(grandChildAddress);
     for (int i = 0; i < exampleNumberOfChildren; ++i) {
       String content = "Content of grandgrandchild (NebuloElement) nr " +
           i + ".";
-      grandChildList.append(new NebuloElement(new EncryptedObject(content.getBytes(CHARSET))));
+      grandChildList.append(Collections.singletonList(
+          new NebuloElement(new EncryptedObject(content.getBytes(CHARSET)))));
     }
 
-    secondChildList.append(new NebuloElement(grandChildAddress));
+    secondChildList.append(Collections.singletonList(new NebuloElement(grandChildAddress)));
 
     rootList.sync();
     firstChildList.sync();
@@ -696,7 +701,7 @@ public class GUIController extends Peer {
   }
 
   private void appendLinkToList(NebuloElement element) throws NebuloException {
-    currentParentList_.append(element);
+    currentParentList_.append(Collections.singletonList(element));
     if (element.isLink()) {
       appendInfoMessage("Successfully appended object with address: " +
           formatAddress(element.getAddress()) + " to list with address: " +
@@ -760,7 +765,8 @@ public class GUIController extends Peer {
     }
 
     currentParentList_.sync();
-    oldParentList.append(new NebuloElement(currentParentList_.getAddress()));
+    oldParentList.append(Collections.singletonList(
+        new NebuloElement(currentParentList_.getAddress())));
 
     currentParentList_ = oldParentList;
   }
@@ -775,7 +781,7 @@ public class GUIController extends Peer {
   }
 
   private void addExpandedNodeChildren(NebuloList list) throws NebuloException {
-    ListIterator iter = list.iterator();
+    Iterator<NebuloElement> iter = list.iterator();
     while (iter.hasNext()) {
       NebuloElement elem = iter.next();
       boolean isList = elem.isLink() &&

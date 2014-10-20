@@ -2,6 +2,7 @@ package org.nebulostore.systest.lists;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -85,8 +86,9 @@ public final class ListsClient extends ConductorClient {
         (clientId_ + 1) + "000")));
     for (int i = 0; i < N_CASES; ++i) {
       BigInteger value = list.getObjectId().getKey().add(BigInteger.valueOf(i));
-      list.append(new NebuloElement(CryptoUtils.encryptObject(value)));
-      list.sync();
+      List<NebuloElement> oneElemList =
+          Collections.singletonList(new NebuloElement(CryptoUtils.encryptObject(value)));
+      list.append(oneElemList);
     }
     return list;
   }
