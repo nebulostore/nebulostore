@@ -10,11 +10,13 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 
 import org.apache.commons.configuration.XMLConfiguration;
+import org.nebulostore.api.AppendToNebuloListModule;
 import org.nebulostore.api.DeleteNebuloObjectModule;
 import org.nebulostore.api.GetNebuloObjectModule;
 import org.nebulostore.api.WriteNebuloObjectModule;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.messaging.Message;
+import org.nebulostore.appcore.model.ListAppender;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
 import org.nebulostore.appcore.model.NebuloObjectFactoryImpl;
 import org.nebulostore.appcore.model.ObjectDeleter;
@@ -79,6 +81,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(ObjectGetter.class).to(GetNebuloObjectModule.class);
     bind(ObjectWriter.class).to(WriteNebuloObjectModule.class);
     bind(ObjectDeleter.class).to(DeleteNebuloObjectModule.class);
+    bind(ListAppender.class).to(AppendToNebuloListModule.class);
 
     bind(SubscriptionNotificationHandler.class).to(SimpleSubscriptionNotificationHandler.class);
 

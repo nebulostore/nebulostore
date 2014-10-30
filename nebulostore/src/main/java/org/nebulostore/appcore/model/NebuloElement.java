@@ -15,7 +15,7 @@ import org.nebulostore.crypto.CryptoUtils;
  * This is a new version of NebuloElement data structure required by new NebuloListAPI.
  * Some of the below methods/attributes for now are exact same methods as in the old version of ListAPI.
  */
-public class NebuloElement implements Serializable {
+public class NebuloElement implements Serializable, Comparable<NebuloElement> {
   private static final long serialVersionUID = -3926287447372574421L;
 
   // Element's metadata: timestamp, unique ID, author ID, author's signature.
@@ -44,6 +44,7 @@ public class NebuloElement implements Serializable {
   public NebuloElement(NebuloAddress address) {
     address_ = address;
     elementId_ = CryptoUtils.getRandomId();
+    timestamp_ = System.currentTimeMillis();
   }
 
   /**
@@ -82,5 +83,10 @@ public class NebuloElement implements Serializable {
 
   public ObjectId getObjectId() {
     return address_.getObjectId();
+  }
+
+  @Override
+  public int compareTo(NebuloElement nebuloElement) {
+    return Long.compare(this.timestamp_, nebuloElement.timestamp_);
   }
 }

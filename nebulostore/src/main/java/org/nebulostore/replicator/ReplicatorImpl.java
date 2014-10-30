@@ -2,18 +2,11 @@ package org.nebulostore.replicator;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Sets;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import org.apache.log4j.Logger;
 import org.nebulostore.api.GetEncryptedObjectModule;
 import org.nebulostore.appcore.addressing.ObjectId;
@@ -21,12 +14,16 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.model.EncryptedObject;
+import org.nebulostore.appcore.model.NebuloElement;
+import org.nebulostore.appcore.model.NebuloList;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.core.DeleteObjectException;
 import org.nebulostore.replicator.core.Replicator;
 import org.nebulostore.replicator.core.TransactionAnswer;
+import org.nebulostore.replicator.messages.AppendElementsMessage;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
 import org.nebulostore.replicator.messages.DeleteObjectMessage;
 import org.nebulostore.replicator.messages.GetObjectMessage;
@@ -40,6 +37,16 @@ import org.nebulostore.replicator.messages.UpdateWithholdMessage;
 import org.nebulostore.replicator.messages.UpdateWithholdMessage.Reason;
 import org.nebulostore.utils.LockMap;
 import org.nebulostore.utils.Pair;
+
+import com.google.common.base.Charsets;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Sets;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 /**
  * Replicator - disk interface.
@@ -248,6 +255,105 @@ public class ReplicatorImpl extends Replicator {
       }
       return null;
     }
+    
+    public Void visit(AppendElementsMessage message) {
+      // TODO list versions and epochs
+
+      ObjectId listId = message.getListId();
+
+      logger_.debug("Acquiring lock for NebuloList with ObjectId = " + listId);
+      if (!acquireObjectLock(listId)) {
+        sendUnsuccessfulAppendMessage("Acquiring object lock wasn't successful.", message);
+        return null;
+      }
+      
+      logger_.debug("Retrieving NebuloList with ObjectId = " + listId);
+      NebuloList list = getList(listId);
+      if (list == null) {
+        sendUnsuccessfulAppendMessage("Couldn't retrieve list from disk.", message);
+        lockMap_.unlock(listId.toString());
+        return null;
+      }
+
+      List<NebuloElement> elements = message.getElementsToAppend();
+      logger_.debug("Appending " + elements.size() + " elements to the list.");
+      appendElements(list, elements);
+
+      logger_.debug("Putting updated list back to the store.");
+      try {
+        // TODO just serialize
+        byte[] serializedList = CryptoUtils.encryptObject(list).getEncryptedData();
+        store_.put(listId.toString(), serializedList);
+      } catch (CryptoException | IOException exception) {
+        sendUnsuccessfulAppendMessage("Error while storing list back on disk.", message);
+        lockMap_.unlock(listId.toString());
+        return null;
+      }
+      logger_.debug("Unlocking object " + listId);
+
+      lockMap_.unlock(listId.toString());
+
+      if (message.shouldPropagate()) {
+        ConfirmationMessage confirmation = new ConfirmationMessage(message.getSourceJobId(),
+            message.getSourceAddress());
+        networkQueue_.add(confirmation);
+        logger_.debug("Propagating list update to other replicators.");
+        propagateAppendToReplicators(message);
+      }
+      return null;
+    }
+
+    private void sendUnsuccessfulAppendMessage(String errorInfo, AppendElementsMessage message) {
+      if (message.shouldPropagate()) {
+        ReplicatorErrorMessage errorMessage = 
+            new ReplicatorErrorMessage(message.getId(), message.getSourceAddress(), errorInfo);
+        networkQueue_.add(errorMessage);
+      }
+    }
+
+    /**
+     * Retrieves and deserializes NebuloList from disk.
+     * 
+     * @return Deserialized list or null if object can't be deserialized or read from disk.
+     */
+    // NOTE: NebuloList data structure won't be stored as encrypted data structure.
+    // TODO Once encryption is implemented, this method will need improvement.
+    private NebuloList getList(ObjectId listId) {
+      EncryptedObject encryptedList = getObject(listId);
+      if (encryptedList == null) {
+        logger_.warn("There is no list with Id = " + listId + " stored.");
+        return null;
+      }
+      
+      NebuloList decryptedList;
+      try {
+        decryptedList = (NebuloList) CryptoUtils.decryptObject(encryptedList);
+      } catch (CryptoException exception) {
+        logger_.warn("Got exception while deserializing NebuloList.");
+        return null;
+      }
+
+      return decryptedList;
+    }
+
+    private NebuloList appendElements(NebuloList list, List<NebuloElement> elements) {
+      list.localAppend(elements);
+      return list;
+    }
+
+    private void propagateAppendToReplicators(AppendElementsMessage appendMsg) {
+      Set<CommAddress> replicators = appendMsg.getReplicators().getReplicatorSet();
+      replicators.remove(appendMsg.getDestinationAddress());
+
+      ObjectId listId = appendMsg.getListId();
+      List<NebuloElement> elementsToAppend = new LinkedList<NebuloElement>(appendMsg.getElementsToAppend());
+      
+      for (CommAddress replicator: replicators) {
+        AppendElementsMessage appendPropagationMsg =
+            new AppendElementsMessage(replicator, listId, elementsToAppend, "");
+        networkQueue_.add(appendPropagationMsg);
+      }
+    }
 
     private void dieWithError(String jobId, CommAddress sourceAddress,
         CommAddress destinationAddress, String errorMessage) {
@@ -414,4 +520,19 @@ public class ReplicatorImpl extends Replicator {
     String joined = Joiner.on(",").join(versions);
     store_.put(objectId.toString() + METADATA_SUFFIX, joined.getBytes(Charsets.UTF_8));
   }
+
+  private boolean acquireObjectLock(ObjectId objectId) {
+    try {
+      if (!lockMap_.tryLock(objectId.toString(), UPDATE_TIMEOUT_SEC, TimeUnit.SECONDS)) {
+        logger_.warn("Lock timeout for Object " + objectId + " in acquireObjectLock().");
+        return false;
+      }
+    } catch (InterruptedException exception) {
+      logger_.warn("Interrupted while waiting for object lock in acquireObjectLock().");
+      return false;
+    }
+
+    return true;
+  }
+
 }

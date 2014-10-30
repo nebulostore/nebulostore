@@ -11,7 +11,9 @@ import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
-import org.nebulostore.utils.Pair;
+
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 /**
  * List of NebuloObjects.
@@ -25,17 +27,22 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   private static Logger logger_ = Logger.getLogger(NebuloList.class);
   private static final long serialVersionUID = 3042380556591602347L;
 
+  private static final int APPEND_TIMEOUT = 2;
+
   private List<NebuloElement> elements_;
 
   // Epoch and epoch's range are needed to aid synchronization process.
   private int epoch_;
-  private Pair<Integer, Integer> epochRange_;
+  // private Pair<Integer, Integer> epochRange_;
+  private int rangeEnd_;
 
   // Attributes:
   boolean isPublicReadable_;
   boolean isPublicAppendable_;
   // The "delible" attribute specifies if "delete" operation can be performed on the list.
   boolean delible_;
+
+  private transient Provider<ListAppender> listAppenderProvider_;
 
   protected NebuloList(NebuloAddress address) {
     super(address);
@@ -44,10 +51,18 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
 
     elements_ = new ArrayList<NebuloElement>();
     epoch_ = 1;
-    epochRange_ = new Pair<Integer, Integer>(0, 0);
+    // epochRange_ = new Pair<Integer, Integer>(0, 0);
+    rangeEnd_ = 0;
     isPublicReadable_ = true;
     isPublicAppendable_ = true;
     delible_ = true;
+
+    listAppenderProvider_ = null;
+  }
+
+  @Inject
+  public void setProvider(Provider<ListAppender> listAppenderProvider) {
+    listAppenderProvider_ = listAppenderProvider;
   }
 
   protected NebuloList(NebuloAddress address, long fromIndex, long toIndex) {
@@ -71,24 +86,34 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   }
 
   // Automatically synchronized.
-  // TODO will need a new communicate to replica
   public void append(List<NebuloElement> elementsToAppend) throws NebuloException {
-    // TODO complete
+    // NOTE: Append is implemented only for plain constructor version for now. Don't know how to
+    // implement it for other kind yet.
     // appends a list of new elements to the end of the list and synchronizes this update as
     // specified
 
     elements_.addAll(elementsToAppend);
-    sync();
+    syncAppend(elementsToAppend);
   }
 
-  // /**
-  // * Designated to be used only by replicas. Appends elements to the local copy of the list.
-  // *
-  // * @param elements elements to be appended
-  // */
-  // public void localAppend(List<NebuloElement> elements) {
-  // elements_.addAll(elements);
-  // }
+  private void syncAppend(List<NebuloElement> elements) throws NebuloException {
+    logger_.info("Running syncAppend() on list.");
+    ListAppender appender = listAppenderProvider_.get();
+    appender.appendElements(this, elements);
+    appender.awaitResult(APPEND_TIMEOUT);
+    // notifySubscribers(NotificationReason.FILE_CHANGED); ??
+  }
+
+  /**
+   * Designated to be used only by replicas. Appends elements to the local copy of the list.
+   * 
+   * @param elements
+   *          elements to be appended
+   */
+  public void localAppend(List<NebuloElement> elements) {
+    elements_.addAll(elements);
+    // TODO Order elements from current epoch.
+  }
 
   // Automatically synchronized.
   public void delete(List<NebuloElement> elementsToDelete) {

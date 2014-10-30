@@ -84,6 +84,7 @@ public final class ListsClient extends ConductorClient {
   private NebuloList createList() throws NebuloException {
     NebuloList list = objectFactory_.createNewNebuloList(new ObjectId(new BigInteger(
         (clientId_ + 1) + "000")));
+    list.sync();
     for (int i = 0; i < N_CASES; ++i) {
       BigInteger value = list.getObjectId().getKey().add(BigInteger.valueOf(i));
       List<NebuloElement> oneElemList =
