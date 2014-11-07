@@ -12,6 +12,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
 
+import com.google.common.base.Predicate;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -30,11 +31,24 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   private static final int APPEND_TIMEOUT = 2;
 
   private List<NebuloElement> elements_;
+  /*
+   * Instance of the NebuloList class used by the application may represent sublist(subset) of all
+   * NebuloElements contained by NebuloList object stored in NebuloStore.
+   * 
+   * In such cases subset of NebuloElements is selected based on index range or given predicate.
+   * 
+   * In objects representing NebuloLists' sublists non-structural attributes are same as in the
+   * original (stored in the NebuloStore system) NebuloList objects.
+   */
+  private boolean isSublist_;
+  private int startIndex_;
+  private int endIndex_;
+  // TODO In Java 8 use java.util.function instead of google.common.base.
+  private Predicate<NebuloElement> predicate_;
 
   // Epoch and epoch's range are needed to aid synchronization process.
-  private int epoch_;
+  // private int epoch_;
   // private Pair<Integer, Integer> epochRange_;
-  private int rangeEnd_;
 
   // Attributes:
   boolean isPublicReadable_;
@@ -46,35 +60,45 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
 
   protected NebuloList(NebuloAddress address) {
     super(address);
-    // TODO complete
-    // constructs (creates/fetches) list with given address
 
     elements_ = new ArrayList<NebuloElement>();
-    epoch_ = 1;
-    // epochRange_ = new Pair<Integer, Integer>(0, 0);
-    rangeEnd_ = 0;
+    isSublist_ = false;
+
+    setDefaultAttributes();
+  }
+
+  public NebuloList(NebuloAddress address, List<NebuloElement> elements,
+      int startIndex, int endIndex) {
+    super(address);
+
+    elements_ = elements;
+    isSublist_ = true;
+    startIndex_ = startIndex;
+    endIndex_ = endIndex;
+
+    setDefaultAttributes();
+  }
+
+  public NebuloList(NebuloAddress address, List<NebuloElement> elements,
+      Predicate<NebuloElement> predicate) {
+    super(address);
+
+    elements_ = elements;
+    isSublist_ = true;
+    predicate_ = predicate;
+
+    setDefaultAttributes();
+  }
+
+  private void setDefaultAttributes() {
     isPublicReadable_ = true;
     isPublicAppendable_ = true;
     delible_ = true;
-
-    listAppenderProvider_ = null;
   }
 
   @Inject
   public void setProvider(Provider<ListAppender> listAppenderProvider) {
     listAppenderProvider_ = listAppenderProvider;
-  }
-
-  protected NebuloList(NebuloAddress address, long fromIndex, long toIndex) {
-    super(address);
-    // TODO implement
-    // based on range constructs list which is a sublist of NebuloList with given address
-  }
-
-  protected NebuloList(NebuloAddress address, Comparator<NebuloElement> predicate) {
-    super(address);
-    // TODO implement
-    // based on Predicate constructs list which is a sublist of NebuloList with given address
   }
 
   // Automatically synchronized.
