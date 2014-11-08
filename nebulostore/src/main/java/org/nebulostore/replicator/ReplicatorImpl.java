@@ -26,6 +26,7 @@ import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.replicator.messages.AppendElementsMessage;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
 import org.nebulostore.replicator.messages.DeleteObjectMessage;
+import org.nebulostore.replicator.messages.GetListMessage;
 import org.nebulostore.replicator.messages.GetObjectMessage;
 import org.nebulostore.replicator.messages.ObjectOutdatedMessage;
 import org.nebulostore.replicator.messages.QueryToStoreObjectMessage;
@@ -42,6 +43,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -300,6 +302,70 @@ public class ReplicatorImpl extends Replicator {
         logger_.debug("Propagating list update to other replicators.");
         propagateAppendToReplicators(message);
       }
+      return null;
+    }
+
+    public Void visit(GetListMessage message) {
+      logger_.debug("GetListMessage with objectID = " + message.getObjectId());
+
+      EncryptedObject serialized = getObject(message.getObjectId());
+      if (serialized == null) {
+       logger_.debug("Could not retrieve given list. Dying with error.");
+       dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+            message.getSourceAddress(), "Unable to retrieve list.");
+        return null;
+      }
+
+      NebuloList storedList;
+      try {
+        // TODO Just deserialize.
+        storedList = (NebuloList) CryptoUtils.decryptObject(serialized);
+      } catch (CryptoException exception) {
+        logger_.debug("Got exception while deserizalizing list. Dying with error.");
+        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+            message.getSourceAddress(), "Unable to deserialize list.");
+        return null;
+      }
+
+
+      NebuloList resultList;
+      if (message.hasRange() || message.hasPredicate()) {
+        int fromIndex = message.getRange().getFirst();
+        int toIndex = message.getRange().getSecond();
+        
+        List<NebuloElement> elementsWithinRange;
+        if (message.hasRange()) {
+          elementsWithinRange = storedList.getElements(fromIndex, toIndex);
+        } else {
+          elementsWithinRange = storedList.getAllElements();
+        }
+
+        List<NebuloElement> filteredElements;
+        if (message.hasPredicate()) {
+          filteredElements = (List<NebuloElement>) Collections2.filter(elementsWithinRange,
+              message.getPredicate());
+        } else {
+          filteredElements = elementsWithinRange;
+        }
+
+        resultList = new NebuloList(storedList.getAddress(), filteredElements, fromIndex, toIndex,
+            message.getPredicate());
+      } else {
+        resultList = storedList;
+      }
+
+      try {
+        // TODO Deserialize instead of decrypt.
+        EncryptedObject serializedToSend = CryptoUtils.encryptObject(resultList);
+        networkQueue_.add(new SendObjectMessage(message.getSourceJobId(), message
+            .getSourceAddress(), serializedToSend, null));
+      } catch (CryptoException exception) {
+        logger_.debug("Got exception while serizalizing list. Dying with error.");
+        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+            message.getSourceAddress(), "Unable to serialize list.");
+        return null;
+      }
+        endJobModule();
       return null;
     }
 

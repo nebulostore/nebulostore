@@ -135,10 +135,14 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
         CommAddress replicator = replicationGroupSet_.first();
         replicationGroupSet_.remove(replicator);
         logger_.debug("Querying replica (" + replicator + ")");
-        networkQueue_.add(new GetObjectMessage(CryptoUtils.getRandomId().toString(),
-            replicator, address_.getObjectId(), jobId_));
+        networkQueue_.add(prepareGetMessage(replicator));
         timer_.schedule(jobId_, REPLICA_WAIT_MILLIS, STATE.REPLICA_FETCH.name());
       }
+    }
+
+    protected GetObjectMessage prepareGetMessage(CommAddress replicator) {
+      return new GetObjectMessage(CryptoUtils.getRandomId().toString(), replicator,
+          address_.getObjectId(), jobId_);
     }
 
     public Void visit(TimeoutMessage message) {

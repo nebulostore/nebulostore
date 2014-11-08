@@ -1,8 +1,8 @@
 package org.nebulostore.appcore.model;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -13,6 +13,7 @@ import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -40,7 +41,6 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
    * In objects representing NebuloLists' sublists non-structural attributes are same as in the
    * original (stored in the NebuloStore system) NebuloList objects.
    */
-  private boolean isSublist_;
   private int startIndex_;
   private int endIndex_;
   // TODO In Java 8 use java.util.function instead of google.common.base.
@@ -61,30 +61,21 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   protected NebuloList(NebuloAddress address) {
     super(address);
 
-    elements_ = new ArrayList<NebuloElement>();
-    isSublist_ = false;
+    elements_ = new LinkedList<NebuloElement>();
+    startIndex_ = -1;
+    endIndex_ = -1;
+    predicate_ = null;
 
     setDefaultAttributes();
   }
 
   public NebuloList(NebuloAddress address, List<NebuloElement> elements,
-      int startIndex, int endIndex) {
+      int startIndex, int endIndex, Predicate<NebuloElement> predicate) {
     super(address);
 
     elements_ = elements;
-    isSublist_ = true;
     startIndex_ = startIndex;
     endIndex_ = endIndex;
-
-    setDefaultAttributes();
-  }
-
-  public NebuloList(NebuloAddress address, List<NebuloElement> elements,
-      Predicate<NebuloElement> predicate) {
-    super(address);
-
-    elements_ = elements;
-    isSublist_ = true;
     predicate_ = predicate;
 
     setDefaultAttributes();
@@ -134,9 +125,20 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
    * @param elements
    *          elements to be appended
    */
+  // ??
   public void localAppend(List<NebuloElement> elements) {
     elements_.addAll(elements);
     // TODO Order elements from current epoch.
+  }
+
+  // ?
+  public List<NebuloElement> getAllElements() {
+    return Lists.newLinkedList(elements_);
+  }
+
+  // ?
+  public List<NebuloElement> getElements(int fromIndex, int toIndex) {
+    return Lists.newLinkedList(elements_.subList(fromIndex, toIndex));
   }
 
   // Automatically synchronized.

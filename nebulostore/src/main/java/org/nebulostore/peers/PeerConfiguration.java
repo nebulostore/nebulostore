@@ -4,19 +4,16 @@ import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import com.google.common.base.Functions;
-import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
-import com.google.inject.name.Names;
-
 import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.api.AppendToNebuloListModule;
 import org.nebulostore.api.DeleteNebuloObjectModule;
+import org.nebulostore.api.GetNebuloListModule;
 import org.nebulostore.api.GetNebuloObjectModule;
 import org.nebulostore.api.WriteNebuloObjectModule;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.ListAppender;
+import org.nebulostore.appcore.model.ListGetter;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
 import org.nebulostore.appcore.model.NebuloObjectFactoryImpl;
 import org.nebulostore.appcore.model.ObjectDeleter;
@@ -48,6 +45,11 @@ import org.nebulostore.subscription.api.SimpleSubscriptionNotificationHandler;
 import org.nebulostore.subscription.api.SubscriptionNotificationHandler;
 import org.nebulostore.timer.Timer;
 import org.nebulostore.timer.TimerImpl;
+
+import com.google.common.base.Functions;
+import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
+import com.google.inject.name.Names;
 
 /**
  * Configuration (all dependencies and constants) of a regular Nebulostore peer.
@@ -82,6 +84,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(ObjectWriter.class).to(WriteNebuloObjectModule.class);
     bind(ObjectDeleter.class).to(DeleteNebuloObjectModule.class);
     bind(ListAppender.class).to(AppendToNebuloListModule.class);
+    bind(ListGetter.class).to(GetNebuloListModule.class);
 
     bind(SubscriptionNotificationHandler.class).to(SimpleSubscriptionNotificationHandler.class);
 

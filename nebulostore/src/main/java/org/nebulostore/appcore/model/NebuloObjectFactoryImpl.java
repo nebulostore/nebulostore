@@ -2,14 +2,15 @@ package org.nebulostore.appcore.model;
 
 import java.math.BigInteger;
 
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.crypto.CryptoUtils;
+
+import com.google.common.base.Predicate;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 
 /**
  * Factory that produces objects for NebuloStore users.
@@ -80,5 +81,42 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
     NebuloList list = new NebuloList(address);
     injector_.injectMembers(list);
     return list;
+  }
+
+  @Override
+  public NebuloList fetchExistingNebuloList(NebuloAddress address) throws NebuloException {
+    ListGetter getter = injector_.getInstance(ListGetter.class);
+    getter.fetchList(address, null);
+    return getResult(getter);
+  }
+
+  @Override
+  public NebuloList fetchExistingNebuloList(NebuloAddress address, int startRange, int endRange)
+      throws NebuloException {
+    ListGetter getter = injector_.getInstance(ListGetter.class);
+    getter.fetchList(address, startRange, endRange, null);
+    return getResult(getter);
+  }
+
+  @Override
+  public NebuloList fetchExistingNebuloList(NebuloAddress address,
+      Predicate<NebuloElement> predicate) throws NebuloException {
+    ListGetter getter = injector_.getInstance(ListGetter.class);
+    getter.fetchList(address, predicate, null);
+    return getResult(getter);
+  }
+
+  @Override
+  public NebuloList fetchExistingNebuloList(NebuloAddress address, int fromIndex, int toIndex,
+      Predicate<NebuloElement> predicate) throws NebuloException {
+    ListGetter getter = injector_.getInstance(ListGetter.class);
+    getter.fetchList(address, fromIndex, toIndex, predicate, null);
+    return getResult(getter);
+  }
+
+  private NebuloList getResult(ListGetter getter) throws NebuloException {
+    NebuloList result = getter.awaitResult(TIMEOUT_SEC);
+    injector_.injectMembers(result);
+    return result;
   }
 }
