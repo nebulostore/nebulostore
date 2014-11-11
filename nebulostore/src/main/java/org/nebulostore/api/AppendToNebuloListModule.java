@@ -32,9 +32,6 @@ public class AppendToNebuloListModule extends ReturningJobModule<Void> implement
   private NebuloList list_;
   private List<NebuloElement> elementsToAppend_;
 
-  // private Set<String> previousVersionSHAs_;
-  // private String commitVersion_;
-
   private final StateMachineVisitor visitor_ = new StateMachineVisitor();
 
   @Override
@@ -58,7 +55,7 @@ public class AppendToNebuloListModule extends ReturningJobModule<Void> implement
 
   /**
    * Visitor class that acts as a state machine realizing the procedure of
-   * appending a list of NebuloELements to NebuloList by contacting with one of Replicators.
+   * appending a list of NebuloElements to NebuloList by contacting with one of Replicators.
    */
   protected class StateMachineVisitor extends MessageVisitor<Void> {
     private STATE state_;
@@ -73,7 +70,6 @@ public class AppendToNebuloListModule extends ReturningJobModule<Void> implement
         NebuloAddress address = list_.getAddress();
         logger_.debug("Quering DHT for replicators for NebuloAddress = " + address);
         state_ = STATE.DHT_QUERY;
-        jobId_ = message.getId();
         logger_.debug(
             "Adding GetDHT to network queue (" + address.getAppKey() + ", " + jobId_ + ").");
         networkQueue_.add(new GetDHTMessage(jobId_, new KeyDHT(address.getAppKey().getKey())));

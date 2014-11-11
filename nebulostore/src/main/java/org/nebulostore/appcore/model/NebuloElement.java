@@ -50,8 +50,7 @@ public class NebuloElement implements Serializable, Comparable<NebuloElement> {
   /**
    * Creates a new link to existing NebuloObject.
    * 
-   * @param object
-   *          object that this NebuloElement refers to
+   * @param object object that this NebuloElement refers to
    */
   public NebuloElement(NebuloObject object) {
     address_ = object.getAddress();
@@ -61,8 +60,7 @@ public class NebuloElement implements Serializable, Comparable<NebuloElement> {
   /**
    * Creates a new element containing some data of unknown structure.
    * 
-   * @param object
-   *          data to hold
+   * @param object data to hold
    */
   public NebuloElement(EncryptedObject object) {
     innerObject_ = object;
@@ -87,6 +85,11 @@ public class NebuloElement implements Serializable, Comparable<NebuloElement> {
 
   @Override
   public int compareTo(NebuloElement nebuloElement) {
-    return Long.compare(this.timestamp_, nebuloElement.timestamp_);
+    int comparison = Long.compare(this.timestamp_, nebuloElement.timestamp_);
+    if (comparison != 0) {
+      return comparison;
+    } else {
+      return this.elementId_.compareTo(nebuloElement.elementId_);
+    }
   }
 }

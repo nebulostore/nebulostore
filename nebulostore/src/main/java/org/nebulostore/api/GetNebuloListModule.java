@@ -69,7 +69,7 @@ public class GetNebuloListModule extends GetModule<NebuloList> implements ListGe
           // TODO Just deserialize
           nebuloList = (NebuloList) CryptoUtils.decryptObject(message.getEncryptedEntity());
           nebuloList.setSender(message.getSourceAddress());
-          // nebuloList.setVersions(message.getVersions());
+          nebuloList.setVersions(message.getVersions());
         } catch (CryptoException exception) {
           endWithError(exception);
           return null;

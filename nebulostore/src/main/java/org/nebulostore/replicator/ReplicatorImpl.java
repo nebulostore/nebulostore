@@ -259,8 +259,6 @@ public class ReplicatorImpl extends Replicator {
     }
     
     public Void visit(AppendElementsMessage message) {
-      // TODO list versions and epochs
-
       ObjectId listId = message.getListId();
 
       logger_.debug("Acquiring lock for NebuloList with ObjectId = " + listId);
@@ -278,8 +276,9 @@ public class ReplicatorImpl extends Replicator {
       }
 
       List<NebuloElement> elements = message.getElementsToAppend();
-      logger_.debug("Appending " + elements.size() + " elements to the list.");
-      appendElements(list, elements);
+      logger_.debug("Appending " + elements.size() + " elements to the list." +
+          " Current epoch's end: " + list.getEpochEnd());
+      list.localAppend(elements);
 
       logger_.debug("Putting updated list back to the store.");
       try {
@@ -349,7 +348,8 @@ public class ReplicatorImpl extends Replicator {
         }
 
         resultList = new NebuloList(storedList.getAddress(), filteredElements, fromIndex, toIndex,
-            message.getPredicate());
+            message.getPredicate(), storedList.isPublicReadable(), storedList.isPublicAppendable(),
+            storedList.isDelible());
       } else {
         resultList = storedList;
       }
@@ -400,11 +400,6 @@ public class ReplicatorImpl extends Replicator {
       }
 
       return decryptedList;
-    }
-
-    private NebuloList appendElements(NebuloList list, List<NebuloElement> elements) {
-      list.localAppend(elements);
-      return list;
     }
 
     private void propagateAppendToReplicators(AppendElementsMessage appendMsg) {

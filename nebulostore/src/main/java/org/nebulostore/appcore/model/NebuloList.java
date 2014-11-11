@@ -1,5 +1,6 @@
 package org.nebulostore.appcore.model;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -41,20 +42,20 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
    * In objects representing NebuloLists' sublists non-structural attributes are same as in the
    * original (stored in the NebuloStore system) NebuloList objects.
    */
-  private int startIndex_;
-  private int endIndex_;
+  private transient int startIndex_;
+  private transient int endIndex_;
   // TODO In Java 8 use java.util.function instead of google.common.base.
-  private Predicate<NebuloElement> predicate_;
+  private transient Predicate<NebuloElement> predicate_;
 
   // Epoch and epoch's range are needed to aid synchronization process.
   // private int epoch_;
-  // private Pair<Integer, Integer> epochRange_;
+  private int epochEnd_;
 
   // Attributes:
-  boolean isPublicReadable_;
-  boolean isPublicAppendable_;
+  private boolean isPublicReadable_;
+  private boolean isPublicAppendable_;
   // The "delible" attribute specifies if "delete" operation can be performed on the list.
-  boolean delible_;
+  private boolean isDelible_;
 
   private transient Provider<ListAppender> listAppenderProvider_;
 
@@ -66,11 +67,14 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
     endIndex_ = -1;
     predicate_ = null;
 
-    setDefaultAttributes();
+    isPublicReadable_ = true;
+    isPublicAppendable_ = true;
+    isDelible_ = true;
   }
 
   public NebuloList(NebuloAddress address, List<NebuloElement> elements,
-      int startIndex, int endIndex, Predicate<NebuloElement> predicate) {
+      int startIndex, int endIndex, Predicate<NebuloElement> predicate,
+      boolean isPublicReadable, boolean isPublicAppendable, boolean isDelible) {
     super(address);
 
     elements_ = elements;
@@ -78,13 +82,9 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
     endIndex_ = endIndex;
     predicate_ = predicate;
 
-    setDefaultAttributes();
-  }
-
-  private void setDefaultAttributes() {
-    isPublicReadable_ = true;
-    isPublicAppendable_ = true;
-    delible_ = true;
+    isPublicReadable_ = isPublicReadable;
+    isPublicAppendable_ = isPublicAppendable;
+    isDelible_ = isDelible;
   }
 
   @Inject
@@ -120,23 +120,20 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   }
 
   /**
-   * Designated to be used only by replicas. Appends elements to the local copy of the list.
+   * Designated to be used only by replicators.
+   * Appends elements to the local copy of the list and sorts elements from current epoch.
    * 
-   * @param elements
-   *          elements to be appended
+   * @param elements elements to be appended
    */
-  // ??
   public void localAppend(List<NebuloElement> elements) {
     elements_.addAll(elements);
-    // TODO Order elements from current epoch.
+    Collections.sort(elements_.subList(epochEnd_, elements_.size()));
   }
 
-  // ?
   public List<NebuloElement> getAllElements() {
     return Lists.newLinkedList(elements_);
   }
 
-  // ?
   public List<NebuloElement> getElements(int fromIndex, int toIndex) {
     return Lists.newLinkedList(elements_.subList(fromIndex, toIndex));
   }
@@ -217,6 +214,22 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   public int getNetworkSize() {
     // TODO implement
     return 0;
+  }
+
+  public int getEpochEnd() {
+    return epochEnd_;
+  }
+
+  public boolean isPublicReadable() {
+    return isPublicReadable_;
+  }
+
+  public boolean isPublicAppendable() {
+    return isPublicAppendable_;
+  }
+
+  public boolean isDelible() {
+    return isDelible_;
   }
 
   // Methods inherited from NebuloObject.
