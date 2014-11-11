@@ -7,6 +7,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Sets;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 import org.apache.log4j.Logger;
 import org.nebulostore.api.GetEncryptedObjectModule;
 import org.nebulostore.appcore.addressing.ObjectId;
@@ -38,17 +50,6 @@ import org.nebulostore.replicator.messages.UpdateWithholdMessage;
 import org.nebulostore.replicator.messages.UpdateWithholdMessage.Reason;
 import org.nebulostore.utils.LockMap;
 import org.nebulostore.utils.Pair;
-
-import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Sets;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 
 /**
  * Replicator - disk interface.
@@ -304,79 +305,6 @@ public class ReplicatorImpl extends Replicator {
       return null;
     }
 
-    public Void visit(GetListMessage message) {
-      logger_.debug("GetListMessage with objectID = " + message.getObjectId());
-
-      EncryptedObject serialized = getObject(message.getObjectId());
-      if (serialized == null) {
-       logger_.debug("Could not retrieve given list. Dying with error.");
-       dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
-            message.getSourceAddress(), "Unable to retrieve list.");
-        return null;
-      }
-
-      NebuloList storedList;
-      try {
-        // TODO Just deserialize.
-        storedList = (NebuloList) CryptoUtils.decryptObject(serialized);
-      } catch (CryptoException exception) {
-        logger_.debug("Got exception while deserizalizing list. Dying with error.");
-        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
-            message.getSourceAddress(), "Unable to deserialize list.");
-        return null;
-      }
-
-
-      NebuloList resultList;
-      if (message.hasRange() || message.hasPredicate()) {
-        int fromIndex = message.getRange().getFirst();
-        int toIndex = message.getRange().getSecond();
-        
-        List<NebuloElement> elementsWithinRange;
-        if (message.hasRange()) {
-          elementsWithinRange = storedList.getElements(fromIndex, toIndex);
-        } else {
-          elementsWithinRange = storedList.getAllElements();
-        }
-
-        List<NebuloElement> filteredElements;
-        if (message.hasPredicate()) {
-          filteredElements = (List<NebuloElement>) Collections2.filter(elementsWithinRange,
-              message.getPredicate());
-        } else {
-          filteredElements = elementsWithinRange;
-        }
-
-        resultList = new NebuloList(storedList.getAddress(), filteredElements, fromIndex, toIndex,
-            message.getPredicate(), storedList.isPublicReadable(), storedList.isPublicAppendable(),
-            storedList.isDelible());
-      } else {
-        resultList = storedList;
-      }
-
-      try {
-        // TODO Deserialize instead of decrypt.
-        EncryptedObject serializedToSend = CryptoUtils.encryptObject(resultList);
-        networkQueue_.add(new SendObjectMessage(message.getSourceJobId(), message
-            .getSourceAddress(), serializedToSend, null));
-      } catch (CryptoException exception) {
-        logger_.debug("Got exception while serizalizing list. Dying with error.");
-        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
-            message.getSourceAddress(), "Unable to serialize list.");
-        return null;
-      }
-        endJobModule();
-      return null;
-    }
-
-    private void sendUnsuccessfulAppendMessage(String errorInfo, AppendElementsMessage message) {
-      if (message.shouldPropagate()) {
-        ReplicatorErrorMessage errorMessage = 
-            new ReplicatorErrorMessage(message.getId(), message.getSourceAddress(), errorInfo);
-        networkQueue_.add(errorMessage);
-      }
-    }
-
     /**
      * Retrieves and deserializes NebuloList from disk.
      * 
@@ -390,7 +318,7 @@ public class ReplicatorImpl extends Replicator {
         logger_.warn("There is no list with Id = " + listId + " stored.");
         return null;
       }
-      
+
       NebuloList decryptedList;
       try {
         decryptedList = (NebuloList) CryptoUtils.decryptObject(encryptedList);
@@ -402,18 +330,95 @@ public class ReplicatorImpl extends Replicator {
       return decryptedList;
     }
 
+    private void sendUnsuccessfulAppendMessage(String errorInfo, AppendElementsMessage message) {
+      if (message.shouldPropagate()) {
+        ReplicatorErrorMessage errorMessage = new ReplicatorErrorMessage(message.getId(),
+            message.getSourceAddress(), errorInfo);
+        networkQueue_.add(errorMessage);
+      }
+    }
+
     private void propagateAppendToReplicators(AppendElementsMessage appendMsg) {
       Set<CommAddress> replicators = appendMsg.getReplicators().getReplicatorSet();
       replicators.remove(appendMsg.getDestinationAddress());
 
       ObjectId listId = appendMsg.getListId();
-      List<NebuloElement> elementsToAppend = new LinkedList<NebuloElement>(appendMsg.getElementsToAppend());
-      
-      for (CommAddress replicator: replicators) {
-        AppendElementsMessage appendPropagationMsg =
-            new AppendElementsMessage(replicator, listId, elementsToAppend, "");
+      List<NebuloElement> elementsToAppend = new LinkedList<NebuloElement>(
+          appendMsg.getElementsToAppend());
+
+      for (CommAddress replicator : replicators) {
+        AppendElementsMessage appendPropagationMsg = new AppendElementsMessage(replicator, listId,
+            elementsToAppend, "");
         networkQueue_.add(appendPropagationMsg);
       }
+    }
+
+    public Void visit(GetListMessage message) {
+      logger_.debug("GetListMessage with objectID = " + message.getObjectId());
+
+      EncryptedObject serializedList = getObject(message.getObjectId());
+      if (serializedList == null) {
+       logger_.debug("Could not retrieve given list. Dying with error.");
+       dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+            message.getSourceAddress(), "Unable to retrieve list.");
+        return null;
+      }
+
+      EncryptedObject serializedToSend;
+      if (message.hasRange() || message.hasPredicate()) {
+        NebuloList storedList;
+        try {
+          // TODO Just deserialize.
+          storedList = (NebuloList) CryptoUtils.decryptObject(serializedList);
+        } catch (CryptoException exception) {
+          logger_.debug("Got exception while deserizalizing list. Dying with error.");
+          dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+              message.getSourceAddress(), "Unable to deserialize list.");
+          return null;
+        }
+
+        int fromIndex = message.getRange().getFirst();
+        int toIndex = message.getRange().getSecond();
+        Predicate<NebuloElement> predicate = message.getPredicate();
+        
+        List<NebuloElement> elementsWithinRange;
+        if (message.hasRange()) {
+          elementsWithinRange = storedList.getElements(fromIndex, toIndex);
+        } else {
+          elementsWithinRange = storedList.getAllElements();
+        }
+
+        List<NebuloElement> filteredElements;
+        if (message.hasPredicate()) {
+          filteredElements =
+              (List<NebuloElement>) Collections2.filter(elementsWithinRange, predicate);
+        } else {
+          filteredElements = elementsWithinRange;
+        }
+
+        NebuloList resultList = new NebuloList(storedList.getAddress(), filteredElements,
+            fromIndex, toIndex, predicate, storedList.isPublicReadable(),
+            storedList.isPublicAppendable(), storedList.isDelible());
+
+        try {
+          // TODO Deserialize instead of decrypt.
+          serializedToSend = CryptoUtils.encryptObject(resultList);
+        } catch (CryptoException exception) {
+          logger_.debug("Got exception while serizalizing list. Dying with error.");
+          dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+              message.getSourceAddress(), "Unable to serialize list.");
+          return null;
+        }
+
+      } else {
+        serializedToSend = serializedList;
+      }
+
+      networkQueue_.add(new SendObjectMessage(message.getSourceJobId(), message.getSourceAddress(),
+          serializedToSend, null));
+
+      endJobModule();
+      return null;
     }
 
     private void dieWithError(String jobId, CommAddress sourceAddress,

@@ -25,14 +25,16 @@ import org.nebulostore.replicator.messages.AppendElementsMessage;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
 import org.nebulostore.replicator.messages.ReplicatorMessage;
 
-
+/**
+ * Job module that appends a list of elements to the end of NebuloList.
+ */
 public class AppendToNebuloListModule extends ReturningJobModule<Void> implements ListAppender {
   private static Logger logger_ = Logger.getLogger(AppendToNebuloListModule.class);
 
   private NebuloList list_;
   private List<NebuloElement> elementsToAppend_;
 
-  private final StateMachineVisitor visitor_ = new StateMachineVisitor();
+  private final AppendingElementsVisitor visitor_ = new AppendingElementsVisitor();
 
   @Override
   public void appendElements(NebuloList list, List<NebuloElement> elementsToAppend) {
@@ -57,11 +59,12 @@ public class AppendToNebuloListModule extends ReturningJobModule<Void> implement
    * Visitor class that acts as a state machine realizing the procedure of
    * appending a list of NebuloElements to NebuloList by contacting with one of Replicators.
    */
-  protected class StateMachineVisitor extends MessageVisitor<Void> {
+  // How many replicators should we try to contact with?
+  protected class AppendingElementsVisitor extends MessageVisitor<Void> {
     private STATE state_;
     private CommAddress recipient_;
 
-    public StateMachineVisitor() {
+    public AppendingElementsVisitor() {
       state_ = STATE.INIT;
     }
 
@@ -157,7 +160,6 @@ public class AppendToNebuloListModule extends ReturningJobModule<Void> implement
 
   @Override
   protected void processMessage(Message message) throws NebuloException {
-    // Handling logic lies inside our visitor class.
     message.accept(visitor_);
   }
 }

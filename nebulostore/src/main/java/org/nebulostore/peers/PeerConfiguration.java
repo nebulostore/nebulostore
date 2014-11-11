@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import com.google.common.base.Functions;
+import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
+import com.google.inject.name.Names;
+
 import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.api.AppendToNebuloListModule;
 import org.nebulostore.api.DeleteNebuloObjectModule;
@@ -45,11 +50,6 @@ import org.nebulostore.subscription.api.SimpleSubscriptionNotificationHandler;
 import org.nebulostore.subscription.api.SubscriptionNotificationHandler;
 import org.nebulostore.timer.Timer;
 import org.nebulostore.timer.TimerImpl;
-
-import com.google.common.base.Functions;
-import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
-import com.google.inject.name.Names;
 
 /**
  * Configuration (all dependencies and constants) of a regular Nebulostore peer.

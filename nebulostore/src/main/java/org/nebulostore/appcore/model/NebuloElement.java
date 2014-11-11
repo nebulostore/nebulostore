@@ -53,8 +53,7 @@ public class NebuloElement implements Serializable, Comparable<NebuloElement> {
    * @param object object that this NebuloElement refers to
    */
   public NebuloElement(NebuloObject object) {
-    address_ = object.getAddress();
-    elementId_ = CryptoUtils.getRandomId();
+    this(object.getAddress());
   }
 
   /**

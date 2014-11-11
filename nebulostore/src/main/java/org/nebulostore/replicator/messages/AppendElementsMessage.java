@@ -9,9 +9,10 @@ import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * This message is a request for appending a series of elements to the end of NebuloList, the
- * replicator is storing, according to the 'append protocol'. If the set of replicators, replicating
- * this list is sent along with the data, receiver is in charge of propagating appnd to the rest of
- * replicators.
+ * replicator is storing, according to the 'append protocol'.
+ * 
+ * If along with the data the set of replicators replicating this list is sent,
+ * receiver is in charge of propagating append to the rest of replicators.
  */
 public class AppendElementsMessage extends InReplicatorMessage {
   private static final long serialVersionUID = 1077956286951592789L;
@@ -21,15 +22,9 @@ public class AppendElementsMessage extends InReplicatorMessage {
   private final ReplicationGroup replicators_;
   private final String sourceJobId_;
 
-  // TODO version, epoch
-
   public AppendElementsMessage(CommAddress destAddress, ObjectId listId,
       List<NebuloElement> elementsToAppend, String sourceJobId) {
-    super(destAddress);
-    listId_ = listId;
-    elementsToAppend_ = elementsToAppend;
-    replicators_ = null;
-    sourceJobId_ = sourceJobId;
+    this(destAddress, listId, elementsToAppend, null, sourceJobId);
   }
 
   public AppendElementsMessage(CommAddress destAddress, ObjectId listId,

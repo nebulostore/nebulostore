@@ -19,7 +19,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 /**
- * List of NebuloObjects.
+ * List of NebuloElements.
  */
 /*
  * This is a new version of the NebuloListAPI.
@@ -42,10 +42,9 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
    * In objects representing NebuloLists' sublists non-structural attributes are same as in the
    * original (stored in the NebuloStore system) NebuloList objects.
    */
-  private transient int startIndex_;
-  private transient int endIndex_;
-  // TODO In Java 8 use java.util.function instead of google.common.base.
-  private transient Predicate<NebuloElement> predicate_;
+  private int startIndex_;
+  private int endIndex_;
+  private Predicate<NebuloElement> predicate_;
 
   // Epoch and epoch's range are needed to aid synchronization process.
   // private int epoch_;
@@ -67,6 +66,7 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
     endIndex_ = -1;
     predicate_ = null;
 
+    // TODO Should be passed in args.
     isPublicReadable_ = true;
     isPublicAppendable_ = true;
     isDelible_ = true;
@@ -93,7 +93,6 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   }
 
   // Automatically synchronized.
-  // TODO will need a new communicate to replica
   public void edit(List<NebuloElement> newSublist) {
     // TODO implement
     // substitutes this list on given (during construction) boundaries with a new list and
@@ -102,11 +101,6 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
 
   // Automatically synchronized.
   public void append(List<NebuloElement> elementsToAppend) throws NebuloException {
-    // NOTE: Append is implemented only for plain constructor version for now. Don't know how to
-    // implement it for other kind yet.
-    // appends a list of new elements to the end of the list and synchronizes this update as
-    // specified
-
     elements_.addAll(elementsToAppend);
     syncAppend(elementsToAppend);
   }
@@ -116,12 +110,12 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
     ListAppender appender = listAppenderProvider_.get();
     appender.appendElements(this, elements);
     appender.awaitResult(APPEND_TIMEOUT);
-    // notifySubscribers(NotificationReason.FILE_CHANGED); ??
+    // notifySubscribers(NotificationReason.FILE_CHANGED);
   }
 
   /**
-   * Designated to be used only by replicators.
-   * Appends elements to the local copy of the list and sorts elements from current epoch.
+   * Needed by replicators. Appends elements to the local copy of the list and orders elements from
+   * current epoch.
    * 
    * @param elements elements to be appended
    */
@@ -187,11 +181,9 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   /**
    * Returns the element at the specified position in this list.
    * 
-   * @param index
-   *          index of the element to return
+   * @param index index of the element to return
    * @return the element at the specified position in this list
-   * @throws IndexOutOfBoundsException
-   *           - if the index is out of range (index < 0 || index >= size())
+   * @throws IndexOutOfBoundsException - if the index is out of range (index < 0 || index >= size())
    */
   public NebuloElement get(int index) throws IndexOutOfBoundsException {
     return elements_.get(index);
