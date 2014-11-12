@@ -12,19 +12,28 @@ import org.nebulostore.crypto.CryptoUtils;
 public abstract class Message implements Serializable {
   private static final long serialVersionUID = -2032656006415029507L;
 
+  // A unique id for message type
+  protected final String id_;
+
   // ID used by Dispatcher to forward the message to proper thread (= running JobModule).
   protected final String jobId_;
 
   public Message() {
     jobId_ = CryptoUtils.getRandomString();
+    id_ = CryptoUtils.getRandomString();
   }
 
   public Message(String jobID) {
     jobId_ = jobID;
+    id_ = CryptoUtils.getRandomString();
   }
 
   public String getId() {
     return jobId_;
+  }
+
+  public String getMessageId() {
+    return id_;
   }
 
   @Override
@@ -38,7 +47,7 @@ public abstract class Message implements Serializable {
 
     Message message = (Message) o;
 
-    if (jobId_ != null ? !jobId_.equals(message.jobId_) : message.jobId_ != null) {
+    if (id_ != null ? !id_.equals(message.id_) : message.id_ != null) {
       return false;
     }
 
@@ -47,13 +56,14 @@ public abstract class Message implements Serializable {
 
   @Override
   public int hashCode() {
-    return jobId_ != null ? jobId_.hashCode() : 0;
+    return id_ != null ? id_.hashCode() : 0;
   }
 
   @Override
   public String toString() {
     return "Message{" +
-        "jobId_='" + jobId_ + '\'' +
+        "jobId_='" + jobId_ + "', " +
+        "id_ ='" + id_ + '\'' +
         "} " + super.toString();
   }
 
