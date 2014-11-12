@@ -208,6 +208,11 @@
     <appender-ref ref="FA-testing"/>
   </logger>
 
+  <logger name="org.nebulostore.dfuntest">
+    <level value="TRACE" />
+    <appender-ref ref="FA-testing"/>
+  </logger>
+
   <logger name="org.nebulostore.crypto">
     <level value="DEBUG" />
     <appender-ref ref="FA-crypto"/>

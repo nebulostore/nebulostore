@@ -12,6 +12,7 @@
     <modules>
         <module>nebulostore</module>
         <module>nebulostore-systest</module>
+        <module>nebulostore-dfuntest</module>
     </modules>
 
     <properties>
@@ -223,6 +224,10 @@
                             <packages>org.nebulostore.conductor*:org.nebulostore.systest*</packages>
                         </group>
                         <group>
+                            <title>Testing</title>
+                            <packages>org.nebulostore.dfuntest*</packages>
+                        </group>
+                        <group>
                             <title>Utilities</title>
                             <packages>org.nebulostore.timer*:org.nebulostore.utils*</packages>
                         </group>
@@ -242,8 +247,8 @@
 
         <dependency>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk14</artifactId>
-            <version>1.38</version>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.50</version>
         </dependency>
 
         <dependency>

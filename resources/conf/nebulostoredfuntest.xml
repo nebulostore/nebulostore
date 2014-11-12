@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<exampledfuntest>
+  <LocalEnvironmentFactory>
+    <environmentCount>
+      5
+    </environmentCount>
+  </LocalEnvironmentFactory>
+  <SSHEnvironmentFactory>
+    <hosts>
+      <!-- Provide list of SSH accessible hosts to test separated by a comma.-->
+      roti.mimuw.edu.pl,
+      planetlab2.inf.ethz.ch
+    </hosts>
+    <username>
+      mimuw_nebulostore
+    </username>
+    <privateKeyPath>
+      <!-- Provide path to ssh private key, it has to be accessible -->
+      PATH_TO_SSH_KEY
+    </privateKeyPath>
+  </SSHEnvironmentFactory>
+  <NebulostoreEnvironmentPreparator>
+    <commInitialPort>
+      11000
+    </commInitialPort>
+    <restInitialPort>
+      14000
+    </restInitialPort>
+  </NebulostoreEnvironmentPreparator>
+  <NebulostoreAppFactory>
+    <javaCommand>
+      java
+      <!-- /home/mimuw_nebulostore/jdk1.7.0_21/bin/java - Use for planetlab -->
+    </javaCommand>
+  </NebulostoreAppFactory>
+  <MultiTestRunner>
+    <shouldPrepareEnvironments>
+      true
+    </shouldPrepareEnvironments>
+    <shouldCleanEnvironments>
+      true
+    </shouldCleanEnvironments>
+  </MultiTestRunner>
+  <NebulostorePeersListTestScript>
+    <sleepDuration>
+      50000
+    </sleepDuration>
+  </NebulostorePeersListTestScript>
+</exampledfuntest>
