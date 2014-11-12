@@ -3,6 +3,7 @@ package org.nebulostore.replicator;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -17,6 +18,7 @@ import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.persistence.InMemoryStore;
 import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.core.Replicator;
+import org.nebulostore.replicator.core.Replicator.MetaData;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
 import org.nebulostore.replicator.messages.DeleteObjectMessage;
@@ -118,6 +120,18 @@ public class ReplicatorTest {
     Assert.assertTrue("Incorrect index content", index.contains(ID_2.toString()));
   }
 
+  @Test
+  public void shouldHaveMetaData() throws Exception {
+    // given
+    ReplicatorWrapper replicator = startNewReplicator();
+    // when
+    storeObject(replicator, ID_1, CONTENT_1);
+    // then
+    Map<String, MetaData> meta = replicator.getMeta();
+    Assert.assertTrue("Does not contain objectID", meta.containsKey(ID_1.toString()));
+    Assert.assertEquals("Incorrect file size in meta",
+            CONTENT_1.length(), meta.get(ID_1.toString()).getSize().intValue());
+  }
 
 
   // waits for the replicator thread to end
@@ -190,6 +204,10 @@ public class ReplicatorTest {
 
     public Set<String> getIndex() {
       return replicator_.getStoredObjectsIds();
+    }
+
+    public Map<String, MetaData> getMeta() {
+      return replicator_.getStoredMetaData();
     }
   }
 }

@@ -134,6 +134,18 @@ public class ReplicatorResource {
     }
   }
 
+  @GET
+  @Path("files_metadata")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String getFileMeta() {
+    LOGGER.info("Start method getFileMeta()");
+    JsonElement result = JSONFactory.recursiveConvertFromMap(
+            replicatorProvider_.get().getStoredMetaData());
+    LOGGER.info(result.toString());
+    LOGGER.info("End method getFileMeta()");
+    return result.toString();
+  }
+
   private String readFile(AppKey appKey, ObjectId objectId) throws NebuloException {
     NebuloFile nebuloFile = (NebuloFile) nebuloObjectFactory_.fetchExistingNebuloObject(
         new NebuloAddress(appKey, objectId));
