@@ -20,12 +20,12 @@ import org.slf4j.LoggerFactory;
 public class RestModuleImpl implements RestModule {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RestModuleImpl.class);
-  private AtomicBoolean isTerminate_;
-  private String host_;
-  private int port_;
-  private BrokerResource brokerResource_;
-  private NetworkMonitorResource networkMonitorResource_;
-  private ReplicatorResource replicatorResource_;
+  private final AtomicBoolean isTerminate_;
+  private final String host_;
+  private final int port_;
+  private final BrokerResource brokerResource_;
+  private final NetworkMonitorResource networkMonitorResource_;
+  private final ReplicatorResource replicatorResource_;
 
   @Inject
   public RestModuleImpl(@Named("rest-api.server-config.host") String host,

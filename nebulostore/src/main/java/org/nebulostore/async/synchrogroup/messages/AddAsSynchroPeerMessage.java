@@ -1,7 +1,7 @@
-package org.nebulostore.async.messages;
+package org.nebulostore.async.synchrogroup.messages;
 
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.async.AddAsSynchroPeerModule;
+import org.nebulostore.async.synchrogroup.AddAsSynchroPeerModule;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 
@@ -15,8 +15,16 @@ public class AddAsSynchroPeerMessage extends CommMessage {
 
   private static final long serialVersionUID = 1L;
 
-  public AddAsSynchroPeerMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress) {
+  private final int counterValue_;
+
+  public AddAsSynchroPeerMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress,
+      int counterValue) {
     super(jobId, sourceAddress, destAddress);
+    counterValue_ = counterValue;
+  }
+
+  public int getCounterValue() {
+    return counterValue_;
   }
 
   @Override

@@ -8,6 +8,7 @@ import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.InstanceMetadata;
+import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -35,9 +36,10 @@ public class TestPeersConnectionModule extends JobModule {
   private static final long TIMEOUT_MILLIS = 3000L;
 
   private final CommAddress peerAddress_;
-  private TPCVisitor visitor_ = new TPCVisitor();
+  private final TPCVisitor visitor_ = new TPCVisitor();
   private Timer timer_;
   private CommAddress myAddress_;
+  private AppKey appKey_;
 
   public TestPeersConnectionModule(CommAddress peer, BlockingQueue<Message> dispatcherQueue) {
     peerAddress_ = peer;
@@ -46,14 +48,15 @@ public class TestPeersConnectionModule extends JobModule {
   }
 
   @Inject
-  public void setDependencies(Timer timer, CommAddress commAddress) {
+  public void setDependencies(Timer timer, CommAddress commAddress, AppKey appKey) {
     timer_ = timer;
     myAddress_ = commAddress;
+    appKey_ = appKey;
   }
 
   long sendTime_;
   private ValueDHTMessage valueDHTMessage_;
-  private List<PeerConnectionSurvey> stats_ = new LinkedList<PeerConnectionSurvey>();
+  private final List<PeerConnectionSurvey> stats_ = new LinkedList<PeerConnectionSurvey>();
 
   /**
    * Visitor.
@@ -129,7 +132,8 @@ public class TestPeersConnectionModule extends JobModule {
   private void appendStatisticsAndFinish(List<PeerConnectionSurvey> stats, ValueDHTMessage message)
   {
     timer_.cancelTimer();
-    InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
+    InstanceMetadata metadataValue = (InstanceMetadata) message.getValue().getValue();
+    InstanceMetadata metadata = new InstanceMetadata(metadataValue.getOwner());
     for (PeerConnectionSurvey pcs : stats) {
       logger_.debug("Adding to DHT: " + pcs.toString());
       metadata.getStatistics().add(pcs);

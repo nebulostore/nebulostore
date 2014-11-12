@@ -1,4 +1,4 @@
-package org.nebulostore.async;
+package org.nebulostore.async.synchrogroup;
 
 import com.google.inject.Inject;
 
@@ -9,9 +9,11 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.async.messages.AddAsSynchroPeerMessage;
-import org.nebulostore.async.messages.AddedAsSynchroPeerMessage;
+import org.nebulostore.async.AsyncMessagesContext;
 import org.nebulostore.async.messages.AsyncModuleErrorMessage;
+import org.nebulostore.async.synchrogroup.messages.AddAsSynchroPeerMessage;
+import org.nebulostore.async.synchrogroup.messages.AddedAsSynchroPeerMessage;
+import org.nebulostore.async.util.RecipientsData;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
@@ -20,6 +22,9 @@ import org.nebulostore.dht.messages.PutDHTMessage;
 
 /**
  * Module responsible for adding current instance as a synchro-peer of recipient_.
+ *
+ * We ensure that real recipients set is always a subset of current instance's recipients set stored
+ * in both DHT and memory.
  *
  * @author Piotr Malicki
  *
@@ -46,12 +51,29 @@ public class AddAsSynchroPeerModule extends JobModule {
   protected class AddAsSynchroPeerVisitor extends MessageVisitor<Void> {
 
     public Void visit(AddAsSynchroPeerMessage message) {
+      logger_.debug("Starting " + AddAsSynchroPeerModule.class + " with message: " + message);
       if (context_.isInitialized()) {
-        messageJobId_ = message.getId();
-        recipient_ = message.getSourceAddress();
-        InstanceMetadata metadata = new InstanceMetadata(appKey_);
-        metadata.getRecipients().add(message.getSourceAddress());
-        networkQueue_.add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(metadata)));
+        if (context_.lockRecipient(message.getSourceAddress())) {
+          messageJobId_ = message.getId();
+          recipient_ = message.getSourceAddress();
+          if (context_.addRecipient(recipient_, message.getCounterValue())) {
+            RecipientsData recipientsData = context_.getRecipientsData();
+            InstanceMetadata metadata = new InstanceMetadata(appKey_);
+            metadata.setRecipients(recipientsData.getRecipients());
+            metadata.setRecipientsSetVersion(recipientsData.getRecipientsSetVersion());
+            networkQueue_.add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(
+                metadata)));
+          } else {
+            logger_.info("Could not add new recipient: too many recipients");
+            networkQueue_.add(new AsyncModuleErrorMessage(myAddress_, message.getSourceAddress()));
+            endJobModule();
+          }
+        } else {
+          logger_.warn("Peer " + message.getSourceAddress() + " is already locked, cancelling the" +
+              "request");
+          networkQueue_.add(new AsyncModuleErrorMessage(myAddress_, message.getSourceAddress()));
+          endJobModule();
+        }
       } else {
         logger_.warn("Async messages context has not yet been initialized, ending the module");
         networkQueue_.add(new AsyncModuleErrorMessage(myAddress_, message.getSourceAddress()));
@@ -61,19 +83,22 @@ public class AddAsSynchroPeerModule extends JobModule {
     }
 
     public Void visit(OkDHTMessage message) {
-      context_.addRecipient(recipient_);
+      logger_.debug("Added new recipients set to DHT");
       networkQueue_.add(new AddedAsSynchroPeerMessage(messageJobId_, myAddress_, recipient_));
+      context_.freeRecipient(recipient_);
       endJobModule();
       return null;
     }
 
     public Void visit(ErrorDHTMessage message) {
       logger_.warn("Adding current instance as a synchro-peer of peer " + recipient_ + " failed.");
+      networkQueue_.add(new AsyncModuleErrorMessage(myAddress_, recipient_));
+      context_.removeRecipient(recipient_);
+      context_.freeRecipient(recipient_);
       endJobModule();
       return null;
     }
   }
-
 
   @Override
   protected void processMessage(Message message) throws NebuloException {

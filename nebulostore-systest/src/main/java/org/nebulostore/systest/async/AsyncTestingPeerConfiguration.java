@@ -4,14 +4,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import com.google.inject.TypeLiteral;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Names;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.async.peerselection.AlwaysDenyingSynchroPeerSelectionModule;
-import org.nebulostore.async.peerselection.SynchroPeerSelectionModule;
-import org.nebulostore.async.peerselection.SynchroPeerSelectionModuleFactory;
+import org.nebulostore.async.synchrogroup.selector.AlwaysDenyingSynchroPeerSelector;
+import org.nebulostore.async.synchrogroup.selector.SynchroPeerSelector;
 import org.nebulostore.peers.AbstractPeer;
 import org.nebulostore.systest.TestingPeerConfiguration;
 
@@ -25,10 +23,8 @@ public class AsyncTestingPeerConfiguration extends TestingPeerConfiguration {
   }
 
   @Override
-  protected void configureAsyncSelectionModule() {
-    install(new FactoryModuleBuilder().implement(SynchroPeerSelectionModule.class,
-        AlwaysDenyingSynchroPeerSelectionModule.class).build(
-        SynchroPeerSelectionModuleFactory.class));
+  protected void configureAsyncSelector() {
+    bind(SynchroPeerSelector.class).toInstance(new AlwaysDenyingSynchroPeerSelector());
   }
 
   @Override

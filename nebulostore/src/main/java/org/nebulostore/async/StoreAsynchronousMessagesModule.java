@@ -40,6 +40,9 @@ public class StoreAsynchronousMessagesModule extends JobModule {
    */
   protected class SAMVisitor extends MessageVisitor<Void> {
     public Void visit(StoreAsynchronousMessage message) {
+      logger_.debug("Starting " + StoreAsynchronousMessagesModule.class +
+          " with messages to add: " + message.getMessage() + " for recipient: " +
+          message.getRecipient());
       if (context_.isInitialized()) {
         if (context_.containsRecipient(message.getRecipient())) {
           context_.storeAsynchronousMessage(message.getRecipient(), message.getMessage());
@@ -49,7 +52,6 @@ public class StoreAsynchronousMessagesModule extends JobModule {
         }
       } else {
         logger_.warn("Async messages context has not yet been initialized, ending the module");
-        endJobModule();
       }
       endJobModule();
       return null;

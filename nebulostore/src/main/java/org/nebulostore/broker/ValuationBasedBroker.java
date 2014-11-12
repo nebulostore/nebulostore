@@ -126,6 +126,7 @@ public class ValuationBasedBroker extends Broker {
       logger_.debug("Improving contracts...");
 
       Set<Contract> possibleContracts = new HashSet<Contract>();
+      //FIXME concurrentModificationException was seen here
       Set<CommAddress> randomPeersSample = networkMonitor_.getRandomPeersSample();
 
       if (context_.getContractsRealSize() > spaceContributedKb_) {

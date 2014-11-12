@@ -45,9 +45,9 @@ public class ReplicatorResource {
 
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ReplicatorResource.class);
-  private Provider<Replicator> replicatorProvider_;
-  private NebuloObjectFactory nebuloObjectFactory_;
-  private String writeFileFormDestination_;
+  private final Provider<Replicator> replicatorProvider_;
+  private final NebuloObjectFactory nebuloObjectFactory_;
+  private final String writeFileFormDestination_;
 
   @Inject
   public ReplicatorResource(Provider<Replicator> replicatorProvider,

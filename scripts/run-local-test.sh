@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_NAME=./_local-test.sh
-declare -a PEERS=(3 16 6 6 8 14 6 3 3 4)
+declare -a PEERS=(3 16 6 6 8 14 6 3 3 7)
 N_TESTS=${#PEERS[@]}
 declare -a TITLES=(\
     'basic ping-pong test'\

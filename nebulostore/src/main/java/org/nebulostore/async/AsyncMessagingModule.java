@@ -1,6 +1,5 @@
 package org.nebulostore.async;
 
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -14,7 +13,10 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
-import org.nebulostore.async.peerselection.SynchroPeerSelectionModuleFactory;
+import org.nebulostore.async.synchrogroup.CacheRefreshingModule;
+import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
+import org.nebulostore.async.synchrogroup.messages.LastFoundPeerMessage;
+import org.nebulostore.async.synchronization.SynchronizeAsynchronousMessagesModule;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
@@ -29,6 +31,15 @@ import org.nebulostore.timer.MessageGenerator;
  * - registering selection modules after discovery of a new peer<br>
  * - running synchronization module periodically<br>
  * - running cache refresh module periodically<br>
+ * <br>
+ * This modules ensures that:<br>
+ * - if any synchro-peer holding a message synchronizes with original recipient at some time,
+ * this message will be delivered to the original recipient.<br>
+ * <br>
+ * IMPORTANT:<br>
+ * There is no guarantee that every message sent asynchronously will be delivered exactly one
+ * time. Each messsage may be delivered one or more times to the proper receiver. All modules
+ * using this module to send messages asynchronously should take this into account.
  *
  * @author Piotr Malicki
  */
@@ -42,35 +53,33 @@ public class AsyncMessagingModule extends JobModule {
   private final SynchronizationService syncService_;
   private final ScheduledExecutorService synchronizationExecutor_;
   private final ScheduledExecutorService cacheRefreshExecutor_;
+
   private final NetworkMonitor networkMonitor_;
   private final BlockingQueue<Message> dispatcherQueue_;
-  private final SynchroPeerSelectionModuleFactory selectionModuleFactory_;
   private final AsyncMessagesContext context_;
   private final CommAddress myAddress_;
-  private final MessageVisitor<Void> visitor_ = new AsyngMessagingModuleVisitor();
+  private final MessageVisitor<Void> visitor_ = new AsyncMessagingModuleVisitor();
+  private final SynchroPeerSetChangeSequencerModule synchroSequencer_;
+
   private final CacheRefreshingService cacheRefreshingService_;
 
   @Inject
   public AsyncMessagingModule(
-      @Named("async.sync-executor")
-        final ScheduledExecutorService synchronizationExecutor,
-      @Named("async.cache-refresh-executor")
-        final ScheduledExecutorService cacheRefreshExecutor,
+      @Named("async.sync-executor") final ScheduledExecutorService synchronizationExecutor,
+      @Named("async.cache-refresh-executor") final ScheduledExecutorService cacheRefreshExecutor,
       final NetworkMonitor networkMonitor,
       @Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
-      SynchroPeerSelectionModuleFactory selectionModuleFactory, AsyncMessagesContext context,
-      CommAddress myAddress) {
+      AsyncMessagesContext context, CommAddress myAddress,
+      SynchroPeerSetChangeSequencerModule synchroSequencer) {
     synchronizationExecutor_ = synchronizationExecutor;
     cacheRefreshExecutor_ = cacheRefreshExecutor;
     networkMonitor_ = networkMonitor;
     dispatcherQueue_ = dispatcherQueue;
-    selectionModuleFactory_ = selectionModuleFactory;
     context_ = context;
     myAddress_ = myAddress;
-
-
     syncService_ = new SynchronizationService();
     cacheRefreshingService_ = new CacheRefreshingService();
+    synchroSequencer_ = synchroSequencer;
   }
 
   private void startSynchronizationService() {
@@ -83,6 +92,13 @@ public class AsyncMessagingModule extends JobModule {
         CACHE_REFRESH_PERIOD_SEC, TimeUnit.SECONDS);
   }
 
+  /**
+   * Service that is responsible for synchronization of asynchronous messages with another peers
+   * from each synchro group current instance belongs to. It is run periodically.
+   *
+   * @author Piotr Malicki
+   *
+   */
   private class SynchronizationService implements Runnable {
 
     @Override
@@ -101,13 +117,7 @@ public class AsyncMessagingModule extends JobModule {
 
     @Override
     public void run() {
-      Set<CommAddress> recipients = context_.getRecipientsCopy();
-      for (CommAddress recipient : recipients) {
-        JobModule updateModule = new SynchroPeerSetUpdateModule(recipient, context_);
-        updateModule.setOutQueue(dispatcherQueue_);
-        updateModule.runThroughDispatcher();
-      }
-      context_.removeUnnecessarySynchroGroups();
+      outQueue_.add(new JobInitMessage(new CacheRefreshingModule()));
     }
 
   }
@@ -116,23 +126,11 @@ public class AsyncMessagingModule extends JobModule {
     INITIALIZING, RUNNING
   }
 
-  protected class AsyngMessagingModuleVisitor extends MessageVisitor<Void> {
+  protected class AsyncMessagingModuleVisitor extends MessageVisitor<Void> {
 
     private ModuleState state_ = ModuleState.INITIALIZING;
 
     public Void visit(JobInitMessage message) {
-      // Run peer selection module when new peer is found.
-      MessageGenerator addFoundSynchroPeer = new MessageGenerator() {
-        @Override
-        public Message generate() {
-          return new JobInitMessage(selectionModuleFactory_.createModule());
-        }
-      };
-      networkMonitor_.addContextChangeMessageGenerator(addFoundSynchroPeer);
-
-      startSynchronizationService();
-      startCacheRefreshingService();
-
       networkQueue_.add(new GetDHTMessage(jobId_, myAddress_.toKeyDHT()));
       return null;
     }
@@ -140,13 +138,15 @@ public class AsyncMessagingModule extends JobModule {
     public Void visit(ValueDHTMessage message) {
       if (state_.equals(ModuleState.INITIALIZING) &&
           message.getKey().equals(myAddress_.toKeyDHT())) {
-        //TODO (pm) Maybe initialize cache here?
+        // TODO (pm) Maybe initialize cache here?
         if (message.getValue().getValue() instanceof InstanceMetadata) {
           InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
           LOGGER.debug("Received InstanceMetadata with synchro-set: " + metadata.getSynchroGroup() +
               " and recipients: " + metadata.getRecipients());
-          context_.initialize(metadata.getSynchroGroup(), metadata.getRecipients());
+          context_.initialize(metadata.getSynchroGroup(), metadata.getRecipients(),
+              metadata.getRecipientsSetVersion(), metadata.getSynchroPeerCounters());
           state_ = ModuleState.RUNNING;
+          runServices();
         } else {
           LOGGER.warn("Received wrong type of message from DHT");
         }
@@ -161,11 +161,30 @@ public class AsyncMessagingModule extends JobModule {
       if (state_.equals(ModuleState.INITIALIZING)) {
         context_.initialize();
         state_ = ModuleState.RUNNING;
+        runServices();
       } else {
         LOGGER.warn("Received " + message.getClass() + " that was not expected");
       }
       return null;
     }
+
+    private void runServices() {
+      // Run peer selection module when new peer is found.
+      MessageGenerator addFoundSynchroPeer = new MessageGenerator() {
+        @Override
+        public Message generate() {
+          int lastPeerIndex = networkMonitor_.getKnownPeers().size() - 1;
+          CommAddress lastPeer = networkMonitor_.getKnownPeers().get(lastPeerIndex);
+          return new LastFoundPeerMessage(synchroSequencer_.getJobId(), lastPeer);
+        }
+      };
+
+      networkMonitor_.addContextChangeMessageGenerator(addFoundSynchroPeer);
+
+      startSynchronizationService();
+      startCacheRefreshingService();
+    }
+
   }
 
   @Override

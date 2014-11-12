@@ -19,7 +19,6 @@ public class UpdateNebuloObjectMessage extends AsynchronousMessage {
   CommAddress updateFrom_;
 
   public UpdateNebuloObjectMessage(NebuloAddress objectId, CommAddress updateFrom) {
-    super();
     objectId_ = objectId;
     updateFrom_ = updateFrom;
   }
@@ -32,6 +31,7 @@ public class UpdateNebuloObjectMessage extends AsynchronousMessage {
     return updateFrom_;
   }
 
+  @Override
   public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
     return visitor.visit(this);
   }

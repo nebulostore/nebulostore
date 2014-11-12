@@ -16,6 +16,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.modules.EndModuleMessage;
 import org.nebulostore.async.AsyncMessagingModule;
+import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.communication.CommunicationPeerFactory;
 import org.nebulostore.communication.naming.CommAddress;
@@ -38,6 +39,8 @@ public class Peer extends AbstractPeer {
   protected Thread dispatcherThread_;
   protected Thread networkThread_;
   protected AsyncMessagingModule asyncMessagingModule_;
+  protected SynchroPeerSetChangeSequencerModule synchroUpdateSequencer_;
+
   protected BlockingQueue<Message> dispatcherInQueue_;
   protected BlockingQueue<Message> networkInQueue_;
   protected BlockingQueue<Message> commPeerInQueue_;
@@ -73,6 +76,7 @@ public class Peer extends AbstractPeer {
                               Injector injector,
                               @Named("peer.registration-timeout") int registrationTimeout,
                               AsyncMessagingModule asyncMessagingModule,
+                              SynchroPeerSetChangeSequencerModule synchroUpdateSequencer,
                               RestModuleImpl restModule,
                               @Named("rest-api.enabled") boolean isRestEnabled) {
     dispatcherInQueue_ = dispatcherInQueue;
@@ -88,6 +92,7 @@ public class Peer extends AbstractPeer {
     injector_ = injector;
     registrationTimeout_ = registrationTimeout;
     asyncMessagingModule_ = asyncMessagingModule;
+    synchroUpdateSequencer_ = synchroUpdateSequencer;
     isRestEnabled_ = isRestEnabled;
 
     // Create core threads.
@@ -184,6 +189,7 @@ public class Peer extends AbstractPeer {
   }
 
   protected void runAsyncMessaging() {
+    synchroUpdateSequencer_.runThroughDispatcher();
     asyncMessagingModule_.runThroughDispatcher();
   }
 

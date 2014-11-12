@@ -1,4 +1,4 @@
-package org.nebulostore.async.messages;
+package org.nebulostore.async.synchrogroup.messages;
 
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;

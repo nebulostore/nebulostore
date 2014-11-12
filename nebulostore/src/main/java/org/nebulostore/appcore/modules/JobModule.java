@@ -55,6 +55,7 @@ public abstract class JobModule extends Module {
    * Run this module through a JobInitMessage (with new random ID) sent to Dispatcher.
    */
   public synchronized void runThroughDispatcher() {
+    logger_.debug("Running module of type: " + getClass().getName() + " through the dispatcher.");
     checkNotNull(jobId_);
     if (isStarted_) {
       logger_.error("Module already ran.");
@@ -62,6 +63,7 @@ public abstract class JobModule extends Module {
     }
 
     isStarted_ = true;
+    logger_.debug("Adding JobInitMessage to the outQueue_");
     outQueue_.add(new JobInitMessage(this));
   }
 

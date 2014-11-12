@@ -7,12 +7,18 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.modules.JobModule;
 
+/**
+ * JobModule responsible for forwarding messages to the counter module.
+ *
+ * @author Piotr Malicki
+ *
+ */
 public class CounterModuleMessageForwarder extends JobModule {
 
   private static Logger logger_ = Logger.getLogger(CounterModuleMessageForwarder.class);
 
-  CounterModule counterModule_;
-  Message message_;
+  private CounterModule counterModule_;
+  private final Message message_;
 
   public CounterModuleMessageForwarder(Message message) {
     message_ = message;
@@ -20,13 +26,15 @@ public class CounterModuleMessageForwarder extends JobModule {
 
   @Inject
   public void setDependencies(CounterModule counterModule) {
+    logger_.debug("setting counter module: " + counterModule);
     counterModule_ = counterModule;
   }
 
   @Override
-  protected void initModule() {
+  public void initModule() {
     super.initModule();
     counterModule_.getInQueue().add(message_);
+    endJobModule();
   }
 
   @Override

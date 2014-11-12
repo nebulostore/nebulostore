@@ -2,6 +2,7 @@ package org.nebulostore.systest.async.messages;
 
 import java.util.concurrent.BlockingQueue;
 
+import org.apache.log4j.Logger;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.communication.messages.CommMessage;
@@ -19,6 +20,8 @@ import org.nebulostore.systest.async.CounterModuleMessageForwarder;
  */
 public class IncrementMessage extends CommMessage {
 
+  private static Logger logger_ = Logger.getLogger(IncrementMessage.class);
+
   public IncrementMessage(CommAddress sourceAddress, CommAddress destAddress) {
     super(sourceAddress, destAddress);
   }
@@ -27,8 +30,9 @@ public class IncrementMessage extends CommMessage {
 
   @Override
   public ErrorResponder generateErrorResponder(BlockingQueue<Message> dispatcherQueue) {
+      logger_.warn("Dispatcher queue: " + dispatcherQueue.hashCode());
     return new SendAsyncMessageErrorResponder(new AsynchronousIncrementMessage(),
-      getDestinationAddress(), dispatcherQueue);
+        getDestinationAddress(), dispatcherQueue);
   }
 
   @Override

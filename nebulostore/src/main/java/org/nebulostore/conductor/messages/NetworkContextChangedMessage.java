@@ -1,4 +1,4 @@
-package org.nebulostore.async.messages;
+package org.nebulostore.conductor.messages;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;

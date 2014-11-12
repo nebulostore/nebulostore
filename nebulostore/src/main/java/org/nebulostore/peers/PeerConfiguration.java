@@ -9,7 +9,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import com.google.common.base.Functions;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Names;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -24,9 +23,9 @@ import org.nebulostore.appcore.model.ObjectDeleter;
 import org.nebulostore.appcore.model.ObjectGetter;
 import org.nebulostore.appcore.model.ObjectWriter;
 import org.nebulostore.async.AsyncMessagesContext;
-import org.nebulostore.async.peerselection.AlwaysAcceptingSynchroPeerSelectionModule;
-import org.nebulostore.async.peerselection.SynchroPeerSelectionModule;
-import org.nebulostore.async.peerselection.SynchroPeerSelectionModuleFactory;
+import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
+import org.nebulostore.async.synchrogroup.selector.LimitedPeerNumSynchroPeerSelector;
+import org.nebulostore.async.synchrogroup.selector.SynchroPeerSelector;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.broker.BrokerContext;
 import org.nebulostore.broker.ContractsEvaluator;
@@ -137,20 +136,19 @@ public class PeerConfiguration extends GenericConfiguration {
   }
 
   protected void configureAsyncMessaging() {
-    bind(AsyncMessagesContext.class).toInstance(new AsyncMessagesContext());
+    bind(AsyncMessagesContext.class).in(Scopes.SINGLETON);
     bind(ScheduledExecutorService.class).annotatedWith(
         Names.named("async.sync-executor")).toInstance(
         Executors.newScheduledThreadPool(ASYNC_MODULE_SYNC_THREAD_POOL_SIZE));
     bind(ScheduledExecutorService.class).annotatedWith(
         Names.named("async.cache-refresh-executor")).toInstance(
         Executors.newScheduledThreadPool(ASYNC_MODULE_CACHE_REFRESH_THREAD_POOL_SIZE));
-    configureAsyncSelectionModule();
+    bind(SynchroPeerSetChangeSequencerModule.class).in(Scopes.SINGLETON);
+    configureAsyncSelector();
   }
 
-  protected void configureAsyncSelectionModule() {
-    install(new FactoryModuleBuilder().implement(SynchroPeerSelectionModule.class,
-        AlwaysAcceptingSynchroPeerSelectionModule.class).build(
-        SynchroPeerSelectionModuleFactory.class));
+  protected void configureAsyncSelector() {
+    bind(SynchroPeerSelector.class).toInstance(new LimitedPeerNumSynchroPeerSelector());
   }
 
   protected void configureQueues() {

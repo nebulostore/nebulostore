@@ -16,7 +16,7 @@ import org.nebulostore.systest.async.AsyncTestClient.AsyncTestClientState;
 /**
  * Starts NUM_PEERS_IN_GROUP * NUM_GROUPS peers, divides them into three groups. During every
  * iteration of the test:<br>
- * - first group of peers pretending to be disabled (<b>disabled group</b>)<br>
+ * - first group of peers pretends to be disabled (<b>disabled group</b>)<br>
  * - peers in the second group are synchro-peers of peers from first group (one synchro-peer per
  * "disabled" peer) (<b>synchro-peers group</b>)<br>
  * - peers in the third group send messages to all peers from the first group
@@ -41,11 +41,11 @@ public class AsyncTestServer extends ConductorServer {
   private static Logger logger_ = Logger.getLogger(AsyncTestServer.class);
 
   private static final int NUM_GROUPS = 3;
-  private static final int NUM_TURNS = 1;
+  private static final int NUM_TURNS = 2;
   private static final int NUM_PHASES = NUM_TURNS * 9;
-  private static final int NUM_PEERS_IN_GROUP = 1;
+  private static final int NUM_PEERS_IN_GROUP = 2;
   private static final int PEERS_NEEDED = NUM_PEERS_IN_GROUP * NUM_GROUPS;
-  private static final int TIMEOUT_SEC = 300;
+  private static final int TIMEOUT_SEC = 500;
 
   public AsyncTestServer() {
     super(NUM_PHASES + 1, TIMEOUT_SEC, "AsyncTestServer" + CryptoUtils.getRandomString(),
@@ -70,8 +70,8 @@ public class AsyncTestServer extends ConductorServer {
       for (int j = 0; j < clients.get(i).size(); ++j) {
         List<CommAddress> neighbor = clients.get((i + 1) % NUM_GROUPS);
         networkQueue_.add(new InitMessage(clientsJobId_, null, clients.get(i).get(j),
-            new AsyncTestClient(jobId_, NUM_PHASES, commAddress_, neighbor, neighbor.get(j %
-                neighbor.size()), AsyncTestClientState.values()[i])));
+            new AsyncTestClient(jobId_, NUM_PHASES, commAddress_, neighbor, neighbor,
+                AsyncTestClientState.values()[i])));
       }
     }
   }

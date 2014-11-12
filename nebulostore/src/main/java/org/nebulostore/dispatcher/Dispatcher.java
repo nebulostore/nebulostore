@@ -83,6 +83,7 @@ public class Dispatcher extends Module {
     /*
      * General behavior - forwarding messages.
      */
+    @Override
     public Void visitDefault(Message message) throws NebuloException {
       if (message.getId() != null) {
         String jobId = message.getId();

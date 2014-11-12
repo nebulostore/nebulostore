@@ -1,5 +1,6 @@
 package org.nebulostore.systest.async;
 
+import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -17,6 +18,8 @@ import org.nebulostore.systest.async.messages.GetCounterValueMessage;
  *
  */
 public class CounterModule extends JobModule {
+
+  private static Logger logger_ = Logger.getLogger(CounterModule.class);
 
   private int number_;
   private final MessageVisitor<Void> visitor_ = new CounterModuleMessageVisitor();
@@ -49,6 +52,7 @@ public class CounterModule extends JobModule {
 
   @Override
   protected void processMessage(Message message) throws NebuloException {
+    logger_.debug("Received message in counter module: " + message);
     message.accept(visitor_);
   }
 

@@ -19,7 +19,6 @@ public class UpdateFileMessage extends AsynchronousMessage {
   CommAddress updateFrom_;
 
   public UpdateFileMessage(NebuloAddress objectId, CommAddress updateFrom) {
-    super();
     objectId_ = objectId;
     updateFrom_ = updateFrom;
   }

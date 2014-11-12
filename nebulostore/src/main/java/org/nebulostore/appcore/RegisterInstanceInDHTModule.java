@@ -63,7 +63,7 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
 
     public Void visit(JobInitMessage message) {
       jobId_ = message.getId();
-      logger_.debug("Trying to retrive InstanceMetadata from DHT taskId: " + jobId_);
+      logger_.debug("Trying to retrieve InstanceMetadata from DHT taskId: " + jobId_);
       networkQueue_.add(new GetDHTMessage(jobId_, myAddress_.toKeyDHT()));
       state_ = State.WAITING_FOR_RESPONSE;
       return null;
@@ -71,7 +71,7 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
 
     public Void visit(ErrorDHTMessage message) {
       if (state_ == State.WAITING_FOR_RESPONSE) {
-        logger_.debug("Unable to retrive InstanceMetadata from DHT, putting new.");
+        logger_.debug("Unable to retrieve InstanceMetadata from DHT, putting new.");
         // TODO(szm): read from file if exists
         networkQueue_
           .add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(new InstanceMetadata(

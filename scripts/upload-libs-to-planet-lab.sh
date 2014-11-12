@@ -31,7 +31,7 @@ SSH_OPTIONS="StrictHostKeyChecking=no"
 : ${RSYNC_OPTIONS="-rlu --size-only"}
 
 echo "BUILDING ..."
-./_build-and-deploy.sh -p 1 -m peer > /dev/null
+./_build-and-deploy.sh -p 1 -m peer > build.log
 
 echo "COPYING ..."
 i=1

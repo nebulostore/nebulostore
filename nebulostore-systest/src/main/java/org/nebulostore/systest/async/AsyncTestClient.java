@@ -6,7 +6,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.async.ChangeSynchroPeerSetModule;
+import org.nebulostore.async.synchrogroup.ChangeSynchroPeerSetModule;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.GatherStatsMessage;
@@ -31,10 +31,10 @@ public class AsyncTestClient extends ConductorClient {
   /**
    * Sleep time while waiting for asynchronous messages synchronization.
    */
-  private static final int SLEEP_TIME = 6000;
+  private static final int SLEEP_TIME = 7000;
 
   private final List<CommAddress> myReceivers_;
-  private final CommAddress mySynchroPeer_;
+  private final List<CommAddress> mySynchroPeers_;
   private final AsyncTestClientState state_;
   private CommAddress myAddress_;
   private transient CounterModule counterModule_;
@@ -46,13 +46,13 @@ public class AsyncTestClient extends ConductorClient {
   }
 
   public AsyncTestClient(String serverJobId, int numPhases, CommAddress serverCommAddress,
-      List<CommAddress> myReceivers, CommAddress mySynchroPeer, AsyncTestClientState state) {
+      List<CommAddress> myReceivers, List<CommAddress> mySynchroPeers, AsyncTestClientState state) {
     super(serverJobId, numPhases, serverCommAddress);
     myReceivers_ = myReceivers;
-    mySynchroPeer_ = mySynchroPeer;
+    mySynchroPeers_ = mySynchroPeers;
     state_ = state;
     logger_.debug("Creating new AsyncTestClient:\n" + "My comm-address: " + myAddress_ + "\n" +
-        "My synchro-peer: " + mySynchroPeer + "\n" + "My receivers: " + myReceivers + "\n");
+        "My synchro-peer: " + mySynchroPeers + "\n" + "My receivers: " + myReceivers + "\n");
   }
 
   @Override
@@ -104,9 +104,9 @@ public class AsyncTestClient extends ConductorClient {
     @Override
     public Void visit(NewPhaseMessage message) {
       logger_.info("Starting initialization phase of test. Adding peer with address " +
-          mySynchroPeer_ + "as a synchro-peer of peer with address " + myAddress_);
+          mySynchroPeers_ + "as a synchro-peer of peer with address " + myAddress_);
       outQueue_.add(new JobInitMessage(new ChangeSynchroPeerSetModule(Sets
-          .newHashSet(mySynchroPeer_), null)));
+          .newHashSet(mySynchroPeers_), null)));
       sleep(SLEEP_TIME);
       phaseFinished();
       return null;

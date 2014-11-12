@@ -12,6 +12,7 @@ import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.async.messages.StoreAsynchronousMessage;
+import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
@@ -19,11 +20,11 @@ import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 
 /**
- * Sends asynchronous message to all peers' synchro-peers.
- *
- * We give no guarantee on asynchronous messages.
+ * The module responsible for sending an asynchronous message to all synchro-peers of the
+ * destination peer.
  *
  * @author szymonmatejczyk
+ * @author Piotr Malicki
  *
  */
 public class SendAsynchronousMessagesForPeerModule extends JobModule {
@@ -60,28 +61,37 @@ public class SendAsynchronousMessagesForPeerModule extends JobModule {
    */
   public class SendAsynchronousMessagesForPeerModuleVisitor extends MessageVisitor<Void> {
     public Void visit(JobInitMessage message) {
-      if (context_.isInitialized()) {
-        jobId_ = message.getId();
-        networkQueue_.add(new GetDHTMessage(jobId_, recipient_.toKeyDHT()));
-      } else {
-        logger_.warn("Async messages context has not yet been initialized, ending the module");
-        endJobModule();
-      }
+      logger_.debug("Starting " + getClass().getName() + " with message: " + message_ + "for: " +
+          recipient_);
+      networkQueue_.add(new GetDHTMessage(jobId_, recipient_.toKeyDHT()));
       return null;
     }
 
     public Void visit(ValueDHTMessage message) {
+      logger_.debug("Received " + message + " in " + getClass().getName());
       if (message.getKey().equals(recipient_.toKeyDHT()) &&
           (message.getValue().getValue() instanceof InstanceMetadata)) {
         InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
-        for (CommAddress inboxHolder : metadata.getSynchroGroup()) {
-          if (inboxHolder.equals(myAddress_)) {
-            context_.addWaitingAsyncMessage(recipient_, message_);
-          } else if (!inboxHolder.equals(recipient_)) {
-            networkQueue_.add(new StoreAsynchronousMessage(jobId_, null, inboxHolder, recipient_,
-                message_));
+        if (metadata == null || metadata.getSynchroGroup() == null ||
+            metadata.getSynchroGroup().size() == 0) {
+          logger_.warn("Could not send message asynchronously, because recipient's synchro peer " +
+              " set is empty");
+        } else {
+          for (CommAddress inboxHolder : metadata.getSynchroGroup()) {
+            if (context_.isInitialized() && inboxHolder.equals(myAddress_)) {
+              context_.storeAsynchronousMessage(recipient_, message_);
+            } else if (!inboxHolder.equals(recipient_)) {
+              logger_.debug("Sending asynchronous message: " + message_ + " to peer: " +
+                  inboxHolder);
+              CommMessage msg =
+                  new StoreAsynchronousMessage(jobId_, null, inboxHolder, recipient_, message_);
+              networkQueue_.add(msg);
+            }
           }
         }
+        endJobModule();
+      } else {
+        logger_.warn("Received " + message.getClass().getName() + " that was not expected");
       }
       endJobModule();
       return null;

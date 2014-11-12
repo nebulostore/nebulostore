@@ -18,7 +18,7 @@ import org.nebulostore.communication.routing.SendResult;
  */
 public final class SendAsyncMessageErrorResponder extends ErrorResponder {
 
-  private static Logger logger_ = Logger.getLogger(SendAsynchronousMessagesForPeerModule.class);
+  private static Logger logger_ = Logger.getLogger(SendAsyncMessageErrorResponder.class);
 
   /**
    * Asynchronous message to be sent.
@@ -32,6 +32,7 @@ public final class SendAsyncMessageErrorResponder extends ErrorResponder {
 
   public SendAsyncMessageErrorResponder(AsynchronousMessage asyncMsg, CommAddress recipient,
       BlockingQueue<Message> dispatcherQueue) {
+    logger_.debug("Creating error responder, dispatcher queue: " + dispatcherQueue.hashCode());
     asyncMsg_ = asyncMsg;
     recipient_ = recipient;
     dispatcherQueue_ = dispatcherQueue;
@@ -40,6 +41,7 @@ public final class SendAsyncMessageErrorResponder extends ErrorResponder {
   @Override
   public void handleError(SendResult result) {
     logger_.debug("Sending asynchronous message: " + asyncMsg_);
+    logger_.debug("Dispatcher queue: " + dispatcherQueue_.hashCode());
     new SendAsynchronousMessagesForPeerModule(recipient_, asyncMsg_, dispatcherQueue_);
   }
 

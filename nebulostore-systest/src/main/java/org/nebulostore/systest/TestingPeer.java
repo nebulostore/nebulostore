@@ -44,6 +44,7 @@ public class TestingPeer extends Peer {
     logger_.info("Starting testing peer with appKey = " + appKey_);
     runNetworkMonitor();
     runBroker();
+    runAsyncMessaging();
   }
 
   @Override

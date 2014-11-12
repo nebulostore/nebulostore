@@ -21,6 +21,7 @@ public class DeleteNebuloObjectMessage extends AsynchronousMessage {
     return objectId_;
   }
 
+  @Override
   public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
     return visitor.visit(this);
   }
