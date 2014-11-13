@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -144,6 +145,29 @@ public class ReplicatorResource {
     LOGGER.info(result.toString());
     LOGGER.info("End method getFileMeta()");
     return result.toString();
+  }
+
+  @POST
+  @Path("delete_file")
+  @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+  @Produces(MediaType.APPLICATION_JSON)
+  public String deleteFile(
+      @FormParam("appKey") String key,
+      @FormParam("objectId") long id)  throws NebuloException {
+    LOGGER.info("Start method deleteFile()");
+    AppKey appKey = new AppKey(key);
+    ObjectId objectId = new ObjectId(BigInteger.valueOf(id));
+    NebuloFile file;
+    try {
+      file = (NebuloFile) nebuloObjectFactory_.fetchExistingNebuloObject(
+          new NebuloAddress(appKey, objectId));
+      file.delete();
+    } catch (NebuloException e) {
+      LOGGER.error(e.getMessage());
+      throw e;
+    }
+    LOGGER.info("End method deleteFile()");
+    return new JsonPrimitive("OK").toString();
   }
 
   private String readFile(AppKey appKey, ObjectId objectId) throws NebuloException {
