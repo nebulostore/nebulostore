@@ -16,6 +16,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.modules.EndModuleMessage;
 import org.nebulostore.async.AsyncMessagingModule;
+import org.nebulostore.async.checker.MessageReceivingCheckerModule;
 import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.communication.CommunicationPeerFactory;
@@ -41,6 +42,8 @@ public class Peer extends AbstractPeer {
   protected Thread networkThread_;
   protected AsyncMessagingModule asyncMessagingModule_;
   protected SynchroPeerSetChangeSequencerModule synchroUpdateSequencer_;
+  protected MessageReceivingCheckerModule msgReceivingChecker_;
+  protected Thread msgReceivingCheckerThread_;
 
   protected BlockingQueue<Message> dispatcherInQueue_;
   protected BlockingQueue<Message> networkInQueue_;
@@ -79,6 +82,7 @@ public class Peer extends AbstractPeer {
                               @Named("peer.registration-timeout") int registrationTimeout,
                               AsyncMessagingModule asyncMessagingModule,
                               SynchroPeerSetChangeSequencerModule synchroUpdateSequencer,
+                              MessageReceivingCheckerModule msgReceivingChecker,
                               RestModuleImpl restModule,
                               @Named("rest-api.enabled") boolean isRestEnabled) {
     dispatcherInQueue_ = dispatcherInQueue;
@@ -95,6 +99,7 @@ public class Peer extends AbstractPeer {
     registrationTimeout_ = registrationTimeout;
     asyncMessagingModule_ = asyncMessagingModule;
     synchroUpdateSequencer_ = synchroUpdateSequencer;
+    msgReceivingChecker_ = msgReceivingChecker;
     isRestEnabled_ = isRestEnabled;
 
     // Create core threads.
@@ -106,9 +111,13 @@ public class Peer extends AbstractPeer {
       restModule_ = restModule;
       restThread_ = new Thread(restModule_, "Rest Thread");
     }
+    msgReceivingCheckerThread_ = new Thread(msgReceivingChecker_, "Messages receiving checker");
   }
 
   public void quitNebuloStore() {
+    if (msgReceivingChecker_ != null) {
+      msgReceivingChecker_.getInQueue().add(new EndModuleMessage());
+    }
     if (networkInQueue_ != null) {
       commPeerInQueue_.add(new EndModuleMessage());
     }
@@ -196,6 +205,7 @@ public class Peer extends AbstractPeer {
 
   protected void runAsyncMessaging() {
     synchroUpdateSequencer_.runThroughDispatcher();
+    msgReceivingCheckerThread_.start();
     asyncMessagingModule_.runThroughDispatcher();
   }
 
@@ -215,6 +225,8 @@ public class Peer extends AbstractPeer {
       if (isRestEnabled_) {
         restThread_.join();
       }
+      msgReceivingCheckerThread_.join();
+
     } catch (InterruptedException exception) {
       logger_.fatal("Interrupted");
       return;

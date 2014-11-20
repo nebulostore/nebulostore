@@ -31,7 +31,7 @@ public class AsyncTestClient extends ConductorClient {
   /**
    * Sleep time while waiting for asynchronous messages synchronization.
    */
-  private static final int SLEEP_TIME = 7000;
+  private static final int SLEEP_TIME = 8000;
 
   private final List<CommAddress> myReceivers_;
   private final List<CommAddress> mySynchroPeers_;

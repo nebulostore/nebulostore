@@ -14,6 +14,7 @@ import org.nebulostore.async.messages.AsyncModuleErrorMessage;
 import org.nebulostore.async.synchronization.messages.AsynchronousMessagesMessage;
 import org.nebulostore.async.synchronization.messages.GetAsynchronousMessagesMessage;
 import org.nebulostore.async.util.RecipientPeerData;
+import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.timer.TimeoutMessage;
 import org.nebulostore.timer.Timer;
@@ -122,6 +123,12 @@ public class RespondWithAsynchronousMessagesModule extends JobModule {
       } else {
         endJobModule();
       }
+      return null;
+    }
+
+    public Void visit(ErrorCommMessage message) {
+      logger_.warn("Message " + message.getMessage() + " has not been sent.");
+      endJobModule();
       return null;
     }
 

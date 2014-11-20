@@ -36,6 +36,11 @@ public class IncrementMessage extends CommMessage {
   }
 
   @Override
+  public boolean requiresAck() {
+    return true;
+  }
+
+  @Override
   public JobModule getHandler() {
     return new CounterModuleMessageForwarder(this);
   }

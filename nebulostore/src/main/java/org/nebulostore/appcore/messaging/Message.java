@@ -9,7 +9,7 @@ import org.nebulostore.crypto.CryptoUtils;
 /**
  * Base class for messages.
  */
-public abstract class Message implements Serializable {
+public abstract class Message implements Serializable, Comparable<Message> {
   private static final long serialVersionUID = -2032656006415029507L;
 
   // A unique id for message type
@@ -65,6 +65,11 @@ public abstract class Message implements Serializable {
         "jobId_='" + jobId_ + "', " +
         "id_ ='" + id_ + '\'' +
         "} " + super.toString();
+  }
+
+  @Override
+  public int compareTo(Message message) {
+    return id_.compareTo(message.id_);
   }
 
   /**

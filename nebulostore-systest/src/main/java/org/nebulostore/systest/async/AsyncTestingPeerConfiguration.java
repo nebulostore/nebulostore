@@ -36,9 +36,10 @@ public class AsyncTestingPeerConfiguration extends TestingPeerConfiguration {
 
   @Override
   protected void configureQueues() {
-    BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<Message>();
-    BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<Message>();
-    BlockingQueue<Message> commPeerInQueue = new LinkedBlockingQueue<Message>();
+    BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<>();
+    BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<>();
+    BlockingQueue<Message> commPeerInQueue = new LinkedBlockingQueue<>();
+    BlockingQueue<Message> msgRcvCheckerInQueue = new LinkedBlockingQueue<>();
 
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
       annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
@@ -47,13 +48,19 @@ public class AsyncTestingPeerConfiguration extends TestingPeerConfiguration {
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
       annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(networkQueue);
+      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(msgRcvCheckerInQueue);
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
       annotatedWith(Names.named("CommOverlayInQueue")).toInstance(networkQueue);
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommOverlayNetworkQueue")).toInstance(commPeerInQueue);
+      annotatedWith(Names.named("CommOverlayNetworkQueue")).toInstance(msgRcvCheckerInQueue);
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
       annotatedWith(Names.named("CommOverlayOutQueue")).toInstance(dispatcherQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("MsgReceivingCheckerInQueue")).toInstance(msgRcvCheckerInQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("MsgReceivingCheckerNetworkQueue")).toInstance(commPeerInQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("MsgReceivingCheckerOutQueue")).toInstance(networkQueue);
     logger_.debug("Communication queues configured.");
   }
 }

@@ -24,6 +24,7 @@ import org.nebulostore.appcore.model.ObjectDeleter;
 import org.nebulostore.appcore.model.ObjectGetter;
 import org.nebulostore.appcore.model.ObjectWriter;
 import org.nebulostore.async.AsyncMessagesContext;
+import org.nebulostore.async.checker.MessageReceivingCheckerModule;
 import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
 import org.nebulostore.async.synchrogroup.selector.LimitedPeerNumSynchroPeerSelector;
 import org.nebulostore.async.synchrogroup.selector.SynchroPeerSelector;
@@ -155,6 +156,7 @@ public class PeerConfiguration extends GenericConfiguration {
         Names.named("async.cache-refresh-executor")).toInstance(
         Executors.newScheduledThreadPool(ASYNC_MODULE_CACHE_REFRESH_THREAD_POOL_SIZE));
     bind(SynchroPeerSetChangeSequencerModule.class).in(Scopes.SINGLETON);
+    bind(MessageReceivingCheckerModule.class).in(Scopes.SINGLETON);
     configureAsyncSelector();
   }
 
@@ -165,15 +167,22 @@ public class PeerConfiguration extends GenericConfiguration {
   protected void configureQueues() {
     BlockingQueue<Message> networkQueue = new LinkedBlockingQueue<Message>();
     BlockingQueue<Message> dispatcherQueue = new LinkedBlockingQueue<Message>();
+    BlockingQueue<Message> commPeerInQueue = new LinkedBlockingQueue<Message>();
 
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
       annotatedWith(Names.named("NetworkQueue")).toInstance(networkQueue);
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(networkQueue);
+      annotatedWith(Names.named("CommunicationPeerInQueue")).toInstance(commPeerInQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("MsgReceivingCheckerNetworkQueue")).toInstance(commPeerInQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("MsgReceivingCheckerInQueue")).toInstance(networkQueue);
+    bind(new TypeLiteral<BlockingQueue<Message>>() { }).
+      annotatedWith(Names.named("MsgReceivingCheckerOutQueue")).toInstance(dispatcherQueue);
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
       annotatedWith(Names.named("DispatcherQueue")).toInstance(dispatcherQueue);
     bind(new TypeLiteral<BlockingQueue<Message>>() { }).
-      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(dispatcherQueue);
+      annotatedWith(Names.named("CommunicationPeerOutQueue")).toInstance(networkQueue);
   }
 
   protected void configureRestModule() {

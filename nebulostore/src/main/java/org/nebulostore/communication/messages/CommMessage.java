@@ -48,6 +48,13 @@ public abstract class CommMessage extends Message {
     return new EmptyErrorResponder();
   }
 
+  /**
+   * Returns true if message should be sent asynchronously in case of an error.
+   */
+  public boolean requiresAck() {
+    return false;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {

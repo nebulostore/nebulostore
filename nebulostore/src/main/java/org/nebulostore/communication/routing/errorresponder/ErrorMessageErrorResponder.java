@@ -1,10 +1,8 @@
 package org.nebulostore.communication.routing.errorresponder;
 
-import java.util.Observable;
 import java.util.concurrent.BlockingQueue;
 
-import org.nebulostore.communication.routing.MessageSendFuture;
-import org.nebulostore.communication.routing.SendResult;
+import org.nebulostore.appcore.messaging.Message;
 
 /**
  * Error responder which sends an error message to the module which
@@ -13,28 +11,24 @@ import org.nebulostore.communication.routing.SendResult;
  * @author Piotr Malicki
  *
  */
-public final class ErrorMessageErrorResponder extends ErrorResponder {
+public final class ErrorMessageErrorResponder implements ErrorResponder {
 
   /**
    * Queue for error messages.
    */
-  private final BlockingQueue<SendResult> errorQueue_;
+  private final BlockingQueue<Message> errorQueue_;
 
-  public ErrorMessageErrorResponder(BlockingQueue<SendResult> outQueue) {
-    errorQueue_ = outQueue;
+  private final Message originalMessage_;
+
+  public ErrorMessageErrorResponder(BlockingQueue<Message> errorQueue,
+      Message originalMessage) {
+    errorQueue_ = errorQueue;
+    originalMessage_ = originalMessage;
   }
 
   @Override
-  public void update(Observable o, Object arg) {
-    MessageSendFuture future = (MessageSendFuture) o;
-    SendResult result = future.getResult();
-    errorQueue_.add(result);
-
-  }
-
-  @Override
-  public void handleError(SendResult result) {
-    errorQueue_.add(result);
+  public void handleError() {
+    errorQueue_.add(new MessageNotReceivedMessage(originalMessage_));
   }
 
 }

@@ -7,7 +7,7 @@ import org.nebulostore.appcore.messaging.Message;
  *
  * @author Piotr Malicki
  */
-public class SendErrorMessage extends Message {
+public class MessageNotReceivedMessage extends Message {
 
   private static final long serialVersionUID = 893858589297014667L;
   /**
@@ -15,7 +15,7 @@ public class SendErrorMessage extends Message {
    */
   private final Message originalMessage_;
 
-  public SendErrorMessage(Message originalMessage) {
+  public MessageNotReceivedMessage(Message originalMessage) {
     originalMessage_ = originalMessage;
   }
 

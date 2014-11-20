@@ -1,6 +1,5 @@
 package org.nebulostore.communication.routing.errorresponder;
 
-import org.nebulostore.communication.routing.SendResult;
 
 /**
  * Error responder which does nothing.
@@ -9,10 +8,10 @@ import org.nebulostore.communication.routing.SendResult;
  *
  */
 
-public final class EmptyErrorResponder extends ErrorResponder {
+public final class EmptyErrorResponder implements ErrorResponder {
 
   @Override
-  public void handleError(SendResult result) {
+  public void handleError() {
   }
 
 }

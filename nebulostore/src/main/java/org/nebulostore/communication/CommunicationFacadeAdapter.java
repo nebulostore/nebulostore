@@ -73,7 +73,6 @@ public class CommunicationFacadeAdapter extends Module {
   private Module dhtPeer_;
   private final BlockingQueue<Message> dhtPeerInQueue_;
   private Thread dhtPeerThread_;
-  private final BlockingQueue<Message> dispatcherQueue_;
 
   @AssistedInject
   public CommunicationFacadeAdapter(
@@ -83,7 +82,6 @@ public class CommunicationFacadeAdapter extends Module {
       @Named("communication.local-comm-address") CommAddress localCommAddress,
       @Named("communication.main-executor") ExecutorService executor,
       ReplicaResolverFactory replicaResolverFactory,
-      @Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
       DHTPeerFactory dhtPeerFactory) {
 
     super(inQueue, outQueue);
@@ -99,8 +97,6 @@ public class CommunicationFacadeAdapter extends Module {
     contractMapFactory_ = replicaResolverFactory;
     dhtPeerFactory_ = dhtPeerFactory;
     executor_ = executor;
-
-    dispatcherQueue_ = dispatcherQueue;
 
     dhtPeerInQueue_ = new LinkedBlockingQueue<Message>();
   }
@@ -198,8 +194,7 @@ public class CommunicationFacadeAdapter extends Module {
       if (msg.getDestinationAddress() == null) {
         LOGGER.warn("Null destination address set for " + msg + ". Dropping the message.");
       } else {
-        commFacade_.sendMessage(msg, sendResults_).addObserver(
-            msg.generateErrorResponder(dispatcherQueue_));
+        commFacade_.sendMessage(msg, sendResults_);
       }
       return null;
     }

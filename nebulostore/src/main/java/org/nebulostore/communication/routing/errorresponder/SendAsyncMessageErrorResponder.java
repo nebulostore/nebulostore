@@ -7,7 +7,6 @@ import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.async.SendAsynchronousMessagesForPeerModule;
 import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.communication.naming.CommAddress;
-import org.nebulostore.communication.routing.SendResult;
 
 /**
  * Error responder which sends asynchronous message to all synchro-peers
@@ -16,7 +15,7 @@ import org.nebulostore.communication.routing.SendResult;
  * @author Piotr Malicki
  *
  */
-public final class SendAsyncMessageErrorResponder extends ErrorResponder {
+public final class SendAsyncMessageErrorResponder implements ErrorResponder {
 
   private static Logger logger_ = Logger.getLogger(SendAsyncMessageErrorResponder.class);
 
@@ -39,9 +38,8 @@ public final class SendAsyncMessageErrorResponder extends ErrorResponder {
   }
 
   @Override
-  public void handleError(SendResult result) {
+  public void handleError() {
     logger_.debug("Sending asynchronous message: " + asyncMsg_);
-    logger_.debug("Dispatcher queue: " + dispatcherQueue_.hashCode());
     new SendAsynchronousMessagesForPeerModule(recipient_, asyncMsg_, dispatcherQueue_);
   }
 
