@@ -33,7 +33,8 @@ public class TimerImpl implements Timer {
 
   @Override
   public void schedule(String jobId, long delayMillis, String messageContent) {
-    javaTimer_.schedule(new DispatcherForwardingTimerTask(jobId, messageContent), delayMillis);
+    javaTimer_.schedule(new DispatcherForwardingTimeoutTimerTask(jobId, messageContent),
+        delayMillis);
   }
 
   @Override
@@ -65,10 +66,6 @@ public class TimerImpl implements Timer {
   private class DispatcherForwardingTimerTask extends TimerTask {
     private final Message message_;
 
-    public DispatcherForwardingTimerTask(String jobId, String messageContent) {
-      message_ = new TimeoutMessage(jobId, messageContent);
-    }
-
     public DispatcherForwardingTimerTask(Message message) {
       message_ = message;
     }
@@ -76,6 +73,23 @@ public class TimerImpl implements Timer {
     @Override
     public void run() {
       dispatcherQueue_.add(message_);
+    }
+  }
+
+  /**
+   * @author Piotr Malicki
+   */
+  private class DispatcherForwardingTimeoutTimerTask extends TimerTask {
+    private final Message message_;
+
+    public DispatcherForwardingTimeoutTimerTask(String jobId, String messageContent) {
+      message_ = new TimeoutMessage(jobId, messageContent);
+    }
+
+    @Override
+    public void run() {
+      dispatcherQueue_.add(message_);
+      javaTimer_.cancel();
     }
   }
 

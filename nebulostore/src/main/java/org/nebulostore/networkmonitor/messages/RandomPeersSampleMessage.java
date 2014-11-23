@@ -3,6 +3,9 @@ package org.nebulostore.networkmonitor.messages;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.inject.Inject;
+import com.google.inject.Provider;
+
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
@@ -16,6 +19,9 @@ import org.nebulostore.networkmonitor.RandomPeersGossipingModule;
  * @author szymonmatejczyk
  */
 public class RandomPeersSampleMessage extends CommMessage {
+
+  private Provider<RandomPeersGossipingModule> provider_;
+
   public RandomPeersSampleMessage(CommAddress destAddress, Set<CommAddress> peersSet) {
     super(null, destAddress);
     peersSet_ = new HashSet<CommAddress>(peersSet);
@@ -25,6 +31,11 @@ public class RandomPeersSampleMessage extends CommMessage {
   {
     super(jobId, null, destAddress);
     peersSet_ = new HashSet<CommAddress>(peersSet);
+  }
+
+  @Inject
+  public void setProvider(Provider<RandomPeersGossipingModule> provider) {
+    provider_ = provider;
   }
 
   private static final long serialVersionUID = 7275803958168737858L;
@@ -40,7 +51,7 @@ public class RandomPeersSampleMessage extends CommMessage {
 
   @Override
   public JobModule getHandler() throws NebuloException {
-    return new RandomPeersGossipingModule();
+    return provider_.get();
   }
 
   @Override

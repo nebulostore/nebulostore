@@ -35,21 +35,18 @@ public class RandomPeersGossipingModule extends JobModule {
   public static final int RANDOM_PEERS_SAMPLE_SIZE = 4;
 
   private final RPGVisitor visitor_ = new RPGVisitor();
-  private CommAddress myAddress_;
-  private Timer timer_;
+  private final CommAddress myAddress_;
+  private final Timer timer_;
 
-  private NetworkMonitor networkMonitor_;
+  private final NetworkMonitor networkMonitor_;
 
   CommAddress remotePeer_;
 
   @Inject
-  void setCommAddress(CommAddress myAddress, NetworkMonitor networkMonitor) {
+  public RandomPeersGossipingModule(CommAddress myAddress, NetworkMonitor networkMonitor,
+      Timer timer) {
     myAddress_ = myAddress;
     networkMonitor_ = networkMonitor;
-  }
-
-  @Inject
-  public void setTimer(Timer timer) {
     timer_ = timer;
   }
 
