@@ -32,7 +32,7 @@ import org.nebulostore.dht.messages.DHTMessage;
 import org.nebulostore.dht.messages.InDHTMessage;
 import org.nebulostore.dht.messages.OutDHTMessage;
 import org.nebulostore.dht.messages.ReconfigureDHTMessage;
-import org.nebulostore.replicaresolver.BDBPeerToReplicaResolverAdapter;
+import org.nebulostore.replicaresolver.DHTPeerFactory;
 import org.nebulostore.replicaresolver.ReplicaResolver;
 import org.nebulostore.replicaresolver.ReplicaResolverFactory;
 
@@ -69,6 +69,7 @@ public class CommunicationFacadeAdapter extends Module {
    * Note that it was implemented by Marcin and I(grzegorzmilka) left it mostly as is. Only BDB
    * works.
    */
+  private final DHTPeerFactory dhtPeerFactory_;
   private Module dhtPeer_;
   private final BlockingQueue<Message> dhtPeerInQueue_;
   private Thread dhtPeerThread_;
@@ -82,7 +83,8 @@ public class CommunicationFacadeAdapter extends Module {
       @Named("communication.local-comm-address") CommAddress localCommAddress,
       @Named("communication.main-executor") ExecutorService executor,
       ReplicaResolverFactory replicaResolverFactory,
-      @Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue) {
+      @Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
+      DHTPeerFactory dhtPeerFactory) {
 
     super(inQueue, outQueue);
     commFacade_ = commFacade;
@@ -95,6 +97,7 @@ public class CommunicationFacadeAdapter extends Module {
     msgSendMonitor_ = new MsgSendMonitor();
     localCommAddress_ = localCommAddress;
     contractMapFactory_ = replicaResolverFactory;
+    dhtPeerFactory_ = dhtPeerFactory;
     executor_ = executor;
 
     dispatcherQueue_ = dispatcherQueue;
@@ -148,7 +151,7 @@ public class CommunicationFacadeAdapter extends Module {
    */
   private void startUpReplicaResolver() {
     LOGGER.trace("startUpReplicaResolver()");
-    dhtPeer_ = new BDBPeerToReplicaResolverAdapter(dhtPeerInQueue_, inQueue_, contractMap_);
+    dhtPeer_ = dhtPeerFactory_.createDHTPeer(dhtPeerInQueue_, inQueue_, contractMap_);
     dhtPeerThread_ = new Thread(dhtPeer_, "Nebulostore.Communication.DHT");
     dhtPeerThread_.setDaemon(true);
     dhtPeerThread_.start();

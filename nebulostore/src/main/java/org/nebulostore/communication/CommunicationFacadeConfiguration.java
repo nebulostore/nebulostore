@@ -84,7 +84,7 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
 
   private void configureBootstrap() {
     bind(CommAddress.class).annotatedWith(Names.named("communication.bootstrap-comm-address")).
-      toInstance(new CommAddress(xmlConfig_.getString("communication.bootstrap-comm-address")));
+        toInstance(new CommAddress(xmlConfig_.getString("communication.bootstrap-comm-address")));
     bind(BootstrapService.class).to(UserGivenBootstrapService.class);
   }
 
@@ -115,9 +115,9 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
         "communication.naming.cached-base-resolver")).to(
             SimpleCommAddressResolver.class).in(Singleton.class);
     bind(CommAddressResolver.class).to(CachedCommAddressResolver.class).in(Singleton.class);
-    bind(ScheduledExecutorService.class).annotatedWith(Names.named(
-        "communication.naming.cached-scheduled-executor")).
-        toInstance(Executors.newScheduledThreadPool(1));
+    bind(ScheduledExecutorService.class).annotatedWith(
+        Names.named("communication.naming.cached-scheduled-executor")).toInstance(
+        Executors.newScheduledThreadPool(1));
   }
 
   protected void configurePeerDiscovery() {
@@ -128,7 +128,7 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
         toInstance(serviceExecutor_);
     bind(ScheduledExecutorService.class).annotatedWith(Names.named(
         "communication.peerdiscovery.scheduled-executor")).
-      toInstance(scheduledExecutor);
+        toInstance(scheduledExecutor);
     install(new FactoryModuleBuilder().implement(PeerDiscovery.class,
           SamplingGossipPeerDiscovery.class).build(PeerDiscoveryFactory.class));
   }
@@ -150,8 +150,8 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
         bind(InetSocketAddress.class).annotatedWith(Names.named(
             "communication.remotemap.server-net-address")).toInstance(
                 new InetSocketAddress(InetAddress.getByName(xmlConfig_.getString(
-                  "communication.remotemap.server-net-address")),
-                  xmlConfig_.getInt("communication.remotemap.server-port")));
+                    "communication.remotemap.server-net-address")),
+                    xmlConfig_.getInt("communication.remotemap.server-port")));
       } catch (UnknownHostException e) {
         throw new IllegalStateException("Unexpected exception.", e);
       }
@@ -186,10 +186,10 @@ public class CommunicationFacadeConfiguration extends AbstractModule {
 
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.sender-worker-executor")).
-      toInstance(senderWorkerExecutor);
+        toInstance(senderWorkerExecutor);
     bind(ExecutorService.class).annotatedWith(Names.named(
         "communication.routing.byte-sender-worker-executor")).
-      toInstance(byteSenderWorkerExecutor);
+        toInstance(byteSenderWorkerExecutor);
 
     bind(ByteSender.class).to(PlainSocketByteSender.class).in(Singleton.class);
     bind(MessageSender.class).to(MessageSenderAdapter.class);

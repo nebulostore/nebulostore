@@ -2,6 +2,11 @@ package org.nebulostore.replicaresolver;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
@@ -22,13 +27,17 @@ public class BDBPeerToReplicaResolverAdapter extends Module {
   private static final Logger LOGGER = Logger.getLogger(BDBPeerToReplicaResolverAdapter.class);
   private final ReplicaResolver contractMap_;
   private final MessageVisitor<Void> msgVisitor_;
+  private final ExecutorService executor_;
 
+  @Inject
   public BDBPeerToReplicaResolverAdapter(
-    BlockingQueue<Message> inQueue,
-    BlockingQueue<Message> outQueue,
-    ReplicaResolver replicaResolver) {
+      @Assisted("communication.dht.inQueue") BlockingQueue<Message> inQueue,
+      @Assisted("communication.dht.outQueue") BlockingQueue<Message> outQueue,
+      @Assisted ReplicaResolver replicaResolver,
+      @Named("communication.dht.executor") ExecutorService executor) {
     super(inQueue, outQueue);
     contractMap_ = replicaResolver;
+    executor_ = executor;
     msgVisitor_ = new BDBServerMessageVisitor();
   }
 
@@ -36,39 +45,6 @@ public class BDBPeerToReplicaResolverAdapter extends Module {
   protected void processMessage(Message msg) throws NebuloException {
     LOGGER.debug(String.format("processMessage(%s)", msg));
     msg.accept(msgVisitor_);
-  }
-
-  private void get(GetDHTMessage getMsg) {
-    LOGGER.debug(String.format("get(%s)", getMsg));
-    KeyDHT key = getMsg.getKey();
-    ValueDHT value = null;
-    try {
-      value = contractMap_.get(key);
-    } catch (IOException e) {
-      LOGGER.warn("get() -> ERROR", e);
-    }
-
-    OutDHTMessage outMessage;
-    if (value != null) {
-      outMessage = new ValueDHTMessage(getMsg, key, value);
-    } else {
-      outMessage = new ErrorDHTMessage(getMsg, new NebuloException(
-          "Unable to read from database."));
-    }
-
-    outQueue_.add(outMessage);
-  }
-
-  private void put(PutDHTMessage putMsg) {
-    KeyDHT key = putMsg.getKey();
-    ValueDHT value = putMsg.getValue();
-
-    try {
-      contractMap_.put(key, value);
-      outQueue_.add(new OkDHTMessage(putMsg));
-    } catch (IOException e) {
-      LOGGER.error(String.format("put(%s)", putMsg), e);
-    }
   }
 
   /**
@@ -84,15 +60,65 @@ public class BDBPeerToReplicaResolverAdapter extends Module {
     }
 
     public Void visit(GetDHTMessage msg) {
-      get(msg);
+      executor_.submit(new GetDHTRunnable(msg));
       return null;
     }
 
     public Void visit(PutDHTMessage msg) {
-      put(msg);
+      executor_.submit(new PutDHTRunnable(msg));
       return null;
     }
   }
 
-}
+  private class GetDHTRunnable implements Runnable {
+    private final GetDHTMessage getMsg_;
 
+    public GetDHTRunnable(GetDHTMessage getMsg) {
+      getMsg_ = getMsg;
+    }
+
+    @Override
+    public void run() {
+      LOGGER.debug(String.format("get(%s)", getMsg_));
+      KeyDHT key = getMsg_.getKey();
+      ValueDHT value = null;
+      try {
+        value = contractMap_.get(key);
+      } catch (IOException e) {
+        LOGGER.warn("get() -> ERROR", e);
+      }
+
+      OutDHTMessage outMessage;
+      if (value != null) {
+        outMessage = new ValueDHTMessage(getMsg_, key, value);
+      } else {
+        outMessage =
+            new ErrorDHTMessage(getMsg_, new NebuloException("Unable to read from database."));
+      }
+
+      outQueue_.add(outMessage);
+    }
+  }
+
+  private class PutDHTRunnable implements Runnable {
+    private final PutDHTMessage putMsg_;
+
+    public PutDHTRunnable(PutDHTMessage putMsg) {
+      putMsg_ = putMsg;
+    }
+
+    @Override
+    public void run() {
+      KeyDHT key = putMsg_.getKey();
+      ValueDHT value = putMsg_.getValue();
+
+      try {
+        contractMap_.put(key, value);
+        outQueue_.add(new OkDHTMessage(putMsg_));
+      } catch (IOException e) {
+        LOGGER.error(String.format("put(%s)", putMsg_), e);
+      }
+    }
+  }
+
+}
