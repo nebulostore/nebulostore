@@ -14,6 +14,7 @@ import asg.cliche.ShellManageable;
 
 import com.google.inject.Inject;
 
+import org.apache.commons.lang.StringUtils;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
@@ -161,23 +162,12 @@ public final class TextInterface extends Peer implements ShellManageable {
       file = objectFactory_.createNewNebuloFile(new NebuloAddress(appKey, objectId));
       System.out.println("Successfully created new file");
     }
-    int currpos = 0;
-    for (String s : content) {
-      String str;
-      if (currpos != 0) {
-        str = " " + s;
-      } else {
-        str = s;
-      }
-      try {
-        int bytesWritten = file.write(str.getBytes(StandardCharsets.UTF_8), currpos);
-        System.out.println("Successfully written " + bytesWritten + " bytes at pos " + currpos);
-        currpos += bytesWritten;
-      } catch (NebuloException exception) {
-        System.out.println("Got exception from 'write()' " +
-            " pos " + currpos + " content token: " + str);
-        exception.printStackTrace();
-      }
+    try {
+      int bytesWritten = file.write(
+          StringUtils.join(content, " ").getBytes(StandardCharsets.UTF_8), 0);
+      System.out.println("Successfully written " + bytesWritten + " bytes");
+    } catch (NebuloException exception) {
+      exception.printStackTrace();
     }
   }
 

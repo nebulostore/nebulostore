@@ -17,6 +17,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.google.common.io.ByteStreams;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.google.inject.Inject;
@@ -195,11 +196,6 @@ public class ReplicatorResource {
     } catch (NebuloException e) {
       file = nebuloObjectFactory_.createNewNebuloFile(new NebuloAddress(appKey, objectId));
     }
-    int writtenBytes = 0;
-    byte[] data = new byte[100];
-    while (uploadedInputStream.read(data) != -1) {
-      writtenBytes += file.write(data, writtenBytes);
-    }
-    return writtenBytes;
+    return file.write(ByteStreams.toByteArray(uploadedInputStream), 0);
   }
 }

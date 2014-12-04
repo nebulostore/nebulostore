@@ -317,6 +317,7 @@ public class ReplicatorImpl extends Replicator {
       String objId = objectId.toString();
       String tmpKey = objId + TMP_SUFFIX + transactionToken;
       byte[] bytes = store_.get(tmpKey);
+      store_.delete(tmpKey);
       store_.put(objId, bytes);
       addToIndex(new MetaData(objId, bytes.length));
 
