@@ -153,12 +153,12 @@ public class CommunicationFacadeAdapter extends Module {
     LOGGER.trace("startUpReplicaResolver()");
     dhtPeer_ = dhtPeerFactory_.createDHTPeer(dhtPeerInQueue_, inQueue_, contractMap_);
     dhtPeerThread_ = new Thread(dhtPeer_, "Nebulostore.Communication.DHT");
-    dhtPeerThread_.setDaemon(true);
     dhtPeerThread_.start();
   }
 
-  private void shutDownReplicaResolver() {
+  private void shutDownReplicaResolver() throws InterruptedException {
     dhtPeerInQueue_.add(new EndModuleMessage());
+    dhtPeerThread_.join();
   }
 
   /**

@@ -3,6 +3,7 @@ package org.nebulostore.replicaresolver;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
@@ -25,6 +26,9 @@ import org.nebulostore.dht.messages.ValueDHTMessage;
 
 public class BDBPeerToReplicaResolverAdapter extends Module {
   private static final Logger LOGGER = Logger.getLogger(BDBPeerToReplicaResolverAdapter.class);
+
+  private static final long EXECUTOR_SHUTDOWN_TIMEOUT_SEC = 10;
+
   private final ReplicaResolver contractMap_;
   private final MessageVisitor<Void> msgVisitor_;
   private final ExecutorService executor_;
@@ -55,6 +59,13 @@ public class BDBPeerToReplicaResolverAdapter extends Module {
   protected final class BDBServerMessageVisitor extends MessageVisitor<Void> {
 
     public Void visit(EndModuleMessage msg) {
+      executor_.shutdown();
+      try {
+        executor_.awaitTermination(EXECUTOR_SHUTDOWN_TIMEOUT_SEC, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        LOGGER.error("Error while waiting for executor service termination.");
+        throw new IllegalStateException(e);
+      }
       endModule();
       return null;
     }
