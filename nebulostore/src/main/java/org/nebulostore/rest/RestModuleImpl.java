@@ -66,10 +66,17 @@ public class RestModuleImpl implements RestModule {
     }
   }
 
+  public void shutDown() {
+    synchronized (isTerminate_) {
+      isTerminate_.set(true);
+      isTerminate_.notify();
+    }
+  }
+
   private ResourceConfig configureServer() {
     ResourceConfig resourceConfig = new ResourceConfig(MultiPartFeature.class);
     resourceConfig.register(
-        new ServerTerminationResource(isTerminate_));
+        new ServerTerminationResource(this));
     resourceConfig.register(brokerResource_);
     resourceConfig.register(networkMonitorResource_);
     resourceConfig.register(replicatorResource_);

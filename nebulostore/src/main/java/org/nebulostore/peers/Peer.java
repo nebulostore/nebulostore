@@ -22,6 +22,7 @@ import org.nebulostore.communication.CommunicationPeerFactory;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dispatcher.Dispatcher;
 import org.nebulostore.networkmonitor.NetworkMonitor;
+import org.nebulostore.rest.RestModule;
 import org.nebulostore.rest.RestModuleImpl;
 import org.nebulostore.timer.Timer;
 
@@ -59,6 +60,7 @@ public class Peer extends AbstractPeer {
 
   private Thread restThread_;
   private boolean isRestEnabled_;
+  private RestModule restModule_;
 
   @Inject
   public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherInQueue,
@@ -101,7 +103,8 @@ public class Peer extends AbstractPeer {
     Runnable commPeer = commPeerFactory_.newCommunicationPeer(commPeerInQueue_, commPeerOutQueue_);
     networkThread_ = new Thread(commPeer, "CommunicationPeer");
     if (isRestEnabled_) {
-      restThread_ = new Thread(restModule, "Rest Thread");
+      restModule_ = restModule;
+      restThread_ = new Thread(restModule_, "Rest Thread");
     }
   }
 
@@ -111,6 +114,9 @@ public class Peer extends AbstractPeer {
     }
     if (dispatcherInQueue_ != null) {
       dispatcherInQueue_.add(new EndModuleMessage());
+    }
+    if (isRestEnabled_) {
+      restModule_.shutDown();
     }
   }
 
