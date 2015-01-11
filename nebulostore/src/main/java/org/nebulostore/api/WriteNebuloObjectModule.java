@@ -1,9 +1,13 @@
 package org.nebulostore.api;
 
+import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.Metadata;
@@ -59,6 +63,13 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
 
   private String commitVersion_;
   private int nRecipients_;
+  private PublicKey publicKey_;
+
+  @Inject
+  public WriteNebuloObjectModule(
+      @Named("security.public-key") String publicKey) throws CryptoException {
+    publicKey_ = CryptoUtils.readPublicKey(publicKey);
+  }
 
   @Override
   public void writeObject(NebuloObject objectToWrite, Set<String> previousVersionSHAs) {
@@ -136,7 +147,7 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
         } else {
           EncryptedObject encryptedObject = null;
           try {
-            encryptedObject = CryptoUtils.encryptObject(object_);
+            encryptedObject = CryptoUtils.encryptObject(object_, publicKey_);
             commitVersion_ = CryptoUtils.sha(encryptedObject);
             isSmallFile_ = encryptedObject.size() < SMALL_FILE_THRESHOLD;
 

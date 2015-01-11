@@ -224,4 +224,8 @@
             resources/web/replicator-write-file-form.html
         </replicator-write-file-form>
     </rest-api>
+    <security>
+        <private-key>keys/private.key</private-key>
+        <public-key>keys/public.key</public-key>
+    </security>
 </peer>

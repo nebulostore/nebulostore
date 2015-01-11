@@ -2,6 +2,9 @@ package org.nebulostore.crypto;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
@@ -9,10 +12,25 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.math.BigInteger;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -20,6 +38,7 @@ import javax.xml.bind.Unmarshaller;
 
 import com.google.common.base.Charsets;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.EncryptedObject;
@@ -31,6 +50,87 @@ import org.nebulostore.appcore.model.EncryptedObject;
  */
 public final class CryptoUtils {
   private static Logger logger_ = Logger.getLogger(CryptoUtils.class);
+  private static final String RSA_ALGORITHM = "RSA";
+  private static final String AES_ALGORITHM = "AES";
+
+
+  public static PublicKey readPublicKey(String filename) throws CryptoException {
+    try {
+      X509EncodedKeySpec x509EncodedKeySpec =
+          new X509EncodedKeySpec(CryptoUtils.readBytes(filename));
+      KeyFactory keyFactory = KeyFactory.getInstance(CryptoUtils.RSA_ALGORITHM);
+      return keyFactory.generatePublic(x509EncodedKeySpec);
+    } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+      logger_.error(e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  public static PrivateKey readPrivateKey(String filename) throws CryptoException {
+    try {
+      PKCS8EncodedKeySpec pkcs8EncodedKeySpec =
+          new PKCS8EncodedKeySpec(CryptoUtils.readBytes(filename));
+      KeyFactory keyFactory = KeyFactory.getInstance(CryptoUtils.RSA_ALGORITHM);
+      return keyFactory.generatePrivate(pkcs8EncodedKeySpec);
+    } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+      logger_.error(e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  private static byte[] readBytes(String filename) throws IOException {
+    File file = new File(filename);
+    FileInputStream fileInputStream = new FileInputStream(file);
+    DataInputStream dataInputStream = new DataInputStream(fileInputStream);
+    try {
+      byte[] keyBytes = new byte[(int) file.length()];
+      dataInputStream.readFully(keyBytes);
+      return keyBytes;
+    } finally {
+      dataInputStream.close();
+    }
+  }
+
+  private static byte[] encrypt(byte[] message, Key key, String algorithm) throws CryptoException {
+    try {
+      Cipher cipher = Cipher.getInstance(algorithm);
+      cipher.init(Cipher.ENCRYPT_MODE, key);
+      return cipher.doFinal(message);
+    } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException |
+        IllegalBlockSizeException | BadPaddingException e) {
+      logger_.error(e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  private static byte[] decrypt(byte[] cipherText, Key key, String algorithm)
+      throws CryptoException {
+    try {
+      Cipher cipher = Cipher.getInstance(algorithm);
+      cipher.init(Cipher.DECRYPT_MODE, key);
+      return cipher.doFinal(cipherText);
+    } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException |
+        IllegalBlockSizeException | BadPaddingException e) {
+      logger_.error(e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  private static byte[] encryptRSA(byte[] message, Key key) throws CryptoException {
+    return encrypt(message, key, RSA_ALGORITHM);
+  }
+
+  private static byte[] decryptRSA(byte[] message, Key key) throws CryptoException {
+    return decrypt(message, key, RSA_ALGORITHM);
+  }
+
+  private static byte[] encryptAES(byte[] message, Key key) throws CryptoException {
+    return encrypt(message, key, AES_ALGORITHM);
+  }
+
+  private static byte[] decryptAES(byte[] message, Key key) throws CryptoException {
+    return decrypt(message, key, AES_ALGORITHM);
+  }
 
   /**
    * Create cryptographically secure 128-bit long positive BigInteger.
@@ -47,9 +147,36 @@ public final class CryptoUtils {
     return getRandomId().toString();
   }
 
-  // TODO: Encryption must use cryptographic keys (add parameters?)
   public static EncryptedObject encryptObject(Serializable object) throws CryptoException {
     return new EncryptedObject(serializeObject(object));
+  }
+
+  public static EncryptedObject encryptObject(Serializable object, Key key) throws CryptoException {
+    Key secretKey = generateSecretKey();
+    byte[] cipherText = encryptAES(serializeObject(object), secretKey);
+    byte[] cipherKey = encryptRSA(serializeObject(secretKey), key);
+    byte[] cipher = ArrayUtils.addAll(cipherKey, cipherText);
+    return new EncryptedObject(cipher);
+  }
+
+  private static SecretKey generateSecretKey() throws CryptoException {
+    try {
+      KeyGenerator keyGen = KeyGenerator.getInstance(AES_ALGORITHM);
+      keyGen.init(256);
+      return keyGen.generateKey();
+    } catch (NoSuchAlgorithmException e) {
+      logger_.error(e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  public static Object decryptObject(EncryptedObject encryptedObject, Key key) throws
+      CryptoException {
+    byte[] cipherKey = Arrays.copyOfRange(encryptedObject.getEncryptedData(), 0, 512);
+    byte[] cipherText = Arrays.copyOfRange(
+        encryptedObject.getEncryptedData(), 512, encryptedObject.size());
+    Key secretKey = (SecretKey) deserializeObject(decryptRSA(cipherKey, key));
+    return deserializeObject(decryptAES(cipherText, secretKey));
   }
 
   public static Object decryptObject(EncryptedObject encryptedObject) throws

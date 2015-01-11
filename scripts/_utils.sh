@@ -40,6 +40,19 @@ function buildNebulostore() {
     return $ret_code
 }
 
+function _generateKey() {
+    KEY_SIZE=4096
+    KEY_DIR=$1/keys
+    mkdir $KEY_DIR
+    PRIVATE_PEM=$KEY_DIR/private.pem
+    PRIVATE_KEY=$KEY_DIR/private.key
+    PUBLIC_KEY=$KEY_DIR/public.key
+    openssl genrsa -out $PRIVATE_PEM $KEY_SIZE
+    openssl pkcs8 -topk8 -inform PEM -outform DER -in $PRIVATE_PEM -out $PRIVATE_KEY -nocrypt
+    openssl rsa -in $PRIVATE_PEM -pubout -outform DER -out $PUBLIC_KEY
+    rm $PRIVATE_PEM
+}
+
 function generateReadMe() {
     cp ../README $1/README
 }
@@ -56,6 +69,7 @@ function createNebuloProductionArtifact() {
     _copyLibraries $1
     _copyNebuloJar $1 $2 $3
     _copyConfig $1
+    _generateKey $1
     generateReadMe $1
     addLicenseFile $1
 }
@@ -66,6 +80,7 @@ function createNebuloLocalArtifact() {
     _linkLibraries $1
     _copyNebuloJar $1 $2 $3
     _copyConfig $1
+    _generateKey $1
     generateReadMe $1
     addLicenseFile $1
 }
