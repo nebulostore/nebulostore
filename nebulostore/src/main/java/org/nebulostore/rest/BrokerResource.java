@@ -1,12 +1,12 @@
 package org.nebulostore.rest;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import com.google.gson.JsonObject;
-import com.google.inject.Inject;
 
 import org.nebulostore.broker.BrokerContext;
 import org.nebulostore.utils.JSONFactory;

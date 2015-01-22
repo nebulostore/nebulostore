@@ -1,12 +1,12 @@
 package org.nebulostore.rest;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import com.google.gson.JsonElement;
-import com.google.inject.Inject;
 
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.utils.JSONFactory;
@@ -21,7 +21,7 @@ public class NetworkMonitorResource {
 
   private static final Logger LOGGER =
       LoggerFactory.getLogger(NetworkMonitorResource.class);
-  private NetworkMonitor networkMonitor_;
+  private final NetworkMonitor networkMonitor_;
 
   @Inject
   public NetworkMonitorResource(NetworkMonitor networkMonitor) {

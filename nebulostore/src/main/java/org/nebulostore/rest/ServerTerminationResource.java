@@ -1,5 +1,6 @@
 package org.nebulostore.rest;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -18,6 +19,7 @@ public class ServerTerminationResource {
       LoggerFactory.getLogger(ServerTerminationResource.class);
   private final RestModule restModule_;
 
+  @Inject
   public ServerTerminationResource(RestModule restModule) {
     this.restModule_ = restModule;
   }
