@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.Metadata;
@@ -66,9 +65,8 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
   private PublicKey publicKey_;
 
   @Inject
-  public WriteNebuloObjectModule(
-      @Named("security.public-key") String publicKey) throws CryptoException {
-    publicKey_ = CryptoUtils.readPublicKey(publicKey);
+  public WriteNebuloObjectModule(PublicKey publicKey) {
+    publicKey_ = publicKey;
   }
 
   @Override

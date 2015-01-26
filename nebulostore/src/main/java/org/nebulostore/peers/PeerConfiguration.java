@@ -1,6 +1,7 @@
 package org.nebulostore.peers;
 
 import java.io.IOException;
+import java.security.PublicKey;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,6 +36,8 @@ import org.nebulostore.broker.OnlySizeContractsEvaluator;
 import org.nebulostore.broker.ValuationBasedBroker;
 import org.nebulostore.communication.CommunicationFacadeAdapterConfiguration;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
+import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.networkmonitor.ConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.DefaultConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -71,7 +74,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(AppKey.class).toInstance(appKey);
     bind(CommAddress.class).toInstance(
         new CommAddress(config_.getString("communication.comm-address", "")));
-
+    configurePublicKey(config_.getString("security.public-key"));
     configureQueues();
 
     bind(NebuloObjectFactory.class).to(NebuloObjectFactoryImpl.class);
@@ -92,6 +95,14 @@ public class PeerConfiguration extends GenericConfiguration {
     configurePeer();
     configureReplicator(appKey);
     configureRestModule();
+  }
+
+  private void configurePublicKey(String publicKey) {
+    try {
+      bind(PublicKey.class).toInstance(CryptoUtils.readPublicKey(publicKey));
+    } catch (CryptoException e) {
+      throw new RuntimeException("Unable to configure Public Key");
+    }
   }
 
   private void configureReplicator(AppKey appKey) {

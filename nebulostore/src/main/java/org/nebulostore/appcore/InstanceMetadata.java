@@ -1,6 +1,7 @@
 package org.nebulostore.appcore;
 
 import java.io.Serializable;
+import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,6 +30,8 @@ public class InstanceMetadata implements Serializable, Mergeable {
   /* Communication addresses of peers for which @instance store messages. */
   private Set<CommAddress> recipients_;
   private int recipientsSetVersion_;
+
+  private PublicKey publicKey_;
 
   /**
    * Map with counters indicating number of times each peer was added as a synchro peer of this
@@ -87,6 +90,14 @@ public class InstanceMetadata implements Serializable, Mergeable {
     synchroPeerCounters_ = recipientsCounters;
   }
 
+  public PublicKey getPublicKey() {
+    return publicKey_;
+  }
+
+  public void setPublicKey(PublicKey publicKey) {
+    publicKey_ = publicKey;
+  }
+
   @Override
   public Mergeable merge(Mergeable other) {
     // TODO(SZM): remove duplicated old statistics - design issue
@@ -125,6 +136,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
   public String toString() {
     return "InstanceMetadata: owner: " + owner_.toString() + "\n\t" + "SynchroGroup: " +
         synchroGroup_ + "\n\t" + "Recipients: " + recipients_ + "\n\t" +
-        "recipients set version: " + recipientsSetVersion_;
+        "recipients set version: " + recipientsSetVersion_ + "\n\t" +
+        "public key: " + publicKey_;
   }
 }

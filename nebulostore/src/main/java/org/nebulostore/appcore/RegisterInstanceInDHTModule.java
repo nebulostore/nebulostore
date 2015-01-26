@@ -1,5 +1,7 @@
 package org.nebulostore.appcore;
 
+import java.security.PublicKey;
+
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
@@ -44,6 +46,7 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
 
   private CommAddress myAddress_;
   private AppKey appKey_;
+  private PublicKey publicKey_;
 
   @Inject
   public void setMyAddress(CommAddress myAddress) {
@@ -53,6 +56,11 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
   @Inject
   public void setMyAppKey(AppKey appKey) {
     appKey_ = appKey;
+  }
+
+  @Inject
+  public void setMeyPublicKey(PublicKey publicKey) {
+    publicKey_ = publicKey;
   }
 
   /**
@@ -73,9 +81,10 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
       if (state_ == State.WAITING_FOR_RESPONSE) {
         logger_.debug("Unable to retrieve InstanceMetadata from DHT, putting new.");
         // TODO(szm): read from file if exists
+        InstanceMetadata instanceMetadata = new InstanceMetadata(appKey_);
+        instanceMetadata.setPublicKey(publicKey_);
         networkQueue_
-          .add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(new InstanceMetadata(
-            appKey_))));
+          .add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(instanceMetadata)));
         state_ = State.PUT_DHT;
       } else if (state_ == State.PUT_DHT) {
         logger_.error("Unable to put InstanceMetadata to DHT. " +
