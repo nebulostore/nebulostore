@@ -248,9 +248,10 @@ public final class NebulostoreDfuntestMain {
 
     if (cmd.hasOption(CONFIG_FILE_OPTION)) {
       String argValue = cmd.getOptionValue(CONFIG_FILE_OPTION);
-      HierarchicalConfiguration config;
+      XMLConfiguration config = new XMLConfiguration();
+      config.setDelimiterParsingDisabled(true);
       try {
-        config = new XMLConfiguration(argValue);
+        config.load(argValue);
       } catch (ConfigurationException e) {
         LOGGER.error("parseAndProcessArguments(): ConfigurationException caught when reading" +
           " configuration file.", e);
