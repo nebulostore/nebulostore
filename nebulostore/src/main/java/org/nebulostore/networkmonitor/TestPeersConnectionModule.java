@@ -134,6 +134,7 @@ public class TestPeersConnectionModule extends JobModule {
     timer_.cancelTimer();
     InstanceMetadata metadataValue = (InstanceMetadata) message.getValue().getValue();
     InstanceMetadata metadata = new InstanceMetadata(metadataValue.getOwner());
+    metadata.setPublicKey(metadataValue.getPublicKey());
     for (PeerConnectionSurvey pcs : stats) {
       logger_.debug("Adding to DHT: " + pcs.toString());
       metadata.getStatistics().add(pcs);

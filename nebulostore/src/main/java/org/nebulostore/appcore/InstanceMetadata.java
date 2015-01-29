@@ -124,6 +124,9 @@ public class InstanceMetadata implements Serializable, Mergeable {
         recipientsSetVersion_ = o.recipientsSetVersion_;
       }
       // TODO
+      if (publicKey_ == null) {
+        publicKey_ = o.publicKey_;
+      }
     }
     return this;
   }
