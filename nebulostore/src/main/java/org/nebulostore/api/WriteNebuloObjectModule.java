@@ -26,7 +26,7 @@ import org.nebulostore.async.messages.UpdateSmallNebuloObjectMessage;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.CryptoModule;
+import org.nebulostore.crypto.CryptoInstancePublicKeyModule;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.messages.PublicKeyMessage;
 import org.nebulostore.dht.core.KeyDHT;
@@ -64,10 +64,10 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
   private String commitVersion_;
   private int nRecipients_;
 
-  private CryptoModule cryptoModule_;
+  private CryptoInstancePublicKeyModule cryptoModule_;
 
   @Inject
-  public WriteNebuloObjectModule(CryptoModule cryptoModule) {
+  public WriteNebuloObjectModule(CryptoInstancePublicKeyModule cryptoModule) {
     cryptoModule_ = cryptoModule;
     cryptoModule_.setSourceJobId(getJobId());
   }
@@ -156,9 +156,13 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
     }
 
     public Void visit(PublicKeyMessage message) {
-      EncryptedObject encryptedObject = null;
+      if (message.getPublicKey() == null) {
+        endWithError(new NebuloException(
+            "Unable to get instance public key which is essential to encrypt message."));
+      }
       try {
-        encryptedObject = CryptoUtils.encryptObject(object_, message.getPublicKey());
+        EncryptedObject encryptedObject =
+            CryptoUtils.encryptObject(object_, message.getPublicKey());
         commitVersion_ = CryptoUtils.sha(encryptedObject);
         isSmallFile_ = encryptedObject.size() < SMALL_FILE_THRESHOLD;
 

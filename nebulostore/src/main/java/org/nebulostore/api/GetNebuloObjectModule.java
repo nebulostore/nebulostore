@@ -25,8 +25,8 @@ public class GetNebuloObjectModule extends GetModule<NebuloObject> implements Ob
 
   @Inject
   public GetNebuloObjectModule(
-      @Named("security.private-key") String privateKey) throws CryptoException {
-    privateKey_ = CryptoUtils.readPrivateKey(privateKey);
+      @Named("security.private-key-file") String privateKeyFile) throws CryptoException {
+    privateKey_ = CryptoUtils.readPrivateKey(privateKeyFile);
   }
 
   @Override

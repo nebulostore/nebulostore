@@ -74,7 +74,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(AppKey.class).toInstance(appKey);
     bind(CommAddress.class).toInstance(
         new CommAddress(config_.getString("communication.comm-address", "")));
-    configurePublicKey(config_.getString("security.public-key"));
+    configureInstancePublicKey(config_.getString("security.public-key-file"));
     configureQueues();
 
     bind(NebuloObjectFactory.class).to(NebuloObjectFactoryImpl.class);
@@ -97,11 +97,11 @@ public class PeerConfiguration extends GenericConfiguration {
     configureRestModule();
   }
 
-  private void configurePublicKey(String publicKey) {
+  private void configureInstancePublicKey(String publicKeyFile) {
     try {
-      bind(PublicKey.class).toInstance(CryptoUtils.readPublicKey(publicKey));
+      bind(PublicKey.class).toInstance(CryptoUtils.readPublicKey(publicKeyFile));
     } catch (CryptoException e) {
-      throw new RuntimeException("Unable to configure Public Key");
+      throw new RuntimeException("Unable to read Instance Public Key from file " + publicKeyFile);
     }
   }
 

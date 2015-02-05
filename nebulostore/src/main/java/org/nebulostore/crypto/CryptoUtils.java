@@ -46,13 +46,14 @@ import org.nebulostore.appcore.model.EncryptedObject;
 /**
  * Library of cryptographic and serialization functions.
  *
- * @author Bolek Kulbabinski
+ * @author Bolek Kulbabinski, lukaszsiczek
  */
 public final class CryptoUtils {
   private static Logger logger_ = Logger.getLogger(CryptoUtils.class);
   private static final String RSA_ALGORITHM = "RSA";
   private static final String AES_ALGORITHM = "AES";
-
+  private static final int SYMETRIC_KEY_BYTE_LENGTH = 256;
+  private static final int ASYMETRIC_ENCRYPTION_BYTE_LENGTH = 512;
 
   public static PublicKey readPublicKey(String filename) throws CryptoException {
     try {
@@ -61,7 +62,7 @@ public final class CryptoUtils {
       KeyFactory keyFactory = KeyFactory.getInstance(CryptoUtils.RSA_ALGORITHM);
       return keyFactory.generatePublic(x509EncodedKeySpec);
     } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-      logger_.error(e);
+      logger_.error("Unable to read public key from file " + filename, e);
       throw new CryptoException(e.getMessage(), e);
     }
   }
@@ -73,7 +74,7 @@ public final class CryptoUtils {
       KeyFactory keyFactory = KeyFactory.getInstance(CryptoUtils.RSA_ALGORITHM);
       return keyFactory.generatePrivate(pkcs8EncodedKeySpec);
     } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-      logger_.error(e);
+      logger_.error("Unable to read private key from file " + filename, e);
       throw new CryptoException(e.getMessage(), e);
     }
   }
@@ -91,45 +92,33 @@ public final class CryptoUtils {
     }
   }
 
-  private static byte[] encrypt(byte[] message, Key key, String algorithm) throws CryptoException {
+  private static byte[] transform(byte[] text, Key key,
+      String algorithm, int mode) throws CryptoException {
     try {
       Cipher cipher = Cipher.getInstance(algorithm);
-      cipher.init(Cipher.ENCRYPT_MODE, key);
-      return cipher.doFinal(message);
+      cipher.init(mode, key);
+      return cipher.doFinal(text);
     } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException |
         IllegalBlockSizeException | BadPaddingException e) {
-      logger_.error(e);
-      throw new CryptoException(e.getMessage(), e);
-    }
-  }
-
-  private static byte[] decrypt(byte[] cipherText, Key key, String algorithm)
-      throws CryptoException {
-    try {
-      Cipher cipher = Cipher.getInstance(algorithm);
-      cipher.init(Cipher.DECRYPT_MODE, key);
-      return cipher.doFinal(cipherText);
-    } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException |
-        IllegalBlockSizeException | BadPaddingException e) {
-      logger_.error(e);
+      logger_.error("Unable to transform message", e);
       throw new CryptoException(e.getMessage(), e);
     }
   }
 
   private static byte[] encryptRSA(byte[] message, Key key) throws CryptoException {
-    return encrypt(message, key, RSA_ALGORITHM);
+    return transform(message, key, RSA_ALGORITHM, Cipher.ENCRYPT_MODE);
   }
 
   private static byte[] decryptRSA(byte[] message, Key key) throws CryptoException {
-    return decrypt(message, key, RSA_ALGORITHM);
+    return transform(message, key, RSA_ALGORITHM, Cipher.DECRYPT_MODE);
   }
 
   private static byte[] encryptAES(byte[] message, Key key) throws CryptoException {
-    return encrypt(message, key, AES_ALGORITHM);
+    return transform(message, key, AES_ALGORITHM, Cipher.ENCRYPT_MODE);
   }
 
   private static byte[] decryptAES(byte[] message, Key key) throws CryptoException {
-    return decrypt(message, key, AES_ALGORITHM);
+    return transform(message, key, AES_ALGORITHM, Cipher.DECRYPT_MODE);
   }
 
   /**
@@ -162,34 +151,27 @@ public final class CryptoUtils {
   private static SecretKey generateSecretKey() throws CryptoException {
     try {
       KeyGenerator keyGen = KeyGenerator.getInstance(AES_ALGORITHM);
-      keyGen.init(256);
+      keyGen.init(CryptoUtils.SYMETRIC_KEY_BYTE_LENGTH);
       return keyGen.generateKey();
     } catch (NoSuchAlgorithmException e) {
-      logger_.error(e);
+      logger_.error("Symetric key generation has failed", e);
       throw new CryptoException(e.getMessage(), e);
     }
   }
 
   public static Object decryptObject(EncryptedObject encryptedObject, Key key) throws
       CryptoException {
-    byte[] cipherKey = Arrays.copyOfRange(encryptedObject.getEncryptedData(), 0, 512);
-    byte[] cipherText = Arrays.copyOfRange(
-        encryptedObject.getEncryptedData(), 512, encryptedObject.size());
-    Key secretKey = (SecretKey) deserializeObject(decryptRSA(cipherKey, key));
+    byte[] cipherKey = Arrays.copyOfRange(
+        encryptedObject.getEncryptedData(), 0, CryptoUtils.ASYMETRIC_ENCRYPTION_BYTE_LENGTH);
+    byte[] cipherText = Arrays.copyOfRange(encryptedObject.getEncryptedData(),
+        CryptoUtils.ASYMETRIC_ENCRYPTION_BYTE_LENGTH, encryptedObject.size());
+    Key secretKey = (Key) deserializeObject(decryptRSA(cipherKey, key));
     return deserializeObject(decryptAES(cipherText, secretKey));
   }
 
   public static Object decryptObject(EncryptedObject encryptedObject) throws
       CryptoException {
     return deserializeObject(encryptedObject.getEncryptedData());
-  }
-
-  public static byte[] encryptData(byte[] data) {
-    return data;
-  }
-
-  public static byte[] decryptData(byte[] data) {
-    return data;
   }
 
   public static byte[] serializeObject(Serializable object) throws CryptoException {
