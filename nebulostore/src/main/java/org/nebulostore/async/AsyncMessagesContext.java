@@ -141,18 +141,21 @@ public final class AsyncMessagesContext {
     for (CommAddress recipient : recipients_) {
       recipientsFreshnesses_.put(recipient, 0);
     }
+
     if (recipientsCounters != null) {
       synchroPeerCounters_.clear();
       synchroPeerCounters_.putAll(recipientsCounters);
     }
 
-    synchroClocks_.put(myAddress_, new VectorClockValue(myAddress_, 0));
-    for (CommAddress recipient : recipients_) {
-      synchroClocks_.put(recipient, new VectorClockValue(myAddress_, 0));
+    recipients_.add(myAddress_);
+    for (CommAddress peer : recipients_) {
+      synchroClocks_.put(peer, new VectorClockValue(myAddress_, 0));
+      waitingMessages_.put(peer, new HashSet<AsynchronousMessage>());
+      messagesTimestamps_.put(peer, new HashMap<String, VectorClockValue>());
+      setClearTimestamps_.put(peer, new VectorClockValue(myAddress_, 0));
     }
-    waitingMessages_.put(myAddress_, new HashSet<AsynchronousMessage>());
-    messagesTimestamps_.put(myAddress_, new HashMap<String, VectorClockValue>());
-    setClearTimestamps_.put(myAddress_, new VectorClockValue(myAddress_, 0));
+
+    recipients_.remove(myAddress_);
     initialized_ = true;
   }
 
