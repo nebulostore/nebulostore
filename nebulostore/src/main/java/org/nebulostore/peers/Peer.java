@@ -118,6 +118,9 @@ public class Peer extends AbstractPeer {
     if (msgReceivingChecker_ != null) {
       msgReceivingChecker_.getInQueue().add(new EndModuleMessage());
     }
+    if (asyncMessagingModule_ != null) {
+      asyncMessagingModule_.getInQueue().add(new EndModuleMessage());
+    }
     if (networkInQueue_ != null) {
       commPeerInQueue_.add(new EndModuleMessage());
     }
@@ -220,12 +223,12 @@ public class Peer extends AbstractPeer {
   protected void joinCoreThreads() {
     // Wait for threads to finish execution.
     try {
+      msgReceivingCheckerThread_.join();
       networkThread_.join();
       dispatcherThread_.join();
       if (isRestEnabled_) {
         restThread_.join();
       }
-      msgReceivingCheckerThread_.join();
 
     } catch (InterruptedException exception) {
       logger_.fatal("Interrupted");

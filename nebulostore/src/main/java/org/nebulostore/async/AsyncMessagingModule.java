@@ -12,6 +12,7 @@ import org.nebulostore.appcore.InstanceMetadata;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
+import org.nebulostore.appcore.modules.EndModuleMessage;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.async.synchrogroup.CacheRefreshingModule;
 import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
@@ -183,6 +184,13 @@ public class AsyncMessagingModule extends JobModule {
 
       startSynchronizationService();
       startCacheRefreshingService();
+    }
+
+    public Void visit(EndModuleMessage message) {
+      synchronizationExecutor_.shutdownNow();
+      cacheRefreshExecutor_.shutdownNow();
+      endJobModule();
+      return null;
     }
 
   }

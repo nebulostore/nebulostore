@@ -35,6 +35,7 @@ public final class TextInterface extends Peer implements ShellManageable {
 
   public static final InputConverter[] CLI_INPUT_CONVERTERS = {
     new InputConverter() {
+      @Override
       public Object convertInput(String original, Class toClass)
           throws Exception {
         if (toClass.equals(AppKey.class)) {
@@ -45,6 +46,7 @@ public final class TextInterface extends Peer implements ShellManageable {
       }
     },
     new InputConverter() {
+      @Override
       public Object convertInput(String original, Class toClass)
           throws Exception {
         if (toClass.equals(ObjectId.class)) {
@@ -80,8 +82,7 @@ public final class TextInterface extends Peer implements ShellManageable {
   @Override
   protected void initializeModules() {
     System.out.print("Starting NebuloStore ...\n");
-    runNetworkMonitor();
-    runBroker();
+    super.initializeModules();
   }
 
   @Override
