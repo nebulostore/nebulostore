@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.Metadata;
@@ -26,9 +27,8 @@ import org.nebulostore.async.messages.UpdateSmallNebuloObjectMessage;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.CryptoInstancePublicKeyModule;
 import org.nebulostore.crypto.CryptoUtils;
-import org.nebulostore.crypto.messages.PublicKeyMessage;
+import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
@@ -64,12 +64,14 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
   private String commitVersion_;
   private int nRecipients_;
 
-  private CryptoInstancePublicKeyModule cryptoModule_;
+  private EncryptionAPI encryption_;
+  private String publicKeyPeerId_;
 
   @Inject
-  public WriteNebuloObjectModule(CryptoInstancePublicKeyModule cryptoModule) {
-    cryptoModule_ = cryptoModule;
-    cryptoModule_.setSourceJobId(getJobId());
+  public WriteNebuloObjectModule(EncryptionAPI encryption,
+      @Named("PublicKeyPeerId") String publicKeyPeerId) {
+    encryption_ = encryption;
+    publicKeyPeerId_ = publicKeyPeerId;
   }
 
   @Override
@@ -105,7 +107,6 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
 
     private boolean isSmallFile_;
     private int confirmations_;
-    private ReplicationGroup group_;
 
     public StateMachineVisitor() {
       state_ = STATE.INIT;
@@ -142,43 +143,33 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
 
         ContractList contractList = metadata.getContractList();
         logger_.debug("ContractList: " + contractList);
-        group_ = contractList.getGroup(object_.getObjectId());
-        logger_.debug("Group: " + group_);
-        if (group_ == null) {
+        ReplicationGroup group = contractList.getGroup(object_.getObjectId());
+        logger_.debug("Group: " + group);
+        if (group == null) {
           endWithError(new NebuloException("No peers replicating this object."));
         } else {
-          cryptoModule_.runThroughDispatcher();
+          try {
+            EncryptedObject encryptedObject =
+                encryption_.encrypt(object_, publicKeyPeerId_);
+            commitVersion_ = CryptoUtils.sha(encryptedObject);
+            isSmallFile_ = encryptedObject.size() < SMALL_FILE_THRESHOLD;
+
+            for (CommAddress replicator : group) {
+              String remoteJobId = CryptoUtils.getRandomId().toString();
+              waitingForTransactionResult_.put(replicator, remoteJobId);
+              networkQueue_.add(new QueryToStoreObjectMessage(remoteJobId, replicator,
+                  object_.getObjectId(), encryptedObject, previousVersionSHAs_, getJobId()));
+              logger_.debug("added recipient: " + replicator);
+            }
+            recipientsSet_.addAll(group.getReplicatorSet());
+            nRecipients_ += group.getSize();
+          } catch (CryptoException exception) {
+            endWithError(new NebuloException("Unable to encrypt object.", exception));
+          }
         }
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
-    }
-
-    public Void visit(PublicKeyMessage message) {
-      if (message.getPublicKey() == null) {
-        endWithError(new NebuloException(
-            "Unable to get instance public key which is essential to encrypt message."));
-      }
-      try {
-        EncryptedObject encryptedObject =
-            CryptoUtils.encryptObject(object_, message.getPublicKey());
-        commitVersion_ = CryptoUtils.sha(encryptedObject);
-        isSmallFile_ = encryptedObject.size() < SMALL_FILE_THRESHOLD;
-
-        for (CommAddress replicator : group_) {
-          String remoteJobId = CryptoUtils.getRandomId().toString();
-          waitingForTransactionResult_.put(replicator, remoteJobId);
-          networkQueue_.add(new QueryToStoreObjectMessage(remoteJobId, replicator,
-              object_.getObjectId(), encryptedObject, previousVersionSHAs_, getJobId()));
-          logger_.debug("added recipient: " + replicator);
-        }
-        recipientsSet_.addAll(group_.getReplicatorSet());
-        nRecipients_ += group_.getSize();
-      } catch (CryptoException exception) {
-        endWithError(new NebuloException("Unable to encrypt object.", exception));
-      }
-      group_ = null;
       return null;
     }
 

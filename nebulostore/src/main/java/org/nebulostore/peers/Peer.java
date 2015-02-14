@@ -9,8 +9,11 @@ import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.api.PutKeyModule;
+import org.nebulostore.appcore.Metadata;
 import org.nebulostore.appcore.RegisterInstanceInDHTModule;
 import org.nebulostore.appcore.addressing.AppKey;
+import org.nebulostore.appcore.addressing.ContractList;
+import org.nebulostore.appcore.addressing.IntervalCollisionException;
 import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
@@ -21,6 +24,12 @@ import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
 import org.nebulostore.broker.Broker;
 import org.nebulostore.communication.CommunicationPeerFactory;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
+import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.EncryptionAPI.KeyLocation;
+import org.nebulostore.crypto.EncryptionAPI.KeyType;
+import org.nebulostore.dht.core.KeyDHT;
+import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.dispatcher.Dispatcher;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.rest.RestModule;
@@ -65,6 +74,12 @@ public class Peer extends AbstractPeer {
   private boolean isRestEnabled_;
   private RestModule restModule_;
 
+  private EncryptionAPI encryption_;
+  private String publicKeyFilePath_;
+  private String privateKeyFilePath_;
+  private String publicKeyPeerId_;
+  private String privateKeyPeerId_;
+
   @Inject
   public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherInQueue,
                               @Named("NetworkQueue") BlockingQueue<Message> networkQueue,
@@ -84,7 +99,12 @@ public class Peer extends AbstractPeer {
                               SynchroPeerSetChangeSequencerModule synchroUpdateSequencer,
                               MessageReceivingCheckerModule msgReceivingChecker,
                               RestModuleImpl restModule,
-                              @Named("rest-api.enabled") boolean isRestEnabled) {
+                              @Named("rest-api.enabled") boolean isRestEnabled,
+                              EncryptionAPI encryption,
+                              @Named("security.public-key-file") String publicKeyFilePath,
+                              @Named("security.private-key-file") String privateKeyFilePath,
+                              @Named("PublicKeyPeerId") String publicKeyPeerId,
+                              @Named("PrivateKeyPeerId") String privateKeyPeerId) {
     dispatcherInQueue_ = dispatcherInQueue;
     networkInQueue_ = networkQueue;
     commPeerInQueue_ = commPeerInQueue;
@@ -101,6 +121,11 @@ public class Peer extends AbstractPeer {
     synchroUpdateSequencer_ = synchroUpdateSequencer;
     msgReceivingChecker_ = msgReceivingChecker;
     isRestEnabled_ = isRestEnabled;
+    encryption_ = encryption;
+    publicKeyFilePath_ = publicKeyFilePath;
+    privateKeyFilePath_ = privateKeyFilePath;
+    publicKeyPeerId_ = publicKeyPeerId;
+    privateKeyPeerId_ = privateKeyPeerId;
 
     // Create core threads.
     Runnable dispatcher = new Dispatcher(dispatcherInQueue_, networkInQueue_, injector_);
@@ -147,14 +172,24 @@ public class Peer extends AbstractPeer {
 
   /**
    * Puts replication group under appKey_ in DHT and InstanceMetadata under commAddress_.
+   * Register peer public and private keys.
    *
    * @param appKey
    */
   protected void register(AppKey appKey) {
     // TODO(bolek): This should be part of broker. (szm): or NetworkMonitor
-    PutKeyModule putKeyModule = new PutKeyModule(new ReplicationGroup(
-        new CommAddress[] {commAddress_ }, BigInteger.ZERO, new BigInteger("1000000")),
-        dispatcherInQueue_);
+
+    ContractList contractList = new ContractList();
+    try {
+      contractList.addGroup(new ReplicationGroup(new CommAddress[] {commAddress_ },
+        BigInteger.ZERO, new BigInteger("1000000")));
+    } catch (IntervalCollisionException e) {
+      logger_.error("Error while creating replication group", e);
+    }
+    PutKeyModule putKeyModule = new PutKeyModule(
+        dispatcherInQueue_,
+        new KeyDHT(appKey.getKey()),
+        new ValueDHT(new Metadata(appKey, contractList)));
     RegisterInstanceInDHTModule registerInstanceMetadataModule = new RegisterInstanceInDHTModule();
     registerInstanceMetadataModule.setDispatcherQueue(dispatcherInQueue_);
     registerInstanceMetadataModule.runThroughDispatcher();
@@ -169,6 +204,7 @@ public class Peer extends AbstractPeer {
     } catch (NebuloException exception) {
       logger_.error("Unable to register InstanceMetadata!", exception);
     }
+    registerPeerPublicPrivateKeys();
   }
 
   /**
@@ -196,6 +232,16 @@ public class Peer extends AbstractPeer {
    */
   protected void cleanModules() {
     // Empty by default.
+  }
+
+  protected void registerPeerPublicPrivateKeys() {
+    try {
+      encryption_.load(publicKeyPeerId_, publicKeyFilePath_, KeyLocation.DHT, KeyType.PUBLIC);
+      encryption_.load(privateKeyPeerId_, privateKeyFilePath_,
+          KeyLocation.LOCAL_DISC, KeyType.PRIVATE);
+    } catch (CryptoException e) {
+      throw new RuntimeException("Unable to load public/private keys", e);
+    }
   }
 
   protected void runNetworkMonitor() {

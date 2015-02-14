@@ -1,7 +1,7 @@
 package org.nebulostore.appcore;
 
 import java.io.Serializable;
-import java.security.PublicKey;
+import java.security.Key;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,7 +31,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
   private Set<CommAddress> recipients_;
   private int recipientsSetVersion_;
 
-  private PublicKey publicKey_;
+  private Key peerKey_;
 
   /**
    * Map with counters indicating number of times each peer was added as a synchro peer of this
@@ -90,12 +90,12 @@ public class InstanceMetadata implements Serializable, Mergeable {
     synchroPeerCounters_ = recipientsCounters;
   }
 
-  public PublicKey getPublicKey() {
-    return publicKey_;
+  public Key getPeerKey() {
+    return peerKey_;
   }
 
-  public void setPublicKey(PublicKey publicKey) {
-    publicKey_ = publicKey;
+  public void setPeerKey(Key peerKey) {
+    peerKey_ = peerKey;
   }
 
   @Override
@@ -124,8 +124,8 @@ public class InstanceMetadata implements Serializable, Mergeable {
         recipientsSetVersion_ = o.recipientsSetVersion_;
       }
       // TODO
-      if (publicKey_ == null) {
-        publicKey_ = o.publicKey_;
+      if (peerKey_ == null) {
+        peerKey_ = o.peerKey_;
       }
     }
     return this;
@@ -140,6 +140,6 @@ public class InstanceMetadata implements Serializable, Mergeable {
     return "InstanceMetadata: owner: " + owner_.toString() + "\n\t" + "SynchroGroup: " +
         synchroGroup_ + "\n\t" + "Recipients: " + recipients_ + "\n\t" +
         "recipients set version: " + recipientsSetVersion_ + "\n\t" +
-        "public key: " + publicKey_;
+        "peer key: " + peerKey_;
   }
 }

@@ -1,7 +1,6 @@
 package org.nebulostore.peers;
 
 import java.io.IOException;
-import java.security.PublicKey;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -37,8 +36,9 @@ import org.nebulostore.broker.OnlySizeContractsEvaluator;
 import org.nebulostore.broker.ValuationBasedBroker;
 import org.nebulostore.communication.CommunicationFacadeAdapterConfiguration;
 import org.nebulostore.communication.naming.CommAddress;
-import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.RSABasedEncryptionAPI;
 import org.nebulostore.networkmonitor.ConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.DefaultConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -75,8 +75,9 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(AppKey.class).toInstance(appKey);
     bind(CommAddress.class).toInstance(
         new CommAddress(config_.getString("communication.comm-address", "")));
-    configureInstancePublicKey(config_.getString("security.public-key-file"));
     configureQueues();
+
+    configureEncryption();
 
     bind(NebuloObjectFactory.class).to(NebuloObjectFactoryImpl.class);
     bind(ObjectGetter.class).to(GetNebuloObjectModule.class);
@@ -98,12 +99,12 @@ public class PeerConfiguration extends GenericConfiguration {
     configureRestModule();
   }
 
-  private void configureInstancePublicKey(String publicKeyFile) {
-    try {
-      bind(PublicKey.class).toInstance(CryptoUtils.readPublicKey(publicKeyFile));
-    } catch (CryptoException e) {
-      throw new RuntimeException("Unable to read Instance Public Key from file " + publicKeyFile);
-    }
+  protected void configureEncryption() {
+    bind(EncryptionAPI.class).to(RSABasedEncryptionAPI.class).in(Scopes.SINGLETON);
+    bind(String.class).annotatedWith(
+        Names.named("PublicKeyPeerId")).toInstance(CryptoUtils.getRandomString());
+    bind(String.class).annotatedWith(
+        Names.named("PrivateKeyPeerId")).toInstance(CryptoUtils.getRandomString());
   }
 
   private void configureReplicator(AppKey appKey) {

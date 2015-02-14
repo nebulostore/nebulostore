@@ -136,10 +136,6 @@ public final class CryptoUtils {
     return getRandomId().toString();
   }
 
-  public static EncryptedObject encryptObject(Serializable object) throws CryptoException {
-    return new EncryptedObject(serializeObject(object));
-  }
-
   public static EncryptedObject encryptObject(Serializable object, Key key) throws CryptoException {
     Key secretKey = generateSecretKey();
     byte[] cipherText = encryptAES(serializeObject(object), secretKey);
@@ -167,11 +163,6 @@ public final class CryptoUtils {
         CryptoUtils.ASYMETRIC_ENCRYPTION_BYTE_LENGTH, encryptedObject.size());
     Key secretKey = (Key) deserializeObject(decryptRSA(cipherKey, key));
     return deserializeObject(decryptAES(cipherText, secretKey));
-  }
-
-  public static Object decryptObject(EncryptedObject encryptedObject) throws
-      CryptoException {
-    return deserializeObject(encryptedObject.getEncryptedData());
   }
 
   public static byte[] serializeObject(Serializable object) throws CryptoException {

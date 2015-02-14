@@ -10,8 +10,8 @@ import org.nebulostore.appcore.modules.ReturningJobModule;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
-import org.nebulostore.dht.messages.OkDHTMessage;
-import org.nebulostore.dht.messages.PutDHTMessage;
+import org.nebulostore.dht.messages.GetDHTMessage;
+import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -19,36 +19,35 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * @author lukaszsiczek
  */
-public class PutKeyModule extends ReturningJobModule<Void> {
+public class GetKeyModule extends ReturningJobModule<ValueDHT> {
 
-  private static Logger logger_ = Logger.getLogger(PutKeyModule.class);
+  private static Logger logger_ = Logger.getLogger(GetKeyModule.class);
   private final MessageVisitor<Void> visitor_;
   private final KeyDHT keyDHT_;
-  private final ValueDHT valueDHT_;
 
-  public PutKeyModule(BlockingQueue<Message> dispatcherQueue, KeyDHT keyDHT, ValueDHT valueDHT) {
-    visitor_ = new PutKeyModuleMessageVisitor();
+  public GetKeyModule(BlockingQueue<Message> dispatcherQueue, KeyDHT keyDHT) {
+    visitor_ = new GetKeyModuleMessageVisitor();
     keyDHT_ = keyDHT;
-    valueDHT_ = valueDHT;
     setDispatcherQueue(checkNotNull(dispatcherQueue));
     runThroughDispatcher();
   }
 
-  protected class PutKeyModuleMessageVisitor extends MessageVisitor<Void> {
+  protected class GetKeyModuleMessageVisitor extends MessageVisitor<Void> {
 
     public Void visit(JobInitMessage message) {
-      networkQueue_.add(new PutDHTMessage(getJobId(), keyDHT_, valueDHT_));
+      networkQueue_.add(new GetDHTMessage(getJobId(), keyDHT_));
       return null;
     }
 
-    public Void visit(OkDHTMessage message) {
-      logger_.debug("Successfully put key " + keyDHT_ + " in DHT");
-      endWithSuccess(null);
+    public Void visit(ValueDHTMessage message) {
+      logger_.debug("Process ValueDHTMessage");
+      endWithSuccess(message.getValue());
       return null;
     }
 
     public Void visit(ErrorDHTMessage message) {
-      endWithError(new NebuloException("DHT write returned with error", message.getException()));
+      logger_.debug("Process ErrorDHTMessage");
+      endWithError(message.getException());
       return null;
     }
   }

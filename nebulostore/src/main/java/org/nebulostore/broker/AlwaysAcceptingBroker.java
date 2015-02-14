@@ -1,14 +1,11 @@
 package org.nebulostore.broker;
 
-import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.List;
 
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.api.PutKeyModule;
-import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -81,13 +78,9 @@ public class AlwaysAcceptingBroker extends Broker {
             message.getSourceAddress() + " accepted our offer.");
         context_.addContract(message.getContract());
 
-        ReplicationGroup currGroup = new ReplicationGroup(
-          context_.getReplicas(), BigInteger.ZERO, new BigInteger("1000000"));
-        PutKeyModule module = new PutKeyModule(currGroup, outQueue_);
-
         try {
-          module.getResult(TIMEOUT_SEC);
-        } catch (NebuloException exception) {
+          updateReplicationGroups(TIMEOUT_SEC);
+        } catch (NebuloException e) {
           logger_.warn("Unsuccessful DHT update.");
         }
       } else {

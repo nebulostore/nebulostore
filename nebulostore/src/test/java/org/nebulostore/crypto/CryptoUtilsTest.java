@@ -6,6 +6,7 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.EncryptedObject;
@@ -22,6 +23,12 @@ import static org.junit.Assert.assertTrue;
 public class CryptoUtilsTest {
   private static final String APP_KEY = "22";
   private static final String OBJECT_ID = "123";
+  private static EncryptionAPI encryption_;
+
+  @BeforeClass
+  public static void initEncryption() {
+    encryption_ = new BasicEncryptionAPI();
+  }
 
   @Test
   public void testSerialization() throws CryptoException {
@@ -41,7 +48,7 @@ public class CryptoUtilsTest {
   public void testNebuloFileEncryption() throws CryptoException {
     NebuloFile file = NebuloObjectUtils.getNewNebuloFile(APP_KEY, OBJECT_ID);
 
-    Object object = CryptoUtils.decryptObject(CryptoUtils.encryptObject(file));
+    Object object = encryption_.decrypt(encryption_.encrypt(file, null), null);
 
     assertTrue(object instanceof NebuloFile);
     NebuloFile file2 = (NebuloFile) object;

@@ -2,6 +2,7 @@ package org.nebulostore.systest;
 
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import com.google.inject.name.Names;
 
 import org.nebulostore.broker.Broker;
 import org.nebulostore.broker.BrokerContext;
@@ -9,6 +10,8 @@ import org.nebulostore.broker.ContractsEvaluator;
 import org.nebulostore.broker.ContractsSelectionAlgorithm;
 import org.nebulostore.broker.GreedyContractsSelection;
 import org.nebulostore.broker.OnlySizeContractsEvaluator;
+import org.nebulostore.crypto.BasicEncryptionAPI;
+import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.networkmonitor.ConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.DefaultConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -27,6 +30,14 @@ public class TestingPeerConfiguration extends PeerConfiguration {
   @Override
   protected void configurePeer() {
     bind(AbstractPeer.class).to(TestingPeer.class);
+  }
+
+  protected void configureEncryption() {
+    bind(EncryptionAPI.class).to(BasicEncryptionAPI.class).in(Scopes.SINGLETON);
+    bind(String.class).annotatedWith(
+        Names.named("PublicKeyPeerId")).toInstance("");
+    bind(String.class).annotatedWith(
+        Names.named("PrivateKeyPeerId")).toInstance("");
   }
 
   @Override

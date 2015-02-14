@@ -1,6 +1,5 @@
 package org.nebulostore.broker;
 
-import java.math.BigInteger;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -8,8 +7,6 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.api.PutKeyModule;
-import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -33,7 +30,6 @@ import org.nebulostore.timer.Timer;
 public class ValuationBasedBroker extends Broker {
   private static Logger logger_ = Logger.getLogger(ValuationBasedBroker.class);
   private static final String CONFIGURATION_PREFIX = "broker.";
-
 
   public ValuationBasedBroker() {
   }
@@ -77,19 +73,6 @@ public class ValuationBasedBroker extends Broker {
 
   private Timer timer_;
   private ContractsSelectionAlgorithm contractsSelectionAlgorithm_;
-
-  public void updateReplicationGroups() {
-    // todo(szm): one group for now
-    ReplicationGroup currGroup = new ReplicationGroup(context_.getReplicas(),
-        new BigInteger("0"), new BigInteger("1000000"));
-    PutKeyModule module = new PutKeyModule(currGroup, outQueue_);
-
-    try {
-      module.getResult(replicationGroupUpdateTimeout_);
-    } catch (NebuloException exception) {
-      logger_.warn("Unsuccessful DHT update.");
-    }
-  }
 
   private final BrokerVisitor visitor_ = new BrokerVisitor();
 
@@ -168,14 +151,9 @@ public class ValuationBasedBroker extends Broker {
 
         // todo(szm): przydzielanie przestrzeni adresowej do kontraktow
         // todo(szm): z czasem coraz rzadziej polepszam kontrakty
-        ReplicationGroup currGroup = new ReplicationGroup(
-            context_.getReplicas(), new BigInteger("0"), new BigInteger(
-                "1000000"));
-        PutKeyModule module = new PutKeyModule(currGroup, outQueue_);
-
         try {
-          module.getResult(replicationGroupUpdateTimeout_);
-        } catch (NebuloException exception) {
+          updateReplicationGroups(replicationGroupUpdateTimeout_);
+        } catch (NebuloException e) {
           logger_.warn("Unsuccessful DHT update after contract conclusion.");
         }
       } else {
@@ -209,7 +187,11 @@ public class ValuationBasedBroker extends Broker {
         for (Contract contract : response.contractsToBreak_) {
           sendBreakContractMessage(contract);
         }
-        updateReplicationGroups();
+        try {
+          updateReplicationGroups(replicationGroupUpdateTimeout_);
+        } catch (NebuloException e) {
+          logger_.warn("Unsuccessful DHT update.");
+        }
       } else {
         networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(),
             message.getContract(), false));

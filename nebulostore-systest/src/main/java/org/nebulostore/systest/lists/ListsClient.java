@@ -23,7 +23,7 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.NewPhaseMessage;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.EncryptionAPI;
 
 /**
  * Lists client.
@@ -46,6 +46,7 @@ public final class ListsClient extends ConductorClient {
   private final ListsStats stats_;
   private NebuloList myList_;
   private transient NebuloObjectFactory objectFactory_;
+  private transient EncryptionAPI encryption_;
 
   public ListsClient(String serverJobId, CommAddress serverAddress, int numPhases,
       List<CommAddress> clients, int clientId) {
@@ -59,6 +60,11 @@ public final class ListsClient extends ConductorClient {
   @Inject
   public void setNebuloObjectFactory(NebuloObjectFactory objectFactory) {
     objectFactory_ = objectFactory;
+  }
+
+  @Inject
+  public void setEncryptionAPI(EncryptionAPI encryption) {
+    encryption_ = encryption;
   }
 
   @Override
@@ -85,7 +91,7 @@ public final class ListsClient extends ConductorClient {
         (clientId_ + 1) + "000")));
     for (int i = 0; i < N_CASES; ++i) {
       BigInteger value = list.getObjectId().getKey().add(BigInteger.valueOf(i));
-      list.append(new NebuloElement(CryptoUtils.encryptObject(value)));
+      list.append(new NebuloElement(encryption_.encrypt(value, null)));
       list.sync();
     }
     return list;
@@ -139,7 +145,7 @@ public final class ListsClient extends ConductorClient {
           }
           Iterator<NebuloElement> iterator = list.iterator();
           for (int j = 0; j < N_CASES; ++j) {
-            BigInteger elem = (BigInteger) CryptoUtils.decryptObject(iterator.next().getData());
+            BigInteger elem = (BigInteger) encryption_.decrypt(iterator.next().getData(), null);
             BigInteger good = list.getObjectId().getKey().add(BigInteger.valueOf(j));
             if (!good.equals(elem)) {
               unableToFetchList(address, "Content is incorrect (" + elem + " != " + good + ")");
