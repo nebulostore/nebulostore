@@ -22,7 +22,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
   private static final long serialVersionUID = -2246471507395388278L;
 
   /* Id of user, that this metadata applies to. */
-  private final AppKey owner_;
+  private AppKey owner_;
 
   /* Communication addresses of peers that store messages for @instance. */
   private Set<CommAddress> synchroGroup_;
@@ -41,6 +41,9 @@ public class InstanceMetadata implements Serializable, Mergeable {
 
   private final ConcurrentLinkedQueue<PeerConnectionSurvey> statistics_ =
       new ConcurrentLinkedQueue<PeerConnectionSurvey>();
+
+  public InstanceMetadata() {
+  }
 
   public InstanceMetadata(AppKey owner) {
     owner_ = owner;
@@ -103,6 +106,9 @@ public class InstanceMetadata implements Serializable, Mergeable {
     // TODO(SZM): remove duplicated old statistics - design issue
     if (other instanceof InstanceMetadata) {
       InstanceMetadata o = (InstanceMetadata) other;
+      if (owner_ == null) {
+        owner_ = o.owner_;
+      }
       if (synchroGroup_ == null) {
         synchroGroup_ = o.synchroGroup_;
       }
@@ -137,7 +143,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
 
   @Override
   public String toString() {
-    return "InstanceMetadata: owner: " + owner_.toString() + "\n\t" + "SynchroGroup: " +
+    return "InstanceMetadata: owner: " + owner_ + "\n\t" + "SynchroGroup: " +
         synchroGroup_ + "\n\t" + "Recipients: " + recipients_ + "\n\t" +
         "recipients set version: " + recipientsSetVersion_ + "\n\t" +
         "peer key: " + peerKey_;

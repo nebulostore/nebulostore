@@ -6,7 +6,6 @@ import java.util.concurrent.BlockingQueue;
 import org.nebulostore.api.GetKeyModule;
 import org.nebulostore.api.PutKeyModule;
 import org.nebulostore.appcore.InstanceMetadata;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.naming.CommAddress;
@@ -21,13 +20,10 @@ public class DHTKeyHandler implements KeyHandler {
   private static final int TIMEOUT_SEC = 30;
   private CommAddress peerAddress_;
   private BlockingQueue<Message> dispatcherQueue_;
-  private AppKey appKey_;
 
-  public DHTKeyHandler(CommAddress peerAddress,
-      BlockingQueue<Message> dispatcherQueue, AppKey appKey) {
+  public DHTKeyHandler(CommAddress peerAddress, BlockingQueue<Message> dispatcherQueue) {
     peerAddress_ = peerAddress;
     dispatcherQueue_ = dispatcherQueue;
-    appKey_ = appKey;
   }
 
   @Override
@@ -45,7 +41,7 @@ public class DHTKeyHandler implements KeyHandler {
 
   public void save(Key key) throws CryptoException {
     try {
-      InstanceMetadata instanceMetadata = new InstanceMetadata(appKey_);
+      InstanceMetadata instanceMetadata = new InstanceMetadata();
       instanceMetadata.setPeerKey(key);
       PutKeyModule putKeyModule = new PutKeyModule(dispatcherQueue_,
           peerAddress_.toKeyDHT(), new ValueDHT(instanceMetadata));

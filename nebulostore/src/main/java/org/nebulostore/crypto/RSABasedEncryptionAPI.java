@@ -10,7 +10,6 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.communication.naming.CommAddress;
@@ -28,16 +27,13 @@ public class RSABasedEncryptionAPI extends EncryptionAPI {
   private ConcurrentMap<String, KeyHandler> keys_;
   private CommAddress peerAddress_;
   private BlockingQueue<Message> dispatcherQueue_;
-  private AppKey appKey_;
 
   @Inject
   public RSABasedEncryptionAPI(CommAddress peerAddress,
-      @Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
-      AppKey appKey) {
+      @Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue) {
     keys_ = new ConcurrentHashMap<String, KeyHandler>();
     peerAddress_ = peerAddress;
     dispatcherQueue_ = dispatcherQueue;
-    appKey_ = appKey;
   }
 
   @Override
@@ -61,7 +57,7 @@ public class RSABasedEncryptionAPI extends EncryptionAPI {
     KeyHandler keyHandler = new LocalDiscKeyHandler(keyFilePath, keyType);
     switch (location) {
       case DHT:
-        DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(peerAddress_, dispatcherQueue_, appKey_);
+        DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(peerAddress_, dispatcherQueue_);
         dhtKeyHandler.save(keyHandler.load());
         keys_.put(keyId, dhtKeyHandler);
         break;
