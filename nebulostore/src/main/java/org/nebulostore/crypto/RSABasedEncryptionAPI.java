@@ -15,7 +15,7 @@ import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.keys.DHTKeyHandler;
 import org.nebulostore.crypto.keys.KeyHandler;
-import org.nebulostore.crypto.keys.LocalDiscKeyHandler;
+import org.nebulostore.crypto.keys.KeySource;
 
 /**
  * @author lukaszsiczek
@@ -51,22 +51,14 @@ public class RSABasedEncryptionAPI extends EncryptionAPI {
   }
 
   @Override
-  public void load(String keyId, String keyFilePath, KeyLocation location,
-      KeyType keyType) throws CryptoException {
-    LOGGER.debug(String.format("load %s %s %s", keyId, keyFilePath, location));
-    KeyHandler keyHandler = new LocalDiscKeyHandler(keyFilePath, keyType);
-    switch (location) {
-      case DHT:
-        DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(peerAddress_, dispatcherQueue_);
-        dhtKeyHandler.save(keyHandler.load());
-        keys_.put(keyId, dhtKeyHandler);
-        break;
-      case LOCAL_DISC:
-        keys_.put(keyId, keyHandler);
-        break;
-      default:
-        break;
+  public void load(String keyId, KeySource keySource, boolean saveInDHT) throws CryptoException {
+    LOGGER.debug(String.format("load %s %s %s", keyId, keySource, saveInDHT));
+    KeyHandler keyHandler = keySource.getKeyHandler();
+    if (saveInDHT) {
+      DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(peerAddress_, dispatcherQueue_);
+      dhtKeyHandler.save(keyHandler.load());
+      keyHandler = dhtKeyHandler;
     }
+    keys_.put(keyId, keyHandler);
   }
-
 }

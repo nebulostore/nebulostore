@@ -26,8 +26,8 @@ import org.nebulostore.communication.CommunicationPeerFactory;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.EncryptionAPI;
-import org.nebulostore.crypto.EncryptionAPI.KeyLocation;
 import org.nebulostore.crypto.EncryptionAPI.KeyType;
+import org.nebulostore.crypto.keys.FileKeySource;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.dispatcher.Dispatcher;
@@ -236,9 +236,10 @@ public class Peer extends AbstractPeer {
 
   protected void registerPeerPublicPrivateKeys() {
     try {
-      encryption_.load(publicKeyPeerId_, publicKeyFilePath_, KeyLocation.DHT, KeyType.PUBLIC);
-      encryption_.load(privateKeyPeerId_, privateKeyFilePath_,
-          KeyLocation.LOCAL_DISC, KeyType.PRIVATE);
+      encryption_.load(publicKeyPeerId_, new FileKeySource(publicKeyFilePath_, KeyType.PUBLIC),
+          EncryptionAPI.STORE_IN_DHT);
+      encryption_.load(privateKeyPeerId_, new FileKeySource(privateKeyFilePath_, KeyType.PRIVATE),
+          !EncryptionAPI.STORE_IN_DHT);
     } catch (CryptoException e) {
       throw new RuntimeException("Unable to load public/private keys", e);
     }

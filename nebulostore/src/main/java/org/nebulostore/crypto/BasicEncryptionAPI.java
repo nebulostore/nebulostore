@@ -3,6 +3,7 @@ package org.nebulostore.crypto;
 import java.io.Serializable;
 
 import org.nebulostore.appcore.model.EncryptedObject;
+import org.nebulostore.crypto.keys.KeySource;
 
 /**
  * @author lukaszsiczek
@@ -20,7 +21,7 @@ public class BasicEncryptionAPI extends EncryptionAPI {
   }
 
   @Override
-  public void load(String keyId, String keyFilePath, KeyLocation location, KeyType keyType) {
+  public void load(String keyId, KeySource keySource, boolean saveInDHT) {
   }
 
 }

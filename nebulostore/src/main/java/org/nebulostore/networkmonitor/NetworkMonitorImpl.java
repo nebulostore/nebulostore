@@ -12,11 +12,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
+
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
+import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.keys.DHTKeySource;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.messages.ConnectionTestMessage;
 import org.nebulostore.timer.MessageGenerator;
@@ -53,6 +58,8 @@ public class NetworkMonitorImpl extends NetworkMonitor {
 
   protected MessageVisitor<Void> visitor_;
 
+  private EncryptionAPI encryptionAPI_;
+
   public NetworkMonitorImpl() {
     visitor_ = new NetworkMonitorVisitor();
   }
@@ -63,7 +70,8 @@ public class NetworkMonitorImpl extends NetworkMonitor {
       Provider<RandomPeersGossipingModule> randomPeersGossipingModuleProvider,
       Provider<ConnectionTestMessageHandler> connectionTestMessageHandlerProvider,
       @Named(CONFIGURATION_PREFIX + "statistics-update-interval-millis") long
-        statisticsUpdateIntervalMillis) {
+        statisticsUpdateIntervalMillis,
+      EncryptionAPI encryptionAPI) {
     dispatcherQueue_ = dispatcherQueue;
     commAddress_ = commAddress;
     knownPeers_.add(commAddress_);
@@ -72,6 +80,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
     randomPeersGossipingModuleProvider_ = randomPeersGossipingModuleProvider;
     connectionTestMessageHandlerProvider_ = connectionTestMessageHandlerProvider;
     statisticsUpdateIntervalMillis_ = statisticsUpdateIntervalMillis;
+    encryptionAPI_ = encryptionAPI;
   }
 
   /**
@@ -111,7 +120,12 @@ public class NetworkMonitorImpl extends NetworkMonitor {
       logger_.debug("Adding a CommAddress: " + address);
       knownPeers_.add(address);
       knownPeersVector_.add(address);
-
+      try {
+        encryptionAPI_.load(CryptoUtils.getRandomString(),
+            new DHTKeySource(address, dispatcherQueue_), !EncryptionAPI.STORE_IN_DHT);
+      } catch (CryptoException e) {
+        logger_.error("Unable to load peer public key", e);
+      }
       if (randomPeersSample_.size() < RandomPeersGossipingModule.RANDOM_PEERS_SAMPLE_SIZE) {
         randomPeersSample_.add(address);
       }
