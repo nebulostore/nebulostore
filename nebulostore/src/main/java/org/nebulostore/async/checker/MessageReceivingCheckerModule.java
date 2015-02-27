@@ -65,10 +65,14 @@ public class MessageReceivingCheckerModule extends Module {
 
     public Void visit(CommMessage message) {
       logger_.debug("Received comm message: " + message);
+      if (message.getSourceAddress() == null) {
+        message.setSourceAddress(myAddress_);
+      }
       if (message.getDestinationAddress() == null) {
         logger_.warn("Received message with null destination address: " + message);
       } else if (message.getDestinationAddress().equals(myAddress_)) {
         if (message.requiresAck()) {
+          logger_.debug("Sending ack for message: " + message);
           networkQueue_.add(new MessageReceivedMessage(message.getDestinationAddress(), message
               .getSourceAddress(), message.getMessageId()));
         }
@@ -86,11 +90,13 @@ public class MessageReceivingCheckerModule extends Module {
     }
 
     public Void visit(TickMessage message) {
+      logger_.debug("Tick message received, current messages set: " + messages_);
       long currentTime = System.currentTimeMillis();
       for (Iterator<MessageWithTimestamp> iterator = messages_.iterator(); iterator.hasNext();) {
         MessageWithTimestamp nextMessage = iterator.next();
         if (currentTime >= nextMessage.timestamp_) {
           // message wasn't received, sending it asynchronously
+          logger_.debug("Timeout, sending the message " + nextMessage + " asynchronously.");
           nextMessage.message_.generateErrorResponder(dispatcherQueue_).handleError();
           iterator.remove();
           messagesMap_.remove(nextMessage.message_.getMessageId());
@@ -106,6 +112,7 @@ public class MessageReceivingCheckerModule extends Module {
       if (msg == null) {
         logger_.warn("Received ack message for message not in module's messages set.");
       } else {
+        logger_.debug("Received ack for message: " + message);
         messages_.remove(msg);
       }
       return null;
@@ -130,6 +137,7 @@ public class MessageReceivingCheckerModule extends Module {
       //Try to send all remaining messages asynchronously before ending the module
       timer_.cancelTimer();
       for (MessageWithTimestamp msg : messages_) {
+        logger_.debug("Ending the module, sending remaining messages: " + message);
         msg.message_.generateErrorResponder(dispatcherQueue_).handleError();
       }
       logger_.debug("Ending the module");
@@ -168,6 +176,11 @@ public class MessageReceivingCheckerModule extends Module {
       } else {
         return message_.compareTo(msg.message_);
       }
+    }
+
+    @Override
+    public String toString() {
+      return "[Message: " + message_ + ", Timestamp: " + timestamp_ + "]";
     }
   }
 
