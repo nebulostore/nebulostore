@@ -37,4 +37,6 @@ public abstract class NetworkMonitor extends JobModule {
   public double getResponseFrequency() {
     throw new UnsupportedOperationException();
   }
+
+  public abstract String getPeerPublicKeyId(CommAddress peer);
 }

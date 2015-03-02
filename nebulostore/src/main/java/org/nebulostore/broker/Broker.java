@@ -3,6 +3,7 @@ package org.nebulostore.broker;
 import java.math.BigInteger;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 import org.nebulostore.api.PutKeyModule;
 import org.nebulostore.appcore.Metadata;
@@ -13,6 +14,7 @@ import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -28,16 +30,22 @@ public abstract class Broker extends JobModule {
   protected NetworkMonitor networkMonitor_;
   protected BrokerContext context_;
   private AppKey appKey_;
+  protected EncryptionAPI encryptionAPI_;
+  protected String privateKeyPeerId_;
 
   @Inject
   private void setDependencies(CommAddress myAddress,
                                NetworkMonitor networkMonitor,
                                BrokerContext context,
-                               AppKey appKey) {
+                               AppKey appKey,
+                               EncryptionAPI encryptionAPI,
+                               @Named("PrivateKeyPeerId") String privateKeyPeerId) {
     myAddress_ = myAddress;
     networkMonitor_ = networkMonitor;
     context_ = context;
     appKey_ = appKey;
+    privateKeyPeerId_ = privateKeyPeerId;
+    encryptionAPI_ = encryptionAPI;
   }
 
   public void updateReplicationGroups(int timeoutSec) throws NebuloException {

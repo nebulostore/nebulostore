@@ -1,7 +1,12 @@
 package org.nebulostore.broker;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+
+import javax.crypto.KeyAgreement;
+import javax.crypto.SecretKey;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -10,6 +15,7 @@ import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
+import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.broker.ContractsSelectionAlgorithm.OfferResponse;
 import org.nebulostore.broker.messages.BreakContractMessage;
 import org.nebulostore.broker.messages.ContractOfferMessage;
@@ -17,10 +23,18 @@ import org.nebulostore.broker.messages.ImproveContractsMessage;
 import org.nebulostore.broker.messages.OfferReplyMessage;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
+import org.nebulostore.crypto.dh.DiffieHellmanInitPackage;
+import org.nebulostore.crypto.dh.DiffieHellmanProtocol;
+import org.nebulostore.crypto.dh.DiffieHellmanResponsePackage;
+import org.nebulostore.crypto.message.InitSessionErrorMessage;
+import org.nebulostore.crypto.message.InitSessionMessage;
+import org.nebulostore.crypto.message.InitSessionResponseMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.timer.MessageGenerator;
 import org.nebulostore.timer.Timer;
+import org.nebulostore.utils.Pair;
 
 /**
  * Module that initializes Broker and provides methods shared by modules in broker package.
@@ -30,6 +44,10 @@ import org.nebulostore.timer.Timer;
 public class ValuationBasedBroker extends Broker {
   private static Logger logger_ = Logger.getLogger(ValuationBasedBroker.class);
   private static final String CONFIGURATION_PREFIX = "broker.";
+  private Map<CommAddress, KeyAgreement> keyAgreements_ = new HashMap<CommAddress, KeyAgreement>();
+  private Map<CommAddress, SecretKey> sessionKeys_ = new HashMap<CommAddress, SecretKey>();
+  private Map<CommAddress, Contract> workingOffer_ = new HashMap<CommAddress, Contract>();
+  private static final Contract CONTRACT_INIT_BY_OTHER_PEER = null;
 
   public ValuationBasedBroker() {
   }
@@ -77,6 +95,7 @@ public class ValuationBasedBroker extends Broker {
   private final BrokerVisitor visitor_ = new BrokerVisitor();
 
   public class BrokerVisitor extends MessageVisitor {
+
     public void visit(JobInitMessage message) {
       logger_.debug("Initialized.");
       // setting contracts improvement, when a new peer is discovered
@@ -129,19 +148,95 @@ public class ValuationBasedBroker extends Broker {
         } else {
           Contract toOffer = contractsSelectionAlgorithm_
               .chooseContractToOffer(possibleContracts, currentContracts);
-          networkQueue_.add(new ContractOfferMessage(getJobId(), toOffer.getPeer(), toOffer));
           // TODO(szm): timeout
+          if (!workingOffer_.containsKey(toOffer.getPeer())) {
+            startKeyAgreement(toOffer);
+          } else {
+            logger_.debug("Already processing contract " + toOffer);
+          }
         }
       } finally {
         context_.disposeReadAccessToContracts();
       }
     }
 
+    public void visit(InitSessionMessage message) {
+      CommAddress peerAddress = message.getSourceAddress();
+      if (workingOffer_.containsKey(peerAddress)) {
+        logger_.debug("Already processing contract with peer " + peerAddress);
+        networkQueue_.add(new InitSessionErrorMessage(getJobId(), myAddress_, peerAddress));
+        return;
+      }
+      workingOffer_.put(peerAddress, CONTRACT_INIT_BY_OTHER_PEER);
+      try {
+        DiffieHellmanInitPackage diffieHellmanInitPackage = (DiffieHellmanInitPackage)
+            encryptionAPI_.decrypt(message.getEncryptedData(), privateKeyPeerId_);
+
+        Pair<KeyAgreement, DiffieHellmanResponsePackage> secondStep =
+            DiffieHellmanProtocol.secondStepDHKeyAgreement(diffieHellmanInitPackage);
+        sessionKeys_.put(peerAddress, DiffieHellmanProtocol.fourthStepDHKeyAgreement(
+            secondStep.getFirst()));
+        String peerKeyId = networkMonitor_.getPeerPublicKeyId(peerAddress);
+        EncryptedObject encryptedData = encryptionAPI_.encrypt(secondStep.getSecond(), peerKeyId);
+
+        Message outputMessage = new InitSessionResponseMessage(getJobId(), myAddress_, peerAddress,
+            encryptedData);
+        networkQueue_.add(outputMessage);
+      } catch (CryptoException e) {
+        logger_.error(e.getMessage(), e);
+        clearInitSessionVariables(peerAddress);
+        networkQueue_.add(new InitSessionErrorMessage(getJobId(), myAddress_, peerAddress));
+      }
+    }
+
+    public void visit(InitSessionResponseMessage message) {
+      CommAddress peerAddress = message.getSourceAddress();
+      if (!workingOffer_.containsKey(peerAddress)) {
+        logger_.debug("Wrong Protocol order. Peer: " + peerAddress);
+        networkQueue_.add(new InitSessionErrorMessage(getJobId(), myAddress_, peerAddress));
+        return;
+      }
+      try {
+        DiffieHellmanResponsePackage diffieHellmanResponsePackage = (DiffieHellmanResponsePackage)
+            encryptionAPI_.decrypt(message.getEncryptedData(), privateKeyPeerId_);
+
+        KeyAgreement keyAgreement = DiffieHellmanProtocol.thirdStepDHKeyAgreement(
+            keyAgreements_.get(peerAddress), diffieHellmanResponsePackage);
+        keyAgreements_.remove(peerAddress);
+        SecretKey secretKey = DiffieHellmanProtocol.fourthStepDHKeyAgreement(keyAgreement);
+        Contract contract = workingOffer_.get(peerAddress);
+        EncryptedObject offer = encryptionAPI_.encryptWithSessionKey(contract, secretKey);
+        sessionKeys_.put(peerAddress, secretKey);
+        networkQueue_.add(new ContractOfferMessage(getJobId(), peerAddress, offer));
+      } catch (CryptoException e) {
+        logger_.error(e.getMessage(), e);
+        clearInitSessionVariables(peerAddress);
+        networkQueue_.add(new InitSessionErrorMessage(getJobId(), myAddress_, peerAddress));
+      }
+    }
+
+    public void visit(InitSessionErrorMessage message) {
+      CommAddress peerAddress = message.getSourceAddress();
+      logger_.debug("Init Session Error Message from peer " + peerAddress);
+      clearInitSessionVariables(peerAddress);
+    }
+
     public void visit(OfferReplyMessage message) {
-      message.getContract().toLocalAndRemoteSwapped();
+      CommAddress peerAddress = message.getSourceAddress();
+      Contract contract = null;
+      try {
+        SecretKey secretKey = sessionKeys_.remove(peerAddress);
+        contract = (Contract)
+            encryptionAPI_.decryptWithSessionKey(message.getEncryptedContract(), secretKey);
+      } catch (NullPointerException | CryptoException e) {
+        logger_.error(e.getMessage(), e);
+        clearInitSessionVariables(peerAddress);
+        return;
+      }
+      contract.toLocalAndRemoteSwapped();
       if (message.getResult()) {
-        logger_.debug("Contract concluded: " + message.getContract().toString());
-        context_.addContract(message.getContract());
+        logger_.debug("Contract concluded: " + contract);
+        context_.addContract(contract);
 
         // todo(szm): przydzielanie przestrzeni adresowej do kontraktow
         // todo(szm): z czasem coraz rzadziej polepszam kontrakty
@@ -151,33 +246,50 @@ public class ValuationBasedBroker extends Broker {
           logger_.warn("Unsuccessful DHT update after contract conclusion.");
         }
       } else {
-        logger_.debug("Contract not concluded: " + message.getContract().toString());
+        logger_.debug("Contract not concluded: " + contract);
       }
       // todo(szm): timeouts
     }
 
     public void visit(ContractOfferMessage message) {
+      CommAddress peerAddress = message.getSourceAddress();
       ContractsSet contracts = context_.acquireReadAccessToContracts();
       OfferResponse response;
-      message.getContract().toLocalAndRemoteSwapped();
+      Contract offer = null;
+      EncryptedObject encryptedOffer = null;
+      try {
+        SecretKey secretKey = sessionKeys_.remove(peerAddress);
+        offer = (Contract) encryptionAPI_.decryptWithSessionKey(
+            message.getEncryptedContract(), secretKey);
+        offer.toLocalAndRemoteSwapped();
+        encryptedOffer = encryptionAPI_.encryptWithSessionKey(offer, secretKey);
+      } catch (NullPointerException | CryptoException e) {
+        logger_.error(e.getMessage(), e);
+        context_.disposeReadAccessToContracts();
+        networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(),
+            encryptedOffer, false));
+        return;
+      } finally {
+        clearInitSessionVariables(peerAddress);
+      }
       if (context_.getContractsRealSize() > spaceContributedKb_ ||
-          context_.getNumberOfContractsWith(message.getContract().getPeer()) >=
+          context_.getNumberOfContractsWith(offer.getPeer()) >=
           maxContractsMultiplicity_) {
-        networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(), message
-            .getContract(), false));
+        networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(),
+            encryptedOffer, false));
         context_.disposeReadAccessToContracts();
         return;
       }
       try {
-        response = contractsSelectionAlgorithm_.responseToOffer(message.getContract(), contracts);
+        response = contractsSelectionAlgorithm_.responseToOffer(offer, contracts);
       } finally {
         context_.disposeReadAccessToContracts();
       }
       if (response.responseAnswer_) {
-        logger_.debug("Concluding contract: " + message.getContract().toString());
-        context_.addContract(message.getContract());
+        logger_.debug("Concluding contract: " + offer);
+        context_.addContract(offer);
         networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(),
-            message.getContract(), true));
+            encryptedOffer, true));
         for (Contract contract : response.contractsToBreak_) {
           sendBreakContractMessage(contract);
         }
@@ -188,7 +300,7 @@ public class ValuationBasedBroker extends Broker {
         }
       } else {
         networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(),
-            message.getContract(), false));
+            encryptedOffer, false));
       }
     }
 
@@ -196,6 +308,29 @@ public class ValuationBasedBroker extends Broker {
       logger_.debug("Received: " + message);
     }
 
+  }
+
+  private void startKeyAgreement(Contract toOffer) {
+    CommAddress peerAddress = toOffer.getPeer();
+    workingOffer_.put(peerAddress, toOffer);
+    try {
+      String peerKeyId = networkMonitor_.getPeerPublicKeyId(peerAddress);
+      Pair<KeyAgreement, DiffieHellmanInitPackage> firstStep =
+          DiffieHellmanProtocol.firstStepDHKeyAgreement();
+      EncryptedObject encryptedData = encryptionAPI_.encrypt(firstStep.getSecond(), peerKeyId);
+      keyAgreements_.put(peerAddress, firstStep.getFirst());
+      Message message = new InitSessionMessage(getJobId(), myAddress_, peerAddress, encryptedData);
+      networkQueue_.add(message);
+    } catch (CryptoException e) {
+      logger_.error(e.getMessage(), e);
+      clearInitSessionVariables(peerAddress);
+    }
+  }
+
+  private void clearInitSessionVariables(CommAddress peerAddress) {
+    keyAgreements_.remove(peerAddress);
+    workingOffer_.remove(peerAddress);
+    sessionKeys_.remove(peerAddress);
   }
 
   private void sendBreakContractMessage(Contract contract) {

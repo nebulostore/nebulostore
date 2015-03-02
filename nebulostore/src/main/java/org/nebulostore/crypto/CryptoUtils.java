@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
@@ -15,6 +16,8 @@ import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -52,8 +55,11 @@ public final class CryptoUtils {
   private static Logger logger_ = Logger.getLogger(CryptoUtils.class);
   private static final String RSA_ALGORITHM = "RSA";
   private static final String AES_ALGORITHM = "AES";
+  private static final String DES_ALGORITHM = "DES/ECB/PKCS5Padding";
   private static final int SYMETRIC_KEY_BYTE_LENGTH = 256;
   private static final int ASYMETRIC_ENCRYPTION_BYTE_LENGTH = 512;
+  private static final int ASYMETRIC_ENCRYPTION_KEY_LENGTH = 8 * ASYMETRIC_ENCRYPTION_BYTE_LENGTH;
+  private static final String KEYS_DIR = "keys/";
 
   public static PublicKey readPublicKey(String filename) throws CryptoException {
     try {
@@ -75,6 +81,32 @@ public final class CryptoUtils {
       return keyFactory.generatePrivate(pkcs8EncodedKeySpec);
     } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
       logger_.error("Unable to read private key from file " + filename, e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  public static KeyPair generateKeyPair() throws CryptoException {
+    try {
+      KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA_ALGORITHM);
+      keyPairGenerator.initialize(ASYMETRIC_ENCRYPTION_KEY_LENGTH);
+      return keyPairGenerator.generateKeyPair();
+    } catch (NoSuchAlgorithmException e) {
+      logger_.error("Unable to generate key pair.", e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  public static String saveKeyOnDisk(Key key, String keyId) throws CryptoException {
+    try {
+      String path = CryptoUtils.KEYS_DIR + keyId;
+      File keyFile = new File(path);
+      ObjectOutputStream objectOutputStream =
+          new ObjectOutputStream(new FileOutputStream(keyFile));
+      objectOutputStream.writeObject(key);
+      objectOutputStream.close();
+      return path;
+    } catch (IOException e) {
+      logger_.error("Unable to save key on disk");
       throw new CryptoException(e.getMessage(), e);
     }
   }
@@ -121,6 +153,14 @@ public final class CryptoUtils {
     return transform(message, key, AES_ALGORITHM, Cipher.DECRYPT_MODE);
   }
 
+  private static byte[] encryptDES(byte[] message, Key key) throws CryptoException {
+    return transform(message, key, DES_ALGORITHM, Cipher.ENCRYPT_MODE);
+  }
+
+  private static byte[] decryptDES(byte[] message, Key key) throws CryptoException {
+    return transform(message, key, DES_ALGORITHM, Cipher.DECRYPT_MODE);
+  }
+
   /**
    * Create cryptographically secure 128-bit long positive BigInteger.
    */
@@ -142,6 +182,16 @@ public final class CryptoUtils {
     byte[] cipherKey = encryptRSA(serializeObject(secretKey), key);
     byte[] cipher = ArrayUtils.addAll(cipherKey, cipherText);
     return new EncryptedObject(cipher);
+  }
+
+  public static EncryptedObject encryptObjectWithSessionKey(Serializable object,
+      SecretKey secretKey) throws CryptoException {
+    return new EncryptedObject(encryptDES(serializeObject(object), secretKey));
+  }
+
+  public static Object decryptObjectWithSessionKey(EncryptedObject object,
+      SecretKey secretKey) throws CryptoException {
+    return deserializeObject(decryptDES(object.getEncryptedData(), secretKey));
   }
 
   private static SecretKey generateSecretKey() throws CryptoException {

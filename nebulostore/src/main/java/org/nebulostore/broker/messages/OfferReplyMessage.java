@@ -1,6 +1,6 @@
 package org.nebulostore.broker.messages;
 
-import org.nebulostore.broker.Contract;
+import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.communication.naming.CommAddress;
 
 /**
@@ -9,13 +9,13 @@ import org.nebulostore.communication.naming.CommAddress;
  */
 public class OfferReplyMessage extends BrokerMessage {
   private static final long serialVersionUID = -6854062479094405282L;
-  private Contract contract_;
+  private EncryptedObject encryptedContract_;
   private boolean result_;
 
-  public OfferReplyMessage(String jobId, CommAddress destAddress, Contract contract,
-      boolean result) {
+  public OfferReplyMessage(String jobId, CommAddress destAddress,
+      EncryptedObject encryptedContract, boolean result) {
     super(jobId, destAddress);
-    contract_ = contract;
+    encryptedContract_ = encryptedContract;
     result_ = result;
   }
 
@@ -23,7 +23,7 @@ public class OfferReplyMessage extends BrokerMessage {
     return result_;
   }
 
-  public Contract getContract() {
-    return contract_;
+  public EncryptedObject getEncryptedContract() {
+    return encryptedContract_;
   }
 }

@@ -2,8 +2,10 @@ package org.nebulostore.networkmonitor;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
@@ -61,6 +63,8 @@ public class NetworkMonitorImpl extends NetworkMonitor {
 
   private final EncryptionAPI encryptionAPI_;
 
+  private Map<CommAddress, String> peersPublicKeyId_;
+
   @Inject
   public NetworkMonitorImpl(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
           CommAddress commAddress,
@@ -79,6 +83,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
     connectionTestMessageHandlerProvider_ = connectionTestMessageHandlerProvider;
     statisticsUpdateIntervalMillis_ = statisticsUpdateIntervalMillis;
     encryptionAPI_ = encryptionAPI;
+    peersPublicKeyId_ = new HashMap<CommAddress, String>();
     visitor_ = new NetworkMonitorVisitor();
   }
 
@@ -119,12 +124,6 @@ public class NetworkMonitorImpl extends NetworkMonitor {
       logger_.debug("Adding a CommAddress: " + address);
       knownPeers_.add(address);
       knownPeersVector_.add(address);
-      try {
-        encryptionAPI_.load(CryptoUtils.getRandomString(), new DHTKeySource(address,
-            dispatcherQueue_), !EncryptionAPI.STORE_IN_DHT);
-      } catch (CryptoException e) {
-        logger_.error("Unable to load peer public key", e);
-      }
       if (randomPeersSample_.size() < RandomPeersGossipingModule.RANDOM_PEERS_SAMPLE_SIZE) {
         randomPeersSample_.add(address);
       }
@@ -142,6 +141,23 @@ public class NetworkMonitorImpl extends NetworkMonitor {
     logger_.debug("Set random peers sample size: " + randomPeersSample.size() + " was: " +
         randomPeersSample_.size());
     randomPeersSample_ = Collections.synchronizedSet(randomPeersSample);
+  }
+
+  @Override
+  public String getPeerPublicKeyId(CommAddress peer) {
+    String result = peersPublicKeyId_.get(peer);
+    if (result == null) {
+      try {
+        result = CryptoUtils.getRandomString();
+        peersPublicKeyId_.put(peer, result);
+        logger_.debug(String.format("Put (Peer address %s, KeyID %s)", peer, result));
+        encryptionAPI_.load(result, new DHTKeySource(peer, dispatcherQueue_),
+            !EncryptionAPI.STORE_IN_DHT);
+      } catch (CryptoException e) {
+        logger_.error("Unable to load peer public key", e);
+      }
+    }
+    return result;
   }
 
   public class NetworkMonitorVisitor extends MessageVisitor {

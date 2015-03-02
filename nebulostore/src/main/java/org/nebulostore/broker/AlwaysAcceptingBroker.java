@@ -9,10 +9,12 @@ import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
+import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.broker.messages.ContractOfferMessage;
 import org.nebulostore.broker.messages.OfferReplyMessage;
 import org.nebulostore.communication.messages.CommPeerFoundMessage;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -21,6 +23,7 @@ import org.nebulostore.timer.MessageGenerator;
 
 /**
  * Broker is always a singleton job. See BrokerMessageForwarder.
+ * Should be used only with BasicEncryptionAPI class
  * @author Bolek Kulbabinski
  */
 public class AlwaysAcceptingBroker extends Broker {
@@ -57,21 +60,23 @@ public class AlwaysAcceptingBroker extends Broker {
       logger_.debug("Initialized");
     }
 
-    public void visit(ContractOfferMessage message) {
+    public void visit(ContractOfferMessage message) throws CryptoException {
       // Accept every offer!
       logger_.debug("Accepting offer from: " +
           message.getSourceAddress());
       // TODO(bolek): Should we accept same offer twice?
-      networkQueue_.add(new OfferReplyMessage(message.getId(), message.getSourceAddress(), message
-          .getContract(), true));
+      networkQueue_.add(new OfferReplyMessage(message.getId(), message.getSourceAddress(),
+          message.getEncryptedContract(), true));
     }
 
-    public void visit(OfferReplyMessage message) {
+    public void visit(OfferReplyMessage message) throws CryptoException {
+      Contract contract = (Contract)
+          encryptionAPI_.decryptWithSessionKey(message.getEncryptedContract(), null);
       if (message.getResult()) {
         // Offer was accepted, add new replica to our DHT entry.
         logger_.debug("Peer " +
             message.getSourceAddress() + " accepted our offer.");
-        context_.addContract(message.getContract());
+        context_.addContract(contract);
 
         try {
           updateReplicationGroups(TIMEOUT_SEC);
@@ -85,7 +90,7 @@ public class AlwaysAcceptingBroker extends Broker {
       context_.removeOffer(message.getSourceAddress());
     }
 
-    public void visit(CommPeerFoundMessage message) {
+    public void visit(CommPeerFoundMessage message) throws CryptoException {
       logger_.debug("Found new peer.");
       if (context_.getReplicas().length + context_.getNumberOfOffers() < MAX_CONTRACTS) {
         List<CommAddress> knownPeers = networkMonitor_.getKnownPeers();
@@ -98,8 +103,9 @@ public class AlwaysAcceptingBroker extends Broker {
             logger_.debug("Sending offer to " +
                 address);
             Contract offer = new Contract(myAddress_, address, DEFAULT_OFFER);
-            networkQueue_.
-                add(new ContractOfferMessage(CryptoUtils.getRandomString(), address, offer));
+            EncryptedObject encryptedOffer = encryptionAPI_.encryptWithSessionKey(offer, null);
+            networkQueue_.add(
+                new ContractOfferMessage(CryptoUtils.getRandomString(), address, encryptedOffer));
             context_.addContractOffer(address, offer);
             break;
           }
