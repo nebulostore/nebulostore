@@ -1,8 +1,6 @@
 package org.nebulostore.appcore.modules;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 /**
  * Command to end (terminate) module.
@@ -10,8 +8,4 @@ import org.nebulostore.appcore.messaging.MessageVisitor;
  */
 public class EndModuleMessage extends Message {
   private static final long serialVersionUID = -1756129179954128771L;
-
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
-  }
 }

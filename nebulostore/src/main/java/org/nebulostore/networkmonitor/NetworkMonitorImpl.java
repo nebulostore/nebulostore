@@ -56,7 +56,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
 
   private long statisticsUpdateIntervalMillis_;
 
-  protected MessageVisitor<Void> visitor_;
+  protected MessageVisitor visitor_;
 
   private EncryptionAPI encryptionAPI_;
 
@@ -145,24 +145,19 @@ public class NetworkMonitorImpl extends NetworkMonitor {
     randomPeersSample_ = Collections.synchronizedSet(randomPeersSample);
   }
 
-  /**
-   * Visitor.
-   */
-  public class NetworkMonitorVisitor extends MessageVisitor<Void> {
-    public Void visit(JobInitMessage message) {
+  public class NetworkMonitorVisitor extends MessageVisitor {
+    public void visit(JobInitMessage message) {
       jobId_ = message.getId();
       logger_.debug("Initialized...");
       timer_.scheduleRepeatedJob(randomPeersGossipingModuleProvider_,
           statisticsUpdateIntervalMillis_, statisticsUpdateIntervalMillis_);
-      return null;
     }
 
-    public Void visit(ConnectionTestMessage message) {
+    public void visit(ConnectionTestMessage message) {
       logger_.debug("Got ConnectionTestMessage.");
       ConnectionTestMessageHandler handler = connectionTestMessageHandlerProvider_.get();
       message.setHandler(handler);
       dispatcherQueue_.add(message);
-      return null;
     }
   }
 

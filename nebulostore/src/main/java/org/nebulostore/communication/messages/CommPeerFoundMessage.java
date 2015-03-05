@@ -1,7 +1,6 @@
 package org.nebulostore.communication.messages;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.networkmonitor.PeerFoundHandler;
@@ -23,10 +22,6 @@ public class CommPeerFoundMessage extends CommMessage {
 
   public CommPeerFoundMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress) {
     super(jobId, sourceAddress, destAddress);
-  }
-
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 
   @Override

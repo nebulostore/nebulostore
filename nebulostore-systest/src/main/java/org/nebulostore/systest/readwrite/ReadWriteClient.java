@@ -99,7 +99,7 @@ public class ReadWriteClient extends ConductorClient {
    */
   protected final class ReadFilesVisitor extends TestingModuleVisitor {
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       for (NebuloAddress address : files_) {
         boolean fetched = false;
         // Try to fetch each file at most MAX_ITER times.
@@ -110,7 +110,7 @@ public class ReadWriteClient extends ConductorClient {
             if (!Arrays.equals(content,
                 address.getAppKey().getKey().toString().getBytes("UTF-8"))) {
               endWithError("File content is incorrect (" + new String(content, "UTF-8") + ")");
-              return null;
+              return;
             } else {
               logger_.debug("Received correct file from address " + address);
               fetched = true;
@@ -128,7 +128,6 @@ public class ReadWriteClient extends ConductorClient {
         }
       }
       phaseFinished();
-      return null;
     }
   }
 
@@ -137,15 +136,14 @@ public class ReadWriteClient extends ConductorClient {
    */
   protected final class DeleteFileVisitor extends TestingModuleVisitor {
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       try {
         myFile_.delete();
       } catch (NebuloException e) {
         endWithError("Unable to delete file (" + e.getMessage() + ")");
-        return null;
+        return;
       }
       phaseFinished();
-      return null;
     }
   }
 }

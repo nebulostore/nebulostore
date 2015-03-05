@@ -1,7 +1,5 @@
 package org.nebulostore.async.synchronization.messages;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.async.synchronization.RespondWithAsynchronousMessagesModule;
 import org.nebulostore.async.synchronization.VectorClockValue;
@@ -41,10 +39,5 @@ public class GetAsynchronousMessagesMessage extends CommMessage {
   @Override
   public JobModule getHandler() {
     return new RespondWithAsynchronousMessagesModule();
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 }

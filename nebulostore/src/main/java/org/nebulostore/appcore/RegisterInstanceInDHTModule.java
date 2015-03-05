@@ -30,7 +30,7 @@ import org.nebulostore.dispatcher.JobInitMessage;
 public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
   private static Logger logger_ = Logger.getLogger(RegisterInstanceInDHTModule.class);
 
-  private final MessageVisitor<Void> visitor_ = new RIIDHTVisitor();
+  private final MessageVisitor visitor_ = new RIIDHTVisitor();
 
   public RegisterInstanceInDHTModule() {
   }
@@ -55,21 +55,17 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
     appKey_ = appKey;
   }
 
-  /**
-   * Visitor.
-   */
-  public class RIIDHTVisitor extends MessageVisitor<Void> {
+  public class RIIDHTVisitor extends MessageVisitor {
     State state_ = State.QUERY_DHT;
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       jobId_ = message.getId();
       logger_.debug("Trying to retrieve InstanceMetadata from DHT taskId: " + jobId_);
       networkQueue_.add(new GetDHTMessage(jobId_, myAddress_.toKeyDHT()));
       state_ = State.WAITING_FOR_RESPONSE;
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       if (state_ == State.WAITING_FOR_RESPONSE) {
         logger_.debug("Unable to retrieve InstanceMetadata from DHT, putting new.");
         // TODO(szm): read from file if exists
@@ -84,27 +80,24 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
       } else {
         logger_.warn("Received unexpected ErrorDHTMessage.");
       }
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       if (state_ == State.WAITING_FOR_RESPONSE) {
         logger_.debug("InstanceMetadata already in DHT, nothing to do.");
         endWithSuccess(false);
       } else {
         logger_.warn("Received unexpected ValueDHTMessage");
       }
-      return null;
     }
 
-    public Void visit(OkDHTMessage message) {
+    public void visit(OkDHTMessage message) {
       if (state_ == State.PUT_DHT) {
         logger_.debug("Successfuly put InstanceMetadata into DHT.");
         endWithSuccess(true);
       } else {
         logger_.warn("Received unexpected OkDHTMessage.");
       }
-      return null;
     }
 
   }

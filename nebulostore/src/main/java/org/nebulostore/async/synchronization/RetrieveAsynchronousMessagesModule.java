@@ -69,16 +69,14 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
   }
 
   /**
-   * Visitor.
-   *
    * @author szymonmatejczyk
    * @author Piotr Malicki
    */
-  protected class RAMVisitor extends MessageVisitor<Void> {
+  protected class RAMVisitor extends MessageVisitor {
     private STATE state_ = STATE.NONE;
     private final Set<CommAddress> waitingForMessages_ = new HashSet<>();
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       logger_.debug("Starting " + RetrieveAsynchronousMessagesModule.class + " for " +
           synchroGroupOwner_ + " with synchro-group: " + synchroGroup_);
       timer_.schedule(jobId_, INSTANCE_TIMEOUT);
@@ -103,17 +101,16 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
       if (waitingForMessages_.isEmpty()) {
         finishModule();
       }
-      return null;
     }
 
-    public Void visit(AsynchronousMessagesMessage message) {
+    public void visit(AsynchronousMessagesMessage message) {
       logger_.debug("Retrieved next messages: " + message.getMessages() + " from " +
           message.getSourceAddress());
       if (!waitingForMessages_.remove(message.getSourceAddress()) ||
           !message.getRecipient().equals(synchroGroupOwner_) ||
           !state_.equals(STATE.WAITING_FOR_MESSAGES)) {
         logger_.warn("Received a message that was not expected.");
-        return null;
+        return;
       }
 
       if (message.getMessages() == null) {
@@ -141,10 +138,9 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
         handleReceivedMessages();
         finishModule();
       }
-      return null;
     }
 
-    public Void visit(AsyncModuleErrorMessage message) {
+    public void visit(AsyncModuleErrorMessage message) {
       if (state_.equals(STATE.WAITING_FOR_MESSAGES) &&
           waitingForMessages_.remove(message.getSourceAddress())) {
         logger_.warn("Received " + message.getClass() + " from " + message.getSourceAddress() +
@@ -156,18 +152,16 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
       } else {
         logger_.warn("Received unexpected message: " + message);
       }
-      return null;
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       logger_.warn("Timeout in RetrieveAsynchronousMessagesModule.");
       logger_.debug(waitingForMessages_.size() + " get requests were not finished");
       handleReceivedMessages();
       endJobModule();
-      return null;
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       logger_.warn("Message " + message.getMessage() + " was not sent");
       if (state_.equals(STATE.WAITING_FOR_MESSAGES) &&
           message.getMessage().getSourceAddress().equals(myAddress_)) {
@@ -177,7 +171,6 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
         handleReceivedMessages();
         finishModule();
       }
-      return null;
     }
 
     private void handleReceivedMessages() {

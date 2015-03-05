@@ -4,9 +4,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.junit.Before;
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 import static org.junit.Assert.fail;
 
@@ -20,10 +18,6 @@ public abstract class ReturningJobModuleBase {
    */
   protected class TestMessage extends Message {
     private static final long serialVersionUID = 6355287939938856475L;
-    @Override
-    public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-      return visitor.visit(this);
-    }
   }
 
   protected static final Integer SUCCESS_VALUE = 123;

@@ -21,10 +21,9 @@ public class ValuationBasedBrokerWithContextOpened extends ValuationBasedBroker 
    * Visitor.
    */
   public class ThisVisitor extends BrokerVisitor {
-    public Void visit(GetBrokerContextMessage message) {
+    public void visit(GetBrokerContextMessage message) {
       logger_.debug("Got GetBrokerContextMessage.");
       outQueue_.add(new BrokerContextMessage(message.getId(), context_));
-      return null;
     }
   }
 

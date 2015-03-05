@@ -33,29 +33,23 @@ public class RetrievePeersStatistics extends
 
   private final RPSVisitor visitor_ = new RPSVisitor();
 
-  /**
-   * Visitor.
-   */
-  public class RPSVisitor extends MessageVisitor<Void> {
-    public Void visit(JobInitMessage message) {
+  public class RPSVisitor extends MessageVisitor {
+    public void visit(JobInitMessage message) {
       jobId_ = message.getId();
       networkQueue_.add(new GetDHTMessage(message.getId(), peer_.toKeyDHT()));
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
       logger_.debug("Retrived peers " + peer_ + " statistics");
       for (PeerConnectionSurvey pcs : metadata.getStatistics()) {
         logger_.debug(pcs.toString());
       }
       endWithSuccess(metadata.getStatistics());
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       endWithError(new NebuloException("DHT Error"));
-      return null;
     }
   }
 

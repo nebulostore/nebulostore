@@ -43,18 +43,15 @@ public class GetPeersConnectionAverageStatisticModule extends ReturningJobModule
     config_ = config;
   }
 
-  private final MessageVisitor<Void> visitor_ = new GetStatisticsModuleVisitor();
+  private final MessageVisitor visitor_ = new GetStatisticsModuleVisitor();
 
   @Override
   protected void processMessage(Message message) throws NebuloException {
     message.accept(visitor_);
   }
 
-  /**
-   * Visitor.
-   */
-  protected class GetStatisticsModuleVisitor extends MessageVisitor<Void> {
-    public Void visit(JobInitMessage message) {
+  protected class GetStatisticsModuleVisitor extends MessageVisitor {
+    public void visit(JobInitMessage message) {
       RetrievePeersStatistics allStatsModule = new RetrievePeersStatistics(peer_, outQueue_);
       try {
         Queue<PeerConnectionSurvey> allStats = allStatsModule.getResult(config_
@@ -72,7 +69,6 @@ public class GetPeersConnectionAverageStatisticModule extends ReturningJobModule
       } catch (NebuloException exception) {
         endWithError(exception);
       }
-      return null;
     }
   }
 

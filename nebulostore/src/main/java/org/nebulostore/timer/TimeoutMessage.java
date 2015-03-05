@@ -1,8 +1,6 @@
 package org.nebulostore.timer;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 /**
  * Message issued by Timer.
@@ -21,8 +19,4 @@ public class TimeoutMessage extends Message {
     return messageContent_;
   }
 
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
-  }
 }

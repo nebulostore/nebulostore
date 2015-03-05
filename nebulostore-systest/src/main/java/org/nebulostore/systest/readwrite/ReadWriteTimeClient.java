@@ -97,7 +97,7 @@ public final class ReadWriteTimeClient extends ReadWriteClient {
    */
   protected final class ReadFilesVisitor extends TestingModuleVisitor {
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       List<String> times = new ArrayList<>(files_.size());
       for (NebuloAddress address : files_) {
         boolean fetched = false;
@@ -112,7 +112,7 @@ public final class ReadWriteTimeClient extends ReadWriteClient {
             final long endReading = System.nanoTime();
             if (!Arrays.equals(content, dataToVerify)) {
               endWithError("File content is incorrect (" + new String(content, "UTF-8") + ")");
-              return null;
+              return;
             } else {
               LOGGER.debug("Received correct file from address " + address);
               fetched = true;
@@ -133,7 +133,6 @@ public final class ReadWriteTimeClient extends ReadWriteClient {
       }
       writeToFile(times);
       phaseFinished();
-      return null;
     }
   }
 }

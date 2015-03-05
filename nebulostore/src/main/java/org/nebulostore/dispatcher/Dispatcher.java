@@ -26,21 +26,21 @@ public class Dispatcher extends Module {
 
   private final Map<String, BlockingQueue<Message>> workersQueues_;
   private final Map<String, Thread> workersThreads_;
-  private final MessageVisitor<?> visitor_;
+  private final MessageVisitor visitor_;
   private final Injector injector_;
 
   /**
    * Visitor class. Contains logic for handling messages depending
    * on their types.
    */
-  public class MessageDispatchVisitor extends MessageVisitor<Void> {
+  public class MessageDispatchVisitor extends MessageVisitor {
     private static final int MAX_LOGGED_JOB_ID_LENGTH = 8;
 
     /*
      * Special handling for JobEndedMessage.
      * Remove MSG_ID from Dispatcher's map.
      */
-    public Void visit(JobEndedMessage message) {
+    public void visit(JobEndedMessage message) {
       if (message.getId() != null) {
         String jobId = message.getId();
         logger_.debug("Got job ended message with ID: " + jobId);
@@ -59,13 +59,12 @@ public class Dispatcher extends Module {
       } else {
         logger_.debug("Got job ended message with NULL ID.");
       }
-      return null;
     }
 
     /*
      * End dispatcher.
      */
-    public Void visit(EndModuleMessage message) throws NebuloException {
+    public void visit(EndModuleMessage message) throws NebuloException {
       Thread[] threads =
           workersThreads_.values().toArray(new Thread[workersThreads_.values().size()]);
       logger_.debug("Quitting dispatcher, waiting for " + threads.length + " job threads.");
@@ -77,14 +76,13 @@ public class Dispatcher extends Module {
         }
       }
       endModule();
-      return null;
     }
 
     /*
      * General behavior - forwarding messages.
      */
     @Override
-    public Void visitDefault(Message message) throws NebuloException {
+    public void visitDefault(Message message) throws NebuloException {
       if (message.getId() != null) {
         String jobId = message.getId();
         logger_.debug("Received message with jobID: " + jobId + " and class name: " +
@@ -123,12 +121,10 @@ public class Dispatcher extends Module {
           logger_.debug("Delegating message to an existing worker thread.");
           workersQueues_.get(jobId).add(message);
         }
-        return null;
       } else {
         logger_.debug("Received message with NULL jobID and class name: " +
             message.getClass().getSimpleName());
       }
-      return null;
     }
   }
 

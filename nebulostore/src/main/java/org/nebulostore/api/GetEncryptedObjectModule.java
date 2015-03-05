@@ -39,9 +39,6 @@ public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, Se
     fetchObject(nebuloAddress, replicaAddress);
   }
 
-  /**
-   * Visitor.
-   */
   protected class GetEncryptedObjectVisitor extends GetModuleVisitor {
     @Override
     public Void visit(SendObjectMessage message) {

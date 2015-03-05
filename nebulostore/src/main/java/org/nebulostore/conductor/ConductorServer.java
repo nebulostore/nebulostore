@@ -223,15 +223,13 @@ public abstract class ConductorServer extends ReturningJobModule<Boolean> {
   }
 
   /**
-   * Visitor.
-   *
    * @author szymonmatejczyk
    * @author Marcin Walas
    */
-  protected class ServerTestingModuleVisitor extends MessageVisitor<Void> {
+  protected class ServerTestingModuleVisitor extends MessageVisitor {
     private MessageGenerator notificationGenerator_;
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       logger_.debug("Received JobInitMessage.");
       jobId_ = message.getId();
       testingState_ = TestingState.COLLECTING_PEERS;
@@ -252,10 +250,9 @@ public abstract class ConductorServer extends ReturningJobModule<Boolean> {
         networkMonitor_.addContextChangeMessageGenerator(notificationGenerator_);
         logger_.debug("Waiting for peer discovery.");
       }
-      return null;
     }
 
-    public Void visit(NetworkContextChangedMessage message) {
+    public void visit(NetworkContextChangedMessage message) {
       logger_.debug("Received NetworkContextChangedMessage (we know " +
           networkMonitor_.getKnownPeers().size() + " peers).");
       if (testingState_ == TestingState.COLLECTING_PEERS && trySetClients()) {
@@ -263,19 +260,18 @@ public abstract class ConductorServer extends ReturningJobModule<Boolean> {
         initClients();
         schedulePhaseTimer(phase_);
       }
-      return null;
     }
 
-    public Void visit(TocMessage message) {
+    public void visit(TocMessage message) {
       if (!clients_.contains(message.getSourceAddress()) || message.getPhase() != phase_) {
-        return null;
+        return;
       }
 
       logger_.debug("TocMessage received from: " + message.getSourceAddress() + ". Tocs: " + tocs_);
 
       if (tocsAddresses_.contains(message.getSourceAddress())) {
         logger_.debug("Already received toc from this address");
-        return null;
+        return;
       }
 
       synchronized (tocsAddresses_) {
@@ -291,13 +287,12 @@ public abstract class ConductorServer extends ReturningJobModule<Boolean> {
         }
         processTocsChange();
       }
-      return null;
     }
 
-    public Void visit(StatsMessage message) {
+    public void visit(StatsMessage message) {
       if (!clients_.contains(message.getSourceAddress())) {
         logger_.warn("Received StatsMessage with no source address.");
-        return null;
+        return;
       }
       tocs_++;
       logger_.debug("Got stats message. (" + tocs_ + "/" + peersNeeded_ + ") from " +
@@ -307,10 +302,9 @@ public abstract class ConductorServer extends ReturningJobModule<Boolean> {
       if (tocs_ >= peersNeeded_) {
         finishTest();
       }
-      return null;
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       if ((testingState_ == TestingState.INITIALIZING) &&
           (PHASE_TIMEOUT_MSG + phase_).equals(message.getMessageContent())) {
         logger_.warn("Phase timeout in initializing phase. " + tocs_ + " tocs out of " +
@@ -329,14 +323,12 @@ public abstract class ConductorServer extends ReturningJobModule<Boolean> {
           peersNeeded_ + " received");
         finishTest();
       }
-      return null;
     }
 
-    public Void visit(ErrorMessage message) {
+    public void visit(ErrorMessage message) {
       logger_.warn("Received ErrorMessage, test failed: " + message.getMessage());
       successful_ = false;
       finishTest();
-      return null;
     }
   }
 

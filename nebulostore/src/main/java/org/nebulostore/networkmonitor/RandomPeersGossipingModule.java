@@ -53,10 +53,10 @@ public class RandomPeersGossipingModule extends JobModule {
   /**
    * Visitor. Implements gossiping a number of random peers protocol.
    */
-  public class RPGVisitor extends MessageVisitor<Void> {
+  public class RPGVisitor extends MessageVisitor {
     private boolean activeMode_;
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       jobId_ = message.getId();
       // starting in active mode
       activeMode_ = true;
@@ -64,7 +64,7 @@ public class RandomPeersGossipingModule extends JobModule {
       if (view.isEmpty()) {
         logger_.debug("Empty view");
         endJobModule();
-        return null;
+        return;
       }
 
       logger_.debug("Gossiping (actively) started...");
@@ -82,10 +82,9 @@ public class RandomPeersGossipingModule extends JobModule {
       view.add(myAddress_);
       networkQueue_.add(new RandomPeersSampleMessage(jobId_, remotePeer_, view));
       timer_.schedule(jobId_, TIMEOUT_MILLIS);
-      return null;
     }
 
-    public Void visit(RandomPeersSampleMessage message) {
+    public void visit(RandomPeersSampleMessage message) {
       Set<CommAddress> view = getView();
       if (activeMode_) {
         view.addAll(message.getPeersSet());
@@ -104,7 +103,6 @@ public class RandomPeersGossipingModule extends JobModule {
       updateStatistics(view);
       timer_.cancelTimer();
       endJobModule();
-      return null;
     }
 
     public Void visit(ErrorCommMessage message) {

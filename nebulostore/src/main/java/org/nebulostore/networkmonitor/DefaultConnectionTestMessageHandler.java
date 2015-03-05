@@ -15,16 +15,12 @@ import org.nebulostore.networkmonitor.messages.ConnectionTestResponseMessage;
 public class DefaultConnectionTestMessageHandler extends ConnectionTestMessageHandler {
   protected CTMVisitor visitor_ = new CTMVisitor();
 
-  /**
-   * Visitor.
-   */
-  public class CTMVisitor extends MessageVisitor<Void> {
-    public Void visit(ConnectionTestMessage message) {
+  public class CTMVisitor extends MessageVisitor {
+    public void visit(ConnectionTestMessage message) {
       jobId_ = message.getId();
       networkQueue_.add(new ConnectionTestResponseMessage(message.getId(), message
           .getSourceAddress()));
       endJobModule();
-      return null;
     }
   }
 

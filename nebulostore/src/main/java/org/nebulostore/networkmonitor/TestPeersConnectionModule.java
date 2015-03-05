@@ -58,28 +58,23 @@ public class TestPeersConnectionModule extends JobModule {
   private ValueDHTMessage valueDHTMessage_;
   private final List<PeerConnectionSurvey> stats_ = new LinkedList<PeerConnectionSurvey>();
 
-  /**
-   * Visitor.
-   */
-  public class TPCVisitor extends MessageVisitor<Void> {
+  public class TPCVisitor extends MessageVisitor {
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       logger_.debug("Testing connection to: " + peerAddress_.toString());
       networkQueue_.add(new GetDHTMessage(message.getId(), peerAddress_.toKeyDHT()));
       sendTime_ = System.currentTimeMillis();
       networkQueue_.add(new ConnectionTestMessage(jobId_, peerAddress_));
       timer_.schedule(jobId_, TIMEOUT_MILLIS);
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       logger_.warn("Unable to retrive statistics from DHT: " + message.getException());
       timer_.cancelTimer();
       endJobModule();
-      return null;
     }
 
-    public Void visit(ConnectionTestResponseMessage message) {
+    public void visit(ConnectionTestResponseMessage message) {
       logger_.debug("Succesfully tested connection to: " + peerAddress_.toString());
       // TODO(szm): other statistics
       // TODO(szm): bandwidth??
@@ -91,19 +86,17 @@ public class TestPeersConnectionModule extends JobModule {
       if (valueDHTMessage_ != null) {
         appendStatisticsAndFinish(stats_, valueDHTMessage_);
       }
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       if (!stats_.isEmpty()) {
         appendStatisticsAndFinish(stats_, message);
       } else {
         valueDHTMessage_ = message;
       }
-      return null;
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       if (valueDHTMessage_ != null) {
         logger_.debug("Timeout in ping.");
         stats_.add(new PeerConnectionSurvey(myAddress_, System.currentTimeMillis(),
@@ -113,10 +106,9 @@ public class TestPeersConnectionModule extends JobModule {
         logger_.warn("Timeout in DHT retrival.");
         endJobModule();
       }
-      return null;
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       logger_.warn("Got ErrorCommMessage: " + message.getNetworkException());
       if (valueDHTMessage_ != null) {
         stats_.add(new PeerConnectionSurvey(myAddress_, System.currentTimeMillis(),
@@ -125,7 +117,6 @@ public class TestPeersConnectionModule extends JobModule {
       } else {
         endJobModule();
       }
-      return null;
     }
   }
 

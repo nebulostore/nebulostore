@@ -1,7 +1,5 @@
 package org.nebulostore.dht.messages;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.core.ValueDHT;
 
@@ -26,9 +24,5 @@ public class ValueDHTMessage extends OutDHTMessage {
 
   public ValueDHT getValue() {
     return value_;
-  }
-
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 }

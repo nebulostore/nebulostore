@@ -34,9 +34,6 @@ public class GetNebuloObjectModule extends GetModule<NebuloObject> implements Ob
     return getResult(timeoutSec);
   }
 
-  /**
-   * Visitor.
-   */
   protected class StateMachineVisitor extends GetModuleVisitor {
 
     @Override

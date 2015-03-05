@@ -1,8 +1,6 @@
 package org.nebulostore.async.messages;
 
 import org.nebulostore.appcore.addressing.NebuloAddress;
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 /**
  * Message sent to peer when a NebuloObject with @objectId_ was deleted.
@@ -19,10 +17,5 @@ public class DeleteNebuloObjectMessage extends AsynchronousMessage {
 
   public NebuloAddress getObjectId() {
     return objectId_;
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 }

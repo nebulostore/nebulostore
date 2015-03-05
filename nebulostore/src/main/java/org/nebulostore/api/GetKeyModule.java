@@ -22,7 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class GetKeyModule extends ReturningJobModule<ValueDHT> {
 
   private static Logger logger_ = Logger.getLogger(GetKeyModule.class);
-  private final MessageVisitor<Void> visitor_;
+  private final MessageVisitor visitor_;
   private final KeyDHT keyDHT_;
 
   public GetKeyModule(BlockingQueue<Message> dispatcherQueue, KeyDHT keyDHT) {
@@ -32,23 +32,20 @@ public class GetKeyModule extends ReturningJobModule<ValueDHT> {
     runThroughDispatcher();
   }
 
-  protected class GetKeyModuleMessageVisitor extends MessageVisitor<Void> {
+  protected class GetKeyModuleMessageVisitor extends MessageVisitor {
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       networkQueue_.add(new GetDHTMessage(getJobId(), keyDHT_));
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       logger_.debug("Process ValueDHTMessage");
       endWithSuccess(message.getValue());
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       logger_.debug("Process ErrorDHTMessage");
       endWithError(message.getException());
-      return null;
     }
   }
 

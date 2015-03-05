@@ -46,16 +46,14 @@ public class RespondWithAsynchronousMessagesModule extends JobModule {
   private final RespondWithAsyncVisitor visitor_ = new RespondWithAsyncVisitor();
 
   /**
-   * Visitor.
-   *
    * @author szymonmatejczyk
    * @author Piotr Malicki
    */
-  protected class RespondWithAsyncVisitor extends MessageVisitor<Void> {
+  protected class RespondWithAsyncVisitor extends MessageVisitor {
     private CommAddress askingPeer_;
     private CommAddress recipient_;
 
-    public Void visit(GetAsynchronousMessagesMessage message) {
+    public void visit(GetAsynchronousMessagesMessage message) {
       logger_.info("Received request for async messages from " + message.getSourceAddress() +
           " for " + message.getRecipient());
       if (context_.isInitialized()) {
@@ -97,10 +95,9 @@ public class RespondWithAsynchronousMessagesModule extends JobModule {
             .getSourceAddress()));
         finishModule();
       }
-      return null;
     }
 
-    public Void visit(AsynchronousMessagesMessage message) {
+    public void visit(AsynchronousMessagesMessage message) {
       logger_.debug("Received asynchronous messages from " + message.getSourceAddress() + " for " +
           message.getRecipient());
       if (message.getSourceAddress().equals(askingPeer_) &&
@@ -113,23 +110,20 @@ public class RespondWithAsynchronousMessagesModule extends JobModule {
         logger_.warn("Got " + message.getClass().getName() + " that shouldn't be sent.");
       }
       finishModule();
-      return null;
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       logger_.warn("Timeout in " + getClass());
       if (askingPeer_ == null || recipient_ == null) {
         logger_.warn("Received TimeoutMessage which was not expected");
       } else {
         endJobModule();
       }
-      return null;
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       logger_.warn("Message " + message.getMessage() + " has not been sent.");
       endJobModule();
-      return null;
     }
 
     public void finishModule() {

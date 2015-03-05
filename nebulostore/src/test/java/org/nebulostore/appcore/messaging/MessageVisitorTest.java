@@ -19,7 +19,7 @@ public class MessageVisitorTest {
   public void testHandleSpecificMessageType() throws NebuloException {
     Message message = new AMessage();
     AtomicInteger counter = new AtomicInteger(0);
-    MessageVisitor<Void> visitor = TestVisitors.getAVisitor(counter);
+    MessageVisitor visitor = TestVisitors.getAVisitor(counter);
 
     message.accept(visitor);
 
@@ -30,7 +30,7 @@ public class MessageVisitorTest {
   public void testHandleAllMessages() throws NebuloException {
     Message message = new AMessage();
     AtomicInteger counter = new AtomicInteger(0);
-    MessageVisitor<Void> visitor = TestVisitors.getSubclassedVisitor(counter);
+    MessageVisitor visitor = TestVisitors.getSubclassedVisitor(counter);
 
     message.accept(visitor);
 
@@ -40,7 +40,7 @@ public class MessageVisitorTest {
   @Test(expected = UnsupportedMessageException.class)
   public void testHandleUnsupportedMessageType() throws NebuloException {
     Message message = new AMessage();
-    MessageVisitor<Void> visitor = TestVisitors.getEmptyVisitor();
+    MessageVisitor visitor = TestVisitors.getEmptyVisitor();
 
     // Should throw UnsupportedMessageException.
     message.accept(visitor);
@@ -48,7 +48,7 @@ public class MessageVisitorTest {
 
   @Test(expected = UnsupportedMessageException.class)
   public void testHandleNotMessageSubclass() throws NebuloException {
-    MessageVisitor<Void> visitor = TestVisitors.getMVisitor(null);
+    MessageVisitor visitor = TestVisitors.getMVisitor(null);
 
     // Should throw UnsupportedMessageException.
     visitor.visit(new Integer(123));
@@ -57,7 +57,7 @@ public class MessageVisitorTest {
   @Test
   public void testExceptionFromVisitMethod() throws NebuloException {
     Message message = new AMessage();
-    MessageVisitor<Void> visitor = TestVisitors.getThrowingVisitor();
+    MessageVisitor visitor = TestVisitors.getThrowingVisitor();
 
     try {
       message.accept(visitor);

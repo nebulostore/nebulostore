@@ -91,17 +91,15 @@ public class NetworkMonitorTestClient extends ConductorClient {
    */
   protected class NetworkMonitorLastPhaseVisitor extends TestingModuleVisitor {
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.debug("Received NewPhaseMessage in GatherStats state.");
-      return null;
     }
 
-    public Void visit(GatherStatsMessage message) {
+    public void visit(GatherStatsMessage message) {
       logger_.debug("Gathering statistics...");
       if (gatherNetworkMonitorStatistics()) {
         networkQueue_.add(new StatsMessage(serverJobId_, null, server_, stats_));
       }
-      return null;
     }
 
   }

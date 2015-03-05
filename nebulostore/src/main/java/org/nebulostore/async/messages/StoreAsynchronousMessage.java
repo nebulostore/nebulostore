@@ -1,7 +1,5 @@
 package org.nebulostore.async.messages;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.async.StoreAsynchronousMessagesModule;
 import org.nebulostore.communication.messages.CommMessage;
@@ -30,11 +28,6 @@ public class StoreAsynchronousMessage extends CommMessage {
 
   public CommAddress getRecipient() {
     return recipient_;
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 
   @Override

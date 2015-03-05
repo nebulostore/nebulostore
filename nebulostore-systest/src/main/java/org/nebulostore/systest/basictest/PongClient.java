@@ -37,12 +37,11 @@ public final class PongClient extends ConductorClient {
    */
   protected final class Visitor1 extends IgnoreNewPhaseVisitor {
     @Override
-    public Void visit(UserCommMessage message) {
+    public void visit(UserCommMessage message) {
       logger_.debug("Received PingMessage.");
       magicNumber_ = (BigInteger) message.getContent();
       sender_ = message.getSourceAddress();
       phaseFinished();
-      return null;
     }
   }
 
@@ -51,11 +50,10 @@ public final class PongClient extends ConductorClient {
    */
   protected final class Visitor2 extends TestingModuleVisitor {
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       networkQueue_.add(new UserCommMessage(jobId_, sender_, magicNumber_.add(BigInteger.ONE),
           phase_));
       phaseFinished();
-      return null;
     }
   }
 }

@@ -89,7 +89,7 @@ public final class PingPongClient extends ConductorClient {
   protected final class VisitorSendPing extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       for (CommAddress address : childrenAddresses_) {
         if (sendMessage(new UserCommMessage(jobId_,
           address, randomNumber_.add(BigInteger.ONE), phase_))) {
@@ -97,7 +97,6 @@ public final class PingPongClient extends ConductorClient {
         }
       }
       phaseFinished();
-      return null;
     }
   }
 
@@ -107,12 +106,11 @@ public final class PingPongClient extends ConductorClient {
    */
   protected final class VisitorReceivedPing extends IgnoreNewPhaseVisitor {
     @Override
-    public Void visit(UserCommMessage message) {
+    public void visit(UserCommMessage message) {
       logger_.debug("Received PingMessage from parent.");
       randomNumber_ = (BigInteger) message.getContent();
       parentAddress_ = message.getSourceAddress();
       phaseFinished();
-      return null;
     }
   }
 
@@ -123,11 +121,10 @@ public final class PingPongClient extends ConductorClient {
   protected final class VisitorSendPong extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.debug("Send PongMessage to parent: " + parentAddress_.toString());
       sendMessage(new UserCommMessage(jobId_, parentAddress_, randomNumber_, phase_));
       phaseFinished();
-      return null;
     }
 
   }
@@ -138,7 +135,7 @@ public final class PingPongClient extends ConductorClient {
    */
   protected final class VisitorReceivedPong extends IgnoreNewPhaseVisitor {
     @Override
-    public Void visit(UserCommMessage message) {
+    public void visit(UserCommMessage message) {
       BigInteger received = (BigInteger) message.getContent();
       logger_.debug("Received PongMessage from child: " + message.getSourceAddress().toString());
       assertTrue(received.equals(randomNumber_.add(BigInteger.ONE)), "Correct number received.");
@@ -148,7 +145,6 @@ public final class PingPongClient extends ConductorClient {
           phaseFinished();
         }
       }
-      return null;
     }
   }
 }

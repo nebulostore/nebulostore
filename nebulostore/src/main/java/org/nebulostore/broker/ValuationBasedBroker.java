@@ -76,11 +76,8 @@ public class ValuationBasedBroker extends Broker {
 
   private final BrokerVisitor visitor_ = new BrokerVisitor();
 
-  /**
-   * Visitor.
-   */
-  public class BrokerVisitor extends MessageVisitor<Void> {
-    public Void visit(JobInitMessage message) {
+  public class BrokerVisitor extends MessageVisitor {
+    public void visit(JobInitMessage message) {
       logger_.debug("Initialized.");
       // setting contracts improvement, when a new peer is discovered
       MessageGenerator contractImrovementMessageGenerator = new MessageGenerator() {
@@ -96,16 +93,14 @@ public class ValuationBasedBroker extends Broker {
       timer_.scheduleRepeated(new ImproveContractsMessage(jobId_),
           contractImprovementDelay_ * 1000,
           contractImprovementPeriod_ * 1000);
-      return null;
     }
 
-    public Void visit(BreakContractMessage message) {
+    public void visit(BreakContractMessage message) {
       logger_.debug("Broken: " + message.getContract().toString());
       context_.remove(message.getContract());
-      return null;
     }
 
-    public Void visit(ImproveContractsMessage message) {
+    public void visit(ImproveContractsMessage message) {
       logger_.debug("Improving contracts...");
 
       Set<Contract> possibleContracts = new HashSet<Contract>();
@@ -114,7 +109,7 @@ public class ValuationBasedBroker extends Broker {
 
       if (context_.getContractsRealSize() > spaceContributedKb_) {
         logger_.debug("Contributed size fully utilized.");
-        return null;
+        return;
       }
 
       // todo(szm): temporarily using gossiped random peers sample
@@ -140,10 +135,9 @@ public class ValuationBasedBroker extends Broker {
       } finally {
         context_.disposeReadAccessToContracts();
       }
-      return null;
     }
 
-    public Void visit(OfferReplyMessage message) {
+    public void visit(OfferReplyMessage message) {
       message.getContract().toLocalAndRemoteSwapped();
       if (message.getResult()) {
         logger_.debug("Contract concluded: " + message.getContract().toString());
@@ -160,10 +154,9 @@ public class ValuationBasedBroker extends Broker {
         logger_.debug("Contract not concluded: " + message.getContract().toString());
       }
       // todo(szm): timeouts
-      return null;
     }
 
-    public Void visit(ContractOfferMessage message) {
+    public void visit(ContractOfferMessage message) {
       ContractsSet contracts = context_.acquireReadAccessToContracts();
       OfferResponse response;
       message.getContract().toLocalAndRemoteSwapped();
@@ -172,7 +165,7 @@ public class ValuationBasedBroker extends Broker {
           maxContractsMultiplicity_) {
         networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(), message
             .getContract(), false));
-        return null;
+        return;
       }
       try {
         response = contractsSelectionAlgorithm_.responseToOffer(message.getContract(), contracts);
@@ -196,12 +189,10 @@ public class ValuationBasedBroker extends Broker {
         networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(),
             message.getContract(), false));
       }
-      return null;
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       logger_.debug("Received: " + message);
-      return null;
     }
 
   }

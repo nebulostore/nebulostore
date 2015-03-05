@@ -52,26 +52,21 @@ public class AlwaysAcceptingBroker extends Broker {
     });
   }
 
-  /**
-   * Visitor.
-   */
-  protected class BrokerVisitor extends MessageVisitor<Void> {
-    public Void visit(JobInitMessage message) {
+  protected class BrokerVisitor extends MessageVisitor {
+    public void visit(JobInitMessage message) {
       logger_.debug("Initialized");
-      return null;
     }
 
-    public Void visit(ContractOfferMessage message) {
+    public void visit(ContractOfferMessage message) {
       // Accept every offer!
       logger_.debug("Accepting offer from: " +
           message.getSourceAddress());
       // TODO(bolek): Should we accept same offer twice?
       networkQueue_.add(new OfferReplyMessage(message.getId(), message.getSourceAddress(), message
           .getContract(), true));
-      return null;
     }
 
-    public Void visit(OfferReplyMessage message) {
+    public void visit(OfferReplyMessage message) {
       if (message.getResult()) {
         // Offer was accepted, add new replica to our DHT entry.
         logger_.debug("Peer " +
@@ -88,10 +83,9 @@ public class AlwaysAcceptingBroker extends Broker {
             message.getSourceAddress() + " rejected our offer.");
       }
       context_.removeOffer(message.getSourceAddress());
-      return null;
     }
 
-    public Void visit(CommPeerFoundMessage message) {
+    public void visit(CommPeerFoundMessage message) {
       logger_.debug("Found new peer.");
       if (context_.getReplicas().length + context_.getNumberOfOffers() < MAX_CONTRACTS) {
         List<CommAddress> knownPeers = networkMonitor_.getKnownPeers();
@@ -111,7 +105,6 @@ public class AlwaysAcceptingBroker extends Broker {
           }
         }
       }
-      return null;
     }
   }
 

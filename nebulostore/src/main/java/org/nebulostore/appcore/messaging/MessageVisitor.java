@@ -15,15 +15,15 @@ import org.nebulostore.appcore.exceptions.NebuloException;
  *
  * @author Bolek Kulbabinski
  */
-public abstract class MessageVisitor<R> {
+public abstract class MessageVisitor {
   private static final String METHOD_NAME = "visit";
 
   /* Common action for all messages that are not handled. */
-  protected R visitDefault(Message message) throws NebuloException {
+  protected void visitDefault(Message message) throws NebuloException {
     throw new UnsupportedMessageException(message.getClass().getName() + " in " + getClass());
   }
 
-  public R visit(Object message) throws NebuloException {
+  public void visit(Object message) throws NebuloException {
     if (message instanceof Message) {
       Class<?> currClass = message.getClass();
       while (currClass != Object.class) {
@@ -37,7 +37,8 @@ public abstract class MessageVisitor<R> {
           continue;
         }
         try {
-          return (R) method.invoke(this, message);
+          method.invoke(this, message);
+          return;
         } catch (IllegalArgumentException e) {
           throw new RuntimeException("IllegalArgumentException in visitor.", e);
         } catch (IllegalAccessException e) {
@@ -46,7 +47,7 @@ public abstract class MessageVisitor<R> {
           throw new NebuloException("Exception from visit method.", e.getCause());
         }
       }
-      return visitDefault((Message) message);
+      visitDefault((Message) message);
     } else {
       throw new UnsupportedMessageException(message.getClass().getName() + " in " + getClass());
     }

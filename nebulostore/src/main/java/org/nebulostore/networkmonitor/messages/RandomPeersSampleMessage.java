@@ -7,7 +7,6 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
@@ -52,10 +51,5 @@ public class RandomPeersSampleMessage extends CommMessage {
   @Override
   public JobModule getHandler() throws NebuloException {
     return provider_.get();
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 }

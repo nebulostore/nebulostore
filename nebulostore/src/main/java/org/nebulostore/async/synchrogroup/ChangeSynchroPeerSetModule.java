@@ -42,7 +42,7 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
   private static Logger logger_ = Logger.getLogger(ChangeSynchroPeerSetModule.class);
   private static final long TIME_LIMIT = 10000;
 
-  private final MessageVisitor<Void> visitor_;
+  private final MessageVisitor visitor_;
 
   private Set<CommAddress> synchroPeersToAdd_;
   private Set<CommAddress> synchroPeersToRemove_;
@@ -78,15 +78,12 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
     FIRST_PHASE, ADDING_SYNCHRO_PEERS_TO_DHT
   }
 
-  /**
-   * Visitor.
-   */
-  public class CSPSVisitor extends MessageVisitor<Void> {
+  public class CSPSVisitor extends MessageVisitor {
 
     private State state_ = State.FIRST_PHASE;
     private Map<CommAddress, Integer> synchroPeerCounters_;
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       logger_.info("Starting ChangeSynchroPeerSetModule module with synchro-peers to add: " +
           synchroPeersToAdd_ + "and synchro-peers to remove: " + synchroPeersToRemove_);
       if (context_.isInitialized()) {
@@ -132,10 +129,9 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
         timer_.cancelTimer();
         endWithSuccess(null);
       }
-      return null;
     }
 
-    public Void visit(AddedAsSynchroPeerMessage message) {
+    public void visit(AddedAsSynchroPeerMessage message) {
       logger_.debug("Received " + message.getClass() + " from " + message.getSourceAddress() +
           " in " + ChangeSynchroPeerSetModule.class);
       if (synchroPeersToAdd_.contains(message.getSourceAddress())) {
@@ -147,40 +143,36 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
       } else {
         logger_.warn("Received " + message + " that was not expected.");
       }
-      return null;
     }
 
-    public Void visit(AsyncModuleErrorMessage message) {
+    public void visit(AsyncModuleErrorMessage message) {
       logger_.warn("Received " + message.getClass() + " from " + message.getSourceAddress() +
           " in " + ChangeSynchroPeerSetModule.class);
       synchroPeersToAdd_.remove(message.getSourceAddress());
       if (allPeersAdded() && state_.equals(State.ADDING_SYNCHRO_PEERS_TO_DHT)) {
         updateSynchroPeers();
       }
-      return null;
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       logger_.warn("Timeout in " + getClass().getCanonicalName() + ". " + addedPeers_.size() +
           " peers were successfully added.");
       if (state_.equals(State.ADDING_SYNCHRO_PEERS_TO_DHT)) {
         logger_.debug("Peers added: " + addedPeers_);
         updateSynchroPeers();
       }
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       if (state_.equals(State.FIRST_PHASE)) {
         logger_.warn("Unable to put new synchro peers' counters and new synchro-group to DHT.");
       } else if (state_.equals(State.ADDING_SYNCHRO_PEERS_TO_DHT)) {
         logger_.warn("Unable to add new synchro-peers to DHT.");
       }
       endWithSuccess(null);
-      return null;
     }
 
-    public Void visit(OkDHTMessage message) {
+    public void visit(OkDHTMessage message) {
       if (state_.equals(State.FIRST_PHASE)) {
         state_ = State.ADDING_SYNCHRO_PEERS_TO_DHT;
         // synchro-peers removed from DHT, now we can inform them about it
@@ -202,7 +194,6 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
         logger_.debug("Current synchro-group: " + context_.getSynchroGroupForPeerCopy(myAddress_));
         endWithSuccess(null);
       }
-      return null;
     }
 
     private void updateSynchroPeers() {

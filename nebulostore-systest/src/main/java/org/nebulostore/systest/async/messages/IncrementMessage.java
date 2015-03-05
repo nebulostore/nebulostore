@@ -30,7 +30,7 @@ public class IncrementMessage extends CommMessage {
 
   @Override
   public ErrorResponder generateErrorResponder(BlockingQueue<Message> dispatcherQueue) {
-      logger_.warn("Dispatcher queue: " + dispatcherQueue.hashCode());
+    logger_.warn("Dispatcher queue: " + dispatcherQueue.hashCode());
     return new SendAsyncMessageErrorResponder(new AsynchronousIncrementMessage(),
         getDestinationAddress(), dispatcherQueue);
   }

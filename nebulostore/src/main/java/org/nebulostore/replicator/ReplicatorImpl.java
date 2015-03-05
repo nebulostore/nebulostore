@@ -64,7 +64,7 @@ public class ReplicatorImpl extends Replicator {
   private static LockMap lockMap_ = new LockMap();
 
   private final KeyValueStore<byte[]> store_;
-  private final MessageVisitor<Void> visitor_ = new ReplicatorVisitor();
+  private final MessageVisitor visitor_ = new ReplicatorVisitor();
 
   @Inject
   public ReplicatorImpl(@Named("ReplicatorStore") KeyValueStore<byte[]> store) {
@@ -108,10 +108,10 @@ public class ReplicatorImpl extends Replicator {
    * Visitor to handle different message types.
    * @author szymonmatejczyk
    */
-  protected class ReplicatorVisitor extends MessageVisitor<Void> {
+  protected class ReplicatorVisitor extends MessageVisitor {
     private QueryToStoreObjectMessage storeWaitingForCommit_;
 
-    public Void visit(QueryToStoreObjectMessage message) throws NebuloException {
+    public void visit(QueryToStoreObjectMessage message) throws NebuloException {
       logger_.debug("StoreObjectMessage received");
 
       QueryToStoreResult result = queryToUpdateObject(message.getObjectId(),
@@ -163,16 +163,15 @@ public class ReplicatorImpl extends Replicator {
         default:
           break;
       }
-      return null;
     }
 
-    public Void visit(TransactionResultMessage message) {
+    public void visit(TransactionResultMessage message) {
       logger_.debug("TransactionResultMessage received: " + message.getResult());
       if (storeWaitingForCommit_ == null) {
         //TODO(szm): ignore late abort transaction messages send by timer.
         logger_.warn("Unexpected commit message received.");
         endJobModule();
-        return null;
+        return;
       }
       if (message.getResult() == TransactionAnswer.COMMIT) {
         commitUpdateObject(storeWaitingForCommit_.getObjectId(),
@@ -183,10 +182,9 @@ public class ReplicatorImpl extends Replicator {
         abortUpdateObject(storeWaitingForCommit_.getObjectId(), message.getId());
       }
       endJobModule();
-      return null;
     }
 
-    public Void visit(GetObjectMessage message) {
+    public void visit(GetObjectMessage message) {
       logger_.debug("GetObjectMessage with objectID = " + message.getObjectId());
       EncryptedObject enc = getObject(message.getObjectId());
       Set<String> versions;
@@ -195,7 +193,7 @@ public class ReplicatorImpl extends Replicator {
       } catch (IOException e) {
         dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
             message.getSourceAddress(), "Unable to retrieve object.");
-        return null;
+        return;
       }
 
       if (enc == null) {
@@ -207,10 +205,9 @@ public class ReplicatorImpl extends Replicator {
             message.getSourceAddress(), enc, versions));
         endJobModule();
       }
-      return null;
     }
 
-    public Void visit(DeleteObjectMessage message) {
+    public void visit(DeleteObjectMessage message) {
       try {
         deleteObject(message.getObjectId());
         networkQueue_.add(new ConfirmationMessage(message.getSourceJobId(),
@@ -221,10 +218,9 @@ public class ReplicatorImpl extends Replicator {
             message.getSourceAddress(), exception.getMessage());
       }
       endJobModule();
-      return null;
     }
 
-    public Void visit(ObjectOutdatedMessage message) {
+    public void visit(ObjectOutdatedMessage message) {
       try {
         GetEncryptedObjectModule getModule = new GetEncryptedObjectModule(message.getAddress(),
             outQueue_);
@@ -248,7 +244,6 @@ public class ReplicatorImpl extends Replicator {
       } catch (NebuloException exception) {
         logger_.warn(exception);
       }
-      return null;
     }
 
     private void dieWithError(String jobId, CommAddress sourceAddress,

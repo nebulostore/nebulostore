@@ -59,7 +59,7 @@ public class AsyncMessagingModule extends JobModule {
   private final BlockingQueue<Message> dispatcherQueue_;
   private final AsyncMessagesContext context_;
   private final CommAddress myAddress_;
-  private final MessageVisitor<Void> visitor_ = new AsyncMessagingModuleVisitor();
+  private final MessageVisitor visitor_ = new AsyncMessagingModuleVisitor();
   private final SynchroPeerSetChangeSequencerModule synchroSequencer_;
 
   private final CacheRefreshingService cacheRefreshingService_;
@@ -127,16 +127,15 @@ public class AsyncMessagingModule extends JobModule {
     INITIALIZING, RUNNING
   }
 
-  protected class AsyncMessagingModuleVisitor extends MessageVisitor<Void> {
+  protected class AsyncMessagingModuleVisitor extends MessageVisitor {
 
     private ModuleState state_ = ModuleState.INITIALIZING;
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       networkQueue_.add(new GetDHTMessage(jobId_, myAddress_.toKeyDHT()));
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       if (state_.equals(ModuleState.INITIALIZING) &&
           message.getKey().equals(myAddress_.toKeyDHT())) {
         // TODO (pm) Maybe initialize cache here?
@@ -154,10 +153,9 @@ public class AsyncMessagingModule extends JobModule {
       } else {
         LOGGER.warn("Received " + message.getClass() + " that was not expected");
       }
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       // no instance metadata in DHT, create empty context
       if (state_.equals(ModuleState.INITIALIZING)) {
         context_.initialize();
@@ -166,7 +164,6 @@ public class AsyncMessagingModule extends JobModule {
       } else {
         LOGGER.warn("Received " + message.getClass() + " that was not expected");
       }
-      return null;
     }
 
     private void runServices() {
@@ -186,11 +183,10 @@ public class AsyncMessagingModule extends JobModule {
       startCacheRefreshingService();
     }
 
-    public Void visit(EndModuleMessage message) {
+    public void visit(EndModuleMessage message) {
       synchronizationExecutor_.shutdownNow();
       cacheRefreshExecutor_.shutdownNow();
       endJobModule();
-      return null;
     }
 
   }

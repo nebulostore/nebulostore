@@ -37,7 +37,7 @@ public class CacheRefreshingModule extends JobModule {
 
   private static Logger logger_ = Logger.getLogger(CacheRefreshingModule.class);
 
-  private final MessageVisitor<Void> visitor_ = new CacheRefreshingModuleVisitor();
+  private final MessageVisitor visitor_ = new CacheRefreshingModuleVisitor();
 
   private final Set<String> modulesIds_ = new HashSet<String>();
 
@@ -59,11 +59,11 @@ public class CacheRefreshingModule extends JobModule {
     WAITING_FOR_RESPONSES, UPDATING_DHT
   }
 
-  protected class CacheRefreshingModuleVisitor extends MessageVisitor<Void> {
+  protected class CacheRefreshingModuleVisitor extends MessageVisitor {
 
     private ModuleState state_ = ModuleState.WAITING_FOR_RESPONSES;
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       if (context_.isInitialized()) {
         Set<CommAddress> recipients = context_.getRecipientsData().getRecipients();
         for (CommAddress recipient : recipients) {
@@ -84,11 +84,9 @@ public class CacheRefreshingModule extends JobModule {
             "Ending the module.");
         finishModule();
       }
-
-      return null;
     }
 
-    public Void visit(SynchroPeerSetUpdateJobEndedMessage message) {
+    public void visit(SynchroPeerSetUpdateJobEndedMessage message) {
       logger_.debug("Module with id: " + message.getId() + " ended.");
       if (state_.equals(ModuleState.WAITING_FOR_RESPONSES)) {
         modulesIds_.remove(message.getId());
@@ -98,36 +96,32 @@ public class CacheRefreshingModule extends JobModule {
           updateRecipientsInDHT();
         }
       }
-      return null;
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       if (state_.equals(ModuleState.WAITING_FOR_RESPONSES)) {
         logger_.warn("Timeout in " + CacheRefreshingModule.class.getSimpleName());
         state_ = ModuleState.UPDATING_DHT;
         updateRecipientsInDHT();
       }
-      return null;
     }
 
-    public Void visit(OkDHTMessage message) {
+    public void visit(OkDHTMessage message) {
       if (state_.equals(ModuleState.UPDATING_DHT)) {
         logger_.info("Successfully refreshed synchro group sets");
         endJobModule();
       } else {
         logger_.warn("Received unexpected " + message.getClass().getName());
       }
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       if (state_.equals(ModuleState.UPDATING_DHT)) {
         logger_.warn("Updating recipients set in DHT failed");
         endJobModule();
       } else {
         logger_.warn("Received unexpected " + message.getClass().getName());
       }
-      return null;
     }
 
     private void updateRecipientsInDHT() {

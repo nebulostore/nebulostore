@@ -1,8 +1,6 @@
 package org.nebulostore.appcore.modules;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 /**
  * Message sent from modules to parenting object signaling its failure.
@@ -17,10 +15,6 @@ public class ModuleFailMessage extends Message {
   public ModuleFailMessage(Module module, Exception exception) {
     module_ = module;
     exception_ = exception;
-  }
-
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 
   public Exception getException() {

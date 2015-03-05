@@ -1,7 +1,6 @@
 package org.nebulostore.broker.messages;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.broker.BrokerMessageForwarder;
 import org.nebulostore.broker.Contract;
@@ -32,11 +31,6 @@ public class BreakContractMessage extends CommMessage {
   @Override
   public JobModule getHandler() throws NebuloException {
     return new BrokerMessageForwarder(this);
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 
 }

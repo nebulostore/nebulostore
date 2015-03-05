@@ -1,8 +1,6 @@
 package org.nebulostore.dispatcher;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.JobModule;
 
 /**
@@ -20,11 +18,6 @@ public class JobInitMessage extends Message {
   public JobInitMessage(String jobId, JobModule jobModule) {
     super(jobId);
     jobModule_ = jobModule;
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 
   @Override

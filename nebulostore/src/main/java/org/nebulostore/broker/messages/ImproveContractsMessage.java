@@ -1,8 +1,6 @@
 package org.nebulostore.broker.messages;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 /**
  * Message send by an instance to itself to start ImproveContractsModule.
@@ -15,11 +13,6 @@ public class ImproveContractsMessage extends Message {
 
   public ImproveContractsMessage(String jobId) {
     super(jobId);
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 
 }

@@ -91,10 +91,9 @@ public class AsyncTestClient extends ConductorClient {
   protected class EmptyPhaseVisitor extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.info("Starting empty phase of test.");
       phaseFinished();
-      return null;
     }
 
   }
@@ -102,14 +101,13 @@ public class AsyncTestClient extends ConductorClient {
   protected class SynchroPeerInitializationVisitor extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.info("Starting initialization phase of test. Adding peer with address " +
           mySynchroPeers_ + "as a synchro-peer of peer with address " + myAddress_);
       outQueue_.add(new JobInitMessage(new ChangeSynchroPeerSetModule(Sets
           .newHashSet(mySynchroPeers_), null)));
       sleep(SLEEP_TIME);
       phaseFinished();
-      return null;
     }
 
   }
@@ -117,23 +115,21 @@ public class AsyncTestClient extends ConductorClient {
   protected class DisableCommunicationVisitor extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.info("Starting disable communication phase");
       networkQueue_.add(new DisableCommunicationMessage());
       phaseFinished();
-      return null;
     }
   }
 
   protected class EnableCommunicationVisitor extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.info("Starting enable communication phase");
       networkQueue_.add(new EnableCommunicationMessage());
       sleep(SLEEP_TIME);
       phaseFinished();
-      return null;
     }
 
   }
@@ -141,7 +137,7 @@ public class AsyncTestClient extends ConductorClient {
   protected class SendMessagesVisitor extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.info("Starting send messages phase");
       for (int i = 0; i < myReceivers_.size(); i++) {
         IncrementMessage msg = new IncrementMessage(myAddress_, myReceivers_.get(i));
@@ -149,7 +145,6 @@ public class AsyncTestClient extends ConductorClient {
       }
       sleep(SLEEP_TIME);
       phaseFinished();
-      return null;
     }
 
   }
@@ -157,20 +152,17 @@ public class AsyncTestClient extends ConductorClient {
   protected class AsyncTestLastPhaseVisitor extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
-      return null;
+    public void visit(NewPhaseMessage message) {
     }
 
-    public Void visit(CounterValueMessage message) {
+    public void visit(CounterValueMessage message) {
       networkQueue_.add(new StatsMessage(serverJobId_, myAddress_, server_,
           new AsyncTestStatistics(message.getValue())));
-      return null;
     }
 
-    public Void visit(GatherStatsMessage message) {
+    public void visit(GatherStatsMessage message) {
       logger_.debug("Received GatherStatsMessage");
       counterModule_.getInQueue().add(new GetCounterValueMessage(inQueue_, jobId_));
-      return null;
     }
 
   }

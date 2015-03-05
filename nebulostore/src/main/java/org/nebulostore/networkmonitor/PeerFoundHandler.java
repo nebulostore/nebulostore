@@ -28,15 +28,13 @@ public class PeerFoundHandler extends JobModule {
   }
 
   /**
-   * Visitor.
    * @author szymonmatejczyk
    */
-  protected class PeerFoundHandlerVisitor extends MessageVisitor<Void> {
-    public Void visit(CommPeerFoundMessage message) {
+  protected class PeerFoundHandlerVisitor extends MessageVisitor {
+    public void visit(CommPeerFoundMessage message) {
       jobId_ = message.getId();
       networkMonitor_.addFoundPeer(message.getSourceAddress());
       endJobModule();
-      return null;
     }
   }
 

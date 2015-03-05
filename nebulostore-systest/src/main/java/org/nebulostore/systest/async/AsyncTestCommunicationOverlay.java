@@ -81,18 +81,17 @@ public class AsyncTestCommunicationOverlay extends Module {
     myAddress_ = myAddress;
   }
 
-  protected final class AsyncTestCommOverlayVisitor extends MessageVisitor<Void> {
+  protected final class AsyncTestCommOverlayVisitor extends MessageVisitor {
 
-    public Void visit(CheckCommunicationStateMessage message) {
+    public void visit(CheckCommunicationStateMessage message) {
       ResponseWithCommunicationStateMessage msg = new ResponseWithCommunicationStateMessage(
           message.getDestinationAddress(), message.getSourceAddress(), isCommEnabled_,
           message.getOriginalMessageId());
       logger_.debug("Sending response for communication state check request: " + isCommEnabled_);
       communicationInQueue_.add(msg);
-      return null;
     }
 
-    public Void visit(ResponseWithCommunicationStateMessage message) {
+    public void visit(ResponseWithCommunicationStateMessage message) {
       synchronized (waitingMessages_) {
         List<CommMessage> messagesToSend = waitingMessages_.remove(message.getSourceAddress());
         logger_.debug("Received response with communication state from peer: " +
@@ -113,37 +112,33 @@ public class AsyncTestCommunicationOverlay extends Module {
           }
         }
       }
-      return null;
     }
 
-    public Void visit(DisableCommunicationMessage msg) {
+    public void visit(DisableCommunicationMessage msg) {
       isCommEnabled_ = false;
-      return null;
     }
 
-    public Void visit(EnableCommunicationMessage msg) {
+    public void visit(EnableCommunicationMessage msg) {
       isCommEnabled_ = true;
-      return null;
     }
 
-    public Void visit(TicMessage msg) {
-      return visitMessageNoCheck(msg);
+    public void visit(TicMessage msg) {
+      visitMessageNoCheck(msg);
     }
 
-    public Void visit(TocMessage msg) {
-      return visitMessageNoCheck(msg);
+    public void visit(TocMessage msg) {
+      visitMessageNoCheck(msg);
     }
 
-    public Void visit(FinishMessage msg) {
-      return visitMessageNoCheck(msg);
+    public void visit(FinishMessage msg) {
+      visitMessageNoCheck(msg);
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       logger_.warn("Message " + message.getMessage() + " was not sent because of an error.");
-      return null;
     }
 
-    public Void visit(CommMessage msg) {
+    public void visit(CommMessage msg) {
       logger_.debug("Received comm message: " + msg);
       if (msg.getDestinationAddress() == null) {
         logger_.warn("Received message with empty destination address. Dropping this message.");
@@ -156,32 +151,27 @@ public class AsyncTestCommunicationOverlay extends Module {
       } else if (isCommEnabled_) {
         executor_.submit(new AsyncTestCommOverlayCallable(msg));
       }
-      return null;
     }
 
-    public Void visit(InDHTMessage msg) {
+    public void visit(InDHTMessage msg) {
       communicationInQueue_.add(msg);
-      return null;
     }
 
-    public Void visit(OutDHTMessage msg) {
+    public void visit(OutDHTMessage msg) {
       outQueue_.add(msg);
-      return null;
     }
 
-    public Void visit(EndModuleMessage msg) {
+    public void visit(EndModuleMessage msg) {
       endModule();
-      return null;
     }
 
-    private Void visitMessageNoCheck(CommMessage msg) {
+    private void visitMessageNoCheck(CommMessage msg) {
       logger_.debug("Received message without check: " + msg);
       if (msg.getDestinationAddress().equals(myAddress_)) {
         outQueue_.add(msg);
       } else {
         communicationInQueue_.add(msg);
       }
-      return null;
     }
   }
 

@@ -62,7 +62,7 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
   /**
    * Visitor class that acts as a state machine realizing the procedure of fetching the file.
    */
-  protected abstract class GetModuleVisitor extends MessageVisitor<Void> {
+  protected abstract class GetModuleVisitor extends MessageVisitor {
     protected STATE state_;
     protected SortedSet<CommAddress> replicationGroupSet_;
 
@@ -70,7 +70,7 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       state_ = STATE.INIT;
     }
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       jobId_ = message.getId();
       logger_.debug("Retrieving file " + address_);
 
@@ -90,11 +90,9 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       } else {
         incorrectState(state_.name(), message);
       }
-
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       if (state_ == STATE.DHT_QUERY) {
 
         // State 2 - Receive reply from DHT and iterate over logical path segments asking
@@ -114,10 +112,9 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       if (state_ == STATE.DHT_QUERY) {
         logger_.debug("Received ErrorDHTMessage");
         endWithError(new NebuloException("Could not fetch metadata from DHT.",
@@ -125,7 +122,6 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
     public void queryNextReplica() {
@@ -141,24 +137,22 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       }
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       if (state_ == STATE.REPLICA_FETCH && state_.name().equals(message.getMessageContent())) {
         logger_.debug("Timeout - replica didn't respond in time. Trying another one.");
         queryNextReplica();
       }
-      return null;
     }
 
     public abstract Void visit(SendObjectMessage message);
 
-    public Void visit(ReplicatorErrorMessage message) {
+    public void visit(ReplicatorErrorMessage message) {
       if (state_ == STATE.REPLICA_FETCH) {
         // TODO(bolek): ReplicatorErrorMessage should contain exception instead of string.
         endWithError(new NebuloException(message.getMessage()));
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
     protected void incorrectState(String stateName, Message message) {

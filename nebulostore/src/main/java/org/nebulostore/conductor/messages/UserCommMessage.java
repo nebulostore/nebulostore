@@ -2,8 +2,6 @@ package org.nebulostore.conductor.messages;
 
 import java.io.Serializable;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 
@@ -30,8 +28,4 @@ public class UserCommMessage extends CommMessage {
     return phase_;
   }
 
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
-  }
 }

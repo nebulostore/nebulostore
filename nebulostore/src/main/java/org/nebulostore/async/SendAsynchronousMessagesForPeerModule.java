@@ -49,25 +49,21 @@ public class SendAsynchronousMessagesForPeerModule extends JobModule {
     context_ = context;
   }
 
-  private final MessageVisitor<Void> visitor_ = new SendAsynchronousMessagesForPeerModuleVisitor();
+  private final MessageVisitor visitor_ = new SendAsynchronousMessagesForPeerModuleVisitor();
 
   @Override
   protected void processMessage(Message message) throws NebuloException {
     message.accept(visitor_);
   }
 
-  /**
-   * Visitor.
-   */
-  public class SendAsynchronousMessagesForPeerModuleVisitor extends MessageVisitor<Void> {
-    public Void visit(JobInitMessage message) {
+  public class SendAsynchronousMessagesForPeerModuleVisitor extends MessageVisitor {
+    public void visit(JobInitMessage message) {
       logger_.debug("Starting " + getClass().getName() + " with message: " + message_ + "for: " +
           recipient_);
       networkQueue_.add(new GetDHTMessage(jobId_, recipient_.toKeyDHT()));
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       logger_.debug("Received " + message + " in " + getClass().getName());
       if (message.getKey().equals(recipient_.toKeyDHT()) &&
           (message.getValue().getValue() instanceof InstanceMetadata)) {
@@ -94,13 +90,11 @@ public class SendAsynchronousMessagesForPeerModule extends JobModule {
         logger_.warn("Received " + message.getClass().getName() + " that was not expected");
       }
       endJobModule();
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       logger_.error("Sending asynchronous messages for " + recipient_ + " failed...");
       endJobModule();
-      return null;
     }
   }
 

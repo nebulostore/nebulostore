@@ -1,7 +1,5 @@
 package org.nebulostore.dht.messages;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 
@@ -22,10 +20,5 @@ public class BdbMessageWrapper extends CommMessage {
 
   public DHTMessage getWrapped() {
     return wrapped_;
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 }

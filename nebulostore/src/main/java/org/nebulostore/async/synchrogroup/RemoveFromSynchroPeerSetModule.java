@@ -32,7 +32,7 @@ public class RemoveFromSynchroPeerSetModule extends JobModule {
 
   private static Logger logger_ = Logger.getLogger(RemoveFromSynchroPeerSetModule.class);
 
-  private final MessageVisitor<Void> visitor_ = new RemoveFromSetVisitor();
+  private final MessageVisitor visitor_ = new RemoveFromSetVisitor();
   private CommAddress recipient_;
 
   private AsyncMessagesContext context_;
@@ -46,9 +46,9 @@ public class RemoveFromSynchroPeerSetModule extends JobModule {
     appKey_ = appKey;
   }
 
-  protected class RemoveFromSetVisitor extends MessageVisitor<Void> {
+  protected class RemoveFromSetVisitor extends MessageVisitor {
 
-    public Void visit(RemoveFromSynchroPeerSetMessage message) {
+    public void visit(RemoveFromSynchroPeerSetMessage message) {
       if (context_.isInitialized()) {
         if (context_.lockRecipient(message.getSourceAddress())) {
           if (context_.containsRecipient(message.getSourceAddress())) {
@@ -80,7 +80,6 @@ public class RemoveFromSynchroPeerSetModule extends JobModule {
         networkQueue_.add(new AsyncModuleErrorMessage(myAddress_, recipient_));
         endJobModule();
       }
-      return null;
     }
 
     public void visit(OkDHTMessage message) {

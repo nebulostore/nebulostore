@@ -21,14 +21,13 @@ public final class TestVisitors {
   /**
    * Handles only Message.
    */
-  protected static class MVisitor extends MessageVisitor<Void> {
+  protected static class MVisitor extends MessageVisitor {
     private final AtomicInteger counter_;
     public MVisitor(AtomicInteger counter) {
       counter_ = counter;
     }
-    public Void visit(Message msg) {
+    public void visit(Message msg) {
       counter_.incrementAndGet();
-      return null;
     }
   }
 
@@ -44,8 +43,8 @@ public final class TestVisitors {
   /**
    * Throws exception in handler.
    */
-  protected static class ThrowingVisitor extends MessageVisitor<Void> {
-    public Void visit(Message msg) {
+  protected static class ThrowingVisitor extends MessageVisitor {
+    public void visit(Message msg) {
       throw new RuntimeException(EXCEPTION_MSG);
     }
   }
@@ -53,46 +52,44 @@ public final class TestVisitors {
   /**
    * Handles AMessage and Message.
    */
-  protected static class AVisitor extends MessageVisitor<Void> {
+  protected static class AVisitor extends MessageVisitor {
     private final AtomicInteger counter_;
     public AVisitor(AtomicInteger counter) {
       counter_ = counter;
     }
-    public Void visit(AMessage msg) {
+    public void visit(AMessage msg) {
       counter_.incrementAndGet();
-      return null;
     }
-    public Void visit(Message msg) {
+    public void visit(Message msg) {
       fail("Should not enter visit(Message) method in AVisitor.");
-      return null;
     }
   }
 
   /**
    * Handles nothing.
    */
-  protected static class EmptyVisitor extends MessageVisitor<Void> {
+  protected static class EmptyVisitor extends MessageVisitor {
   }
 
 
 
-  public static MessageVisitor<Void> getMVisitor(AtomicInteger counter) {
+  public static MessageVisitor getMVisitor(AtomicInteger counter) {
     return new MVisitor(counter);
   }
 
-  public static MessageVisitor<Void> getSubclassedVisitor(AtomicInteger counter) {
+  public static MessageVisitor getSubclassedVisitor(AtomicInteger counter) {
     return new SubclassedVisitor(counter);
   }
 
-  public static MessageVisitor<Void> getThrowingVisitor() {
+  public static MessageVisitor getThrowingVisitor() {
     return new ThrowingVisitor();
   }
 
-  public static MessageVisitor<Void> getAVisitor(AtomicInteger counter) {
+  public static MessageVisitor getAVisitor(AtomicInteger counter) {
     return new AVisitor(counter);
   }
 
-  public static MessageVisitor<Void> getEmptyVisitor() {
+  public static MessageVisitor getEmptyVisitor() {
     return new EmptyVisitor();
   }
 

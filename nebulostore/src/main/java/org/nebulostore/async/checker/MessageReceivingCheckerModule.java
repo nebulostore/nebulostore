@@ -38,7 +38,7 @@ public class MessageReceivingCheckerModule extends Module {
   public static final long TICK_PERIOD_MILIS = 1000;
   public static final long ACK_TIMEOUT_MILIS = 4000;
 
-  private final MessageVisitor<Void> visitor_ = new MRCVisitor();
+  private final MessageVisitor visitor_ = new MRCVisitor();
 
   private final SortedSet<MessageWithTimestamp> messages_ = new TreeSet<>();
   private final Map<String, MessageWithTimestamp> messagesMap_ = new HashMap<>();
@@ -61,9 +61,9 @@ public class MessageReceivingCheckerModule extends Module {
 
   }
 
-  protected class MRCVisitor extends MessageVisitor<Void> {
+  protected class MRCVisitor extends MessageVisitor {
 
-    public Void visit(CommMessage message) {
+    public void visit(CommMessage message) {
       logger_.debug("Received comm message: " + message);
       if (message.getSourceAddress() == null) {
         message.setSourceAddress(myAddress_);
@@ -86,10 +86,9 @@ public class MessageReceivingCheckerModule extends Module {
           messagesMap_.put(message.getMessageId(), msg);
         }
       }
-      return null;
     }
 
-    public Void visit(TickMessage message) {
+    public void visit(TickMessage message) {
       logger_.debug("Tick message received, current messages set: " + messages_);
       long currentTime = System.currentTimeMillis();
       for (Iterator<MessageWithTimestamp> iterator = messages_.iterator(); iterator.hasNext();) {
@@ -104,10 +103,9 @@ public class MessageReceivingCheckerModule extends Module {
           break;
         }
       }
-      return null;
     }
 
-    public Void visit(MessageReceivedMessage message) {
+    public void visit(MessageReceivedMessage message) {
       MessageWithTimestamp msg = messagesMap_.remove(message.getOriginalMessageId());
       if (msg == null) {
         logger_.warn("Received ack message for message not in module's messages set.");
@@ -115,25 +113,21 @@ public class MessageReceivingCheckerModule extends Module {
         logger_.debug("Received ack for message: " + message);
         messages_.remove(msg);
       }
-      return null;
     }
 
-    public Void visit(InDHTMessage message) {
+    public void visit(InDHTMessage message) {
       networkQueue_.add(message);
-      return null;
     }
 
-    public Void visit(OutDHTMessage message) {
+    public void visit(OutDHTMessage message) {
       outQueue_.add(message);
-      return null;
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       outQueue_.add(message);
-      return null;
     }
 
-    public Void visit(EndModuleMessage message) {
+    public void visit(EndModuleMessage message) {
       //Try to send all remaining messages asynchronously before ending the module
       timer_.cancelTimer();
       for (MessageWithTimestamp msg : messages_) {
@@ -142,7 +136,6 @@ public class MessageReceivingCheckerModule extends Module {
       }
       logger_.debug("Ending the module");
       endModule();
-      return null;
     }
   }
 

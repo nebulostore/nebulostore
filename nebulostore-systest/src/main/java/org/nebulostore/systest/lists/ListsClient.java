@@ -103,7 +103,7 @@ public final class ListsClient extends ConductorClient {
   protected final class ReadFilesVisitor extends TestingModuleVisitor {
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       /**
        * Single file fetcher.
        * @author Bolek Kulbabinski
@@ -164,7 +164,6 @@ public final class ListsClient extends ConductorClient {
 
       threadPool.shutdown();
       phaseFinished();
-      return null;
     }
 
     private void unableToFetchList(NebuloAddress address, String reason) {
@@ -178,15 +177,14 @@ public final class ListsClient extends ConductorClient {
    */
   protected final class DeleteFileVisitor extends TestingModuleVisitor {
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       try {
         myList_.delete();
       } catch (NebuloException e) {
         endWithError("Unable to delete file (" + e.getMessage() + ")");
-        return null;
+        return;
       }
       phaseFinished();
-      return null;
     }
   }
 }

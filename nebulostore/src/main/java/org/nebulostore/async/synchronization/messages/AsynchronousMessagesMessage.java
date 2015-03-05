@@ -3,8 +3,6 @@ package org.nebulostore.async.synchronization.messages;
 import java.util.Map;
 import java.util.Set;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.async.messages.AsynchronousMessage;
 import org.nebulostore.async.synchronization.VectorClockValue;
 import org.nebulostore.communication.messages.CommMessage;
@@ -76,10 +74,5 @@ public class AsynchronousMessagesMessage extends CommMessage {
 
   public Map<String, VectorClockValue> getMessagesTimestamps() {
     return messagesTimestamps_;
-  }
-
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 }

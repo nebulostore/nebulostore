@@ -22,7 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class PutKeyModule extends ReturningJobModule<Void> {
 
   private static Logger logger_ = Logger.getLogger(PutKeyModule.class);
-  private final MessageVisitor<Void> visitor_;
+  private final MessageVisitor visitor_;
   private final KeyDHT keyDHT_;
   private final ValueDHT valueDHT_;
 
@@ -34,22 +34,19 @@ public class PutKeyModule extends ReturningJobModule<Void> {
     runThroughDispatcher();
   }
 
-  protected class PutKeyModuleMessageVisitor extends MessageVisitor<Void> {
+  protected class PutKeyModuleMessageVisitor extends MessageVisitor {
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       networkQueue_.add(new PutDHTMessage(getJobId(), keyDHT_, valueDHT_));
-      return null;
     }
 
-    public Void visit(OkDHTMessage message) {
+    public void visit(OkDHTMessage message) {
       logger_.debug("Successfully put key " + keyDHT_ + " in DHT");
       endWithSuccess(null);
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       endWithError(new NebuloException("DHT write returned with error", message.getException()));
-      return null;
     }
   }
 

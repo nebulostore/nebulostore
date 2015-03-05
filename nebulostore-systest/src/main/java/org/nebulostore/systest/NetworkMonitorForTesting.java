@@ -14,14 +14,10 @@ public class NetworkMonitorForTesting extends NetworkMonitorImpl {
     visitor_ = new NetworkMonitorForTestingVisitor();
   }
 
-  /**
-   * Visitor.
-   */
   public class NetworkMonitorForTestingVisitor extends NetworkMonitorVisitor {
 
-    public Void visit(ChangeTestMessageHandlerMessage message) {
+    public void visit(ChangeTestMessageHandlerMessage message) {
       connectionTestMessageHandlerProvider_ = message.getProvider();
-      return null;
     }
 
   }

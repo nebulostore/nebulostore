@@ -27,15 +27,14 @@ public class FaultyConnectionTestMessageHandler extends ConnectionTestMessageHan
   /**
    * Visitor.
    */
-  public class IncidentalCTMVisitor extends MessageVisitor<Void> {
-    public Void visit(ConnectionTestMessage message) {
+  public class IncidentalCTMVisitor extends MessageVisitor {
+    public void visit(ConnectionTestMessage message) {
       jobId_ = message.getId();
       if (CryptoUtils.nextDouble() < responseFrequency_) {
         networkQueue_.add(new ConnectionTestResponseMessage(message.getId(), message
             .getSourceAddress()));
       }
       endJobModule();
-      return null;
     }
   }
 

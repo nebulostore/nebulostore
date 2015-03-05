@@ -9,9 +9,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.nebulostore.appcore.context.DefaultTestContext;
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.modules.EndModuleMessage;
 import org.nebulostore.appcore.modules.JobModule;
 
@@ -95,10 +93,6 @@ public class DispatcherTest {
         return new DummyModule();
       }
 
-      @Override
-      public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-        return visitor.visit(this);
-      }
     }
 
     staticCounter_ = 0;

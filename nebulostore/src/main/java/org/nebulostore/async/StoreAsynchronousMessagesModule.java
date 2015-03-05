@@ -33,13 +33,11 @@ public class StoreAsynchronousMessagesModule extends JobModule {
   private final SAMVisitor visitor_ = new SAMVisitor();
 
   /**
-   * Visitor.
-   *
    * @author szymonmatejczyk
    * @author Piotr Malicki
    */
-  protected class SAMVisitor extends MessageVisitor<Void> {
-    public Void visit(StoreAsynchronousMessage message) {
+  protected class SAMVisitor extends MessageVisitor {
+    public void visit(StoreAsynchronousMessage message) {
       logger_.debug("Starting " + StoreAsynchronousMessagesModule.class +
           " with messages to add: " + message.getMessage() + " for recipient: " +
           message.getRecipient());
@@ -54,7 +52,6 @@ public class StoreAsynchronousMessagesModule extends JobModule {
         logger_.warn("Async messages context has not yet been initialized, ending the module");
       }
       endJobModule();
-      return null;
     }
   }
 

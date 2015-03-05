@@ -33,7 +33,7 @@ public class AddAsSynchroPeerModule extends JobModule {
 
   private static Logger logger_ = Logger.getLogger(AddAsSynchroPeerModule.class);
 
-  private final MessageVisitor<Void> visitor_ = new AddAsSynchroPeerVisitor();
+  private final MessageVisitor visitor_ = new AddAsSynchroPeerVisitor();
   private String messageJobId_;
   private CommAddress recipient_;
 
@@ -48,9 +48,9 @@ public class AddAsSynchroPeerModule extends JobModule {
     context_ = context;
   }
 
-  protected class AddAsSynchroPeerVisitor extends MessageVisitor<Void> {
+  protected class AddAsSynchroPeerVisitor extends MessageVisitor {
 
-    public Void visit(AddAsSynchroPeerMessage message) {
+    public void visit(AddAsSynchroPeerMessage message) {
       logger_.debug("Starting " + AddAsSynchroPeerModule.class + " with message: " + message);
       if (context_.isInitialized()) {
         if (context_.lockRecipient(message.getSourceAddress())) {
@@ -79,24 +79,21 @@ public class AddAsSynchroPeerModule extends JobModule {
         networkQueue_.add(new AsyncModuleErrorMessage(myAddress_, message.getSourceAddress()));
         endJobModule();
       }
-      return null;
     }
 
-    public Void visit(OkDHTMessage message) {
+    public void visit(OkDHTMessage message) {
       logger_.debug("Added new recipients set to DHT");
       networkQueue_.add(new AddedAsSynchroPeerMessage(messageJobId_, myAddress_, recipient_));
       context_.freeRecipient(recipient_);
       endJobModule();
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       logger_.warn("Adding current instance as a synchro-peer of peer " + recipient_ + " failed.");
       networkQueue_.add(new AsyncModuleErrorMessage(myAddress_, recipient_));
       context_.removeRecipient(recipient_);
       context_.freeRecipient(recipient_);
       endJobModule();
-      return null;
     }
   }
 

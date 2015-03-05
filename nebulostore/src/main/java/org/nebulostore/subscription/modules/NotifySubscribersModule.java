@@ -25,7 +25,7 @@ public class NotifySubscribersModule extends JobModule {
 
   private final SubscriptionNotification subscriptionNotification_;
 
-  private final MessageVisitor<Void> visitor_ = new SubscriptionVisitor();
+  private final MessageVisitor visitor_ = new SubscriptionVisitor();
 
 
   public NotifySubscribersModule(CommAddress sourceAddress,
@@ -47,9 +47,9 @@ public class NotifySubscribersModule extends JobModule {
   /**
    * Message handler for notifying subscribers about file change.
    */
-  protected class SubscriptionVisitor extends MessageVisitor<Void> {
+  protected class SubscriptionVisitor extends MessageVisitor {
 
-    public Void visit(JobInitMessage message) throws NebuloException {
+    public void visit(JobInitMessage message) throws NebuloException {
       for (CommAddress subscriber : subscribersAddresses_) {
         if (!subscriber.equals(sourceAddress_)) {
           NotifySubscriberMessage subscribeMessage =
@@ -59,7 +59,6 @@ public class NotifySubscribersModule extends JobModule {
         }
       }
       endJobModule();
-      return null;
     }
   }
 }

@@ -22,31 +22,27 @@ public class CounterModule extends JobModule {
   private static Logger logger_ = Logger.getLogger(CounterModule.class);
 
   private int number_;
-  private final MessageVisitor<Void> visitor_ = new CounterModuleMessageVisitor();
+  private final MessageVisitor visitor_ = new CounterModuleMessageVisitor();
 
   public int getNumber() {
     return number_;
   }
 
-  protected class CounterModuleMessageVisitor extends MessageVisitor<Void> {
+  protected class CounterModuleMessageVisitor extends MessageVisitor {
 
-    public Void visit(JobInitMessage message) {
-      return null;
+    public void visit(JobInitMessage message) {
     }
 
-    public Void visit(GetCounterValueMessage message) {
+    public void visit(GetCounterValueMessage message) {
       outQueue_.add(new CounterValueMessage(message.getSenderJobId(), number_));
-      return null;
     }
 
-    public Void visit(AsynchronousIncrementMessage message) {
+    public void visit(AsynchronousIncrementMessage message) {
       number_++;
-      return null;
     }
 
-    public Void visit(EndModuleMessage message) {
+    public void visit(EndModuleMessage message) {
       endJobModule();
-      return null;
     }
   }
 

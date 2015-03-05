@@ -52,7 +52,7 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
   /**
    * Visitor class that acts as a state machine realizing the procedure of deleting the file.
    */
-  protected class StateMachineVisitor extends MessageVisitor<Void> {
+  protected class StateMachineVisitor extends MessageVisitor {
     private final Set<CommAddress> recipientsSet_;
     private STATE state_;
 
@@ -61,7 +61,7 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
       state_ = STATE.INIT;
     }
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       if (state_ == STATE.INIT) {
         // State 1 - Send groupId to DHT and wait for reply.
         state_ = STATE.DHT_QUERY;
@@ -73,10 +73,9 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       logger_.debug("Got ValueDHTMessage " + message.toString());
       if (state_ == STATE.DHT_QUERY) {
         state_ = STATE.REPLICA_UPDATE;
@@ -102,10 +101,9 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       if (state_ == STATE.DHT_QUERY) {
         logger_.debug("Received ErrorDHTMessage");
         endWithError(new NebuloException("Could not fetch metadata from DHT.",
@@ -113,10 +111,9 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ConfirmationMessage message) {
+    public void visit(ConfirmationMessage message) {
       if (state_ == STATE.REPLICA_UPDATE) {
         logger_.debug("Confirmation message, removing: " + message.getSourceAddress());
         recipientsSet_.remove(message.getSourceAddress());
@@ -130,13 +127,11 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       incorrectState(state_.name(), message);
       // TODO(bolek): Can we safely ignore it here and just wait for timeout and async messages?
-      return null;
     }
 
     // TODO(bolek): Maybe move it to a new superclass StateMachine?

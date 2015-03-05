@@ -43,7 +43,7 @@ public class CommunicationFacadeAdapter extends Module {
   private static final Logger LOGGER = Logger.getLogger(CommunicationFacadeAdapter.class);
   private final CommunicationFacade commFacade_;
   private final PeerFoundObserver peerFoundObserver_;
-  private final MessageVisitor<Void> msgVisitor_;
+  private final MessageVisitor msgVisitor_;
 
   private final AtomicBoolean isEnding_;
 
@@ -162,22 +162,20 @@ public class CommunicationFacadeAdapter extends Module {
    *
    * @author Grzegorz Milka
    */
-  protected final class CommFacadeAdapterMsgVisitor extends MessageVisitor<Void> {
-    public Void visit(EndModuleMessage msg) {
+  protected final class CommFacadeAdapterMsgVisitor extends MessageVisitor {
+    public void visit(EndModuleMessage msg) {
       isEnding_.set(true);
       shutDown();
-      return null;
     }
 
-    public Void visit(ReconfigureDHTMessage msg) {
+    public void visit(ReconfigureDHTMessage msg) {
       LOGGER.warn("Got reconfigure request with jobId: " + msg.getId());
       /*
        * reconfigureDHT(((ReconfigureDHTMessage) msg).getProvider(), (ReconfigureDHTMessage) msg);
        */
-      return null;
     }
 
-    public Void visit(DHTMessage msg) {
+    public void visit(DHTMessage msg) {
       if (msg instanceof InDHTMessage) {
         LOGGER.debug("InDHTMessage forwarded to DHT" + msg.getClass().getSimpleName());
         dhtPeerInQueue_.add(msg);
@@ -187,16 +185,14 @@ public class CommunicationFacadeAdapter extends Module {
       } else {
         LOGGER.warn("Unrecognized DHTMessage: " + msg);
       }
-      return null;
     }
 
-    public Void visit(CommMessage msg) {
+    public void visit(CommMessage msg) {
       if (msg.getDestinationAddress() == null) {
         LOGGER.warn("Null destination address set for " + msg + ". Dropping the message.");
       } else {
         commFacade_.sendMessage(msg, sendResults_);
       }
-      return null;
     }
   }
 

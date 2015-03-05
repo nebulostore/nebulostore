@@ -30,7 +30,7 @@ public class BDBPeerToReplicaResolverAdapter extends Module {
   private static final long EXECUTOR_SHUTDOWN_TIMEOUT_SEC = 10;
 
   private final ReplicaResolver contractMap_;
-  private final MessageVisitor<Void> msgVisitor_;
+  private final MessageVisitor msgVisitor_;
   private final ExecutorService executor_;
 
   @Inject
@@ -56,9 +56,9 @@ public class BDBPeerToReplicaResolverAdapter extends Module {
    *
    * @author Grzegorz Milka
    */
-  protected final class BDBServerMessageVisitor extends MessageVisitor<Void> {
+  protected final class BDBServerMessageVisitor extends MessageVisitor {
 
-    public Void visit(EndModuleMessage msg) {
+    public void visit(EndModuleMessage msg) {
       executor_.shutdown();
       try {
         executor_.awaitTermination(EXECUTOR_SHUTDOWN_TIMEOUT_SEC, TimeUnit.SECONDS);
@@ -67,17 +67,14 @@ public class BDBPeerToReplicaResolverAdapter extends Module {
         throw new IllegalStateException(e);
       }
       endModule();
-      return null;
     }
 
-    public Void visit(GetDHTMessage msg) {
+    public void visit(GetDHTMessage msg) {
       executor_.submit(new GetDHTRunnable(msg));
-      return null;
     }
 
-    public Void visit(PutDHTMessage msg) {
+    public void visit(PutDHTMessage msg) {
       executor_.submit(new PutDHTRunnable(msg));
-      return null;
     }
   }
 

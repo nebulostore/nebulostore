@@ -1,8 +1,6 @@
 package org.nebulostore.conductor.messages;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 /**
  * Message send by TestModule to itself when test advances to next phase.
@@ -16,8 +14,4 @@ public class NewPhaseMessage extends Message {
     super();
   }
 
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
-  }
 }

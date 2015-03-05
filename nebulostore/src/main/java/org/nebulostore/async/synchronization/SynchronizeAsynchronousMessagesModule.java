@@ -41,9 +41,9 @@ public class SynchronizeAsynchronousMessagesModule extends JobModule {
     message.accept(visitor_);
   }
 
-  protected class SynchroVisitor extends MessageVisitor<Void> {
+  protected class SynchroVisitor extends MessageVisitor {
 
-    public Void visit(JobInitMessage msg) {
+    public void visit(JobInitMessage msg) {
       LOGGER.info("Starting synchronization of asynchronous messages.");
       if (context_.isInitialized()) {
         jobId_ = msg.getId();
@@ -65,7 +65,6 @@ public class SynchronizeAsynchronousMessagesModule extends JobModule {
         LOGGER.warn("Async messages context has not yet been initialized, ending the module");
       }
       endJobModule();
-      return null;
     }
   }
 

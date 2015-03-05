@@ -28,7 +28,7 @@ public class SynchroPeerSetChangeSequencerModule extends JobModule {
   private static Logger logger_ = Logger.getLogger(SynchroPeerSetChangeSequencerModule.class);
   private static final int CHANGE_SYNCHRO_PEER_SET_MODULE_TIMEOUT = 5000;
 
-  private final MessageVisitor<Void> visitor_ = new SPSUSequencerVisitor();
+  private final MessageVisitor visitor_ = new SPSUSequencerVisitor();
   private final SynchroPeerSelector selector_;
 
   @Inject
@@ -36,13 +36,12 @@ public class SynchroPeerSetChangeSequencerModule extends JobModule {
     selector_ = selector;
   }
 
-  protected class SPSUSequencerVisitor extends MessageVisitor<Void> {
+  protected class SPSUSequencerVisitor extends MessageVisitor {
 
-    public Void visit(JobInitMessage message) {
-      return null;
+    public void visit(JobInitMessage message) {
     }
 
-    public Void visit(LastFoundPeerMessage message) {
+    public void visit(LastFoundPeerMessage message) {
       if (message.getLastPeer() != null) {
         Pair<Set<CommAddress>, Set<CommAddress>> synchroGroupChange =
             selector_.decide(message.getLastPeer());
@@ -64,7 +63,6 @@ public class SynchroPeerSetChangeSequencerModule extends JobModule {
           }
         }
       }
-      return null;
     }
   }
 

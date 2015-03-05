@@ -2,8 +2,6 @@ package org.nebulostore.conductor.messages;
 
 import java.util.Set;
 
-import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.communication.messages.CommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 
@@ -25,8 +23,4 @@ public class ReconfigurationMessage extends CommMessage {
     return clients_;
   }
 
-  @Override
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
-  }
 }

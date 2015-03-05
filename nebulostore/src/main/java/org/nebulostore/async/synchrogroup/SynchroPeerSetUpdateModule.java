@@ -27,7 +27,7 @@ public class SynchroPeerSetUpdateModule extends JobModule {
 
   private static Logger logger_ = Logger.getLogger(SynchroPeerSetUpdateModule.class);
 
-  private final MessageVisitor<Void> visitor_ = new SynchroPeerSetUpdateVisitor();
+  private final MessageVisitor visitor_ = new SynchroPeerSetUpdateVisitor();
   private final CommAddress peer_;
   private final AsyncMessagesContext context_;
   private final BlockingQueue<Message> resultQueue_;
@@ -39,18 +39,17 @@ public class SynchroPeerSetUpdateModule extends JobModule {
     resultQueue_ = resultQueue;
   }
 
-  protected class SynchroPeerSetUpdateVisitor extends MessageVisitor<Void> {
-    public Void visit(JobInitMessage message) {
+  protected class SynchroPeerSetUpdateVisitor extends MessageVisitor {
+    public void visit(JobInitMessage message) {
       if (context_.isInitialized()) {
         networkQueue_.add(new GetDHTMessage(jobId_, peer_.toKeyDHT()));
       } else {
         logger_.warn("Asynchronous messages context is not initialized. Ending the module.");
         endJobModule();
       }
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       if (message.getKey().equals(peer_.toKeyDHT())) {
         if (message.getValue().getValue() instanceof InstanceMetadata) {
           InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
@@ -65,14 +64,12 @@ public class SynchroPeerSetUpdateModule extends JobModule {
         logger_.warn("Wrong type of value in ValueDHTMessage.");
       }
       endJobModule();
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       logger_.warn("Could not download InstanceMetadata for address " + peer_);
       resultQueue_.add(new SynchroPeerSetUpdateJobEndedMessage(jobId_));
       endJobModule();
-      return null;
     }
   }
 

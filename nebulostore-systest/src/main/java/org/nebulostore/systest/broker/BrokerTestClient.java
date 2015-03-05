@@ -80,17 +80,15 @@ public class BrokerTestClient extends ConductorClient {
     }
 
     @Override
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       logger_.debug("Phase delaying finished.");
       broker_.getInQueue().add(new GetBrokerContextMessage(jobId_));
-      return null;
     }
 
-    public Void visit(BrokerContextMessage message) {
+    public void visit(BrokerContextMessage message) {
       assertTrue(message.getBrokerContext().getReplicas().length > 0,
           "No contracts concluded in the first phase");
       phaseFinished();
-      return null;
     }
   }
 
@@ -99,18 +97,16 @@ public class BrokerTestClient extends ConductorClient {
    */
   protected class BrokerLastPhaseVisitor extends TestingModuleVisitor {
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.debug("Received NewPhaseMessage in GatherStats state.");
-      return null;
     }
 
-    public Void visit(GatherStatsMessage message) {
+    public void visit(GatherStatsMessage message) {
       logger_.debug("Gathering statistics...");
       broker_.getInQueue().add(new GetBrokerContextMessage(jobId_));
-      return null;
     }
 
-    public Void visit(BrokerContextMessage message) {
+    public void visit(BrokerContextMessage message) {
       logger_.debug("Got broker context.");
       BrokerTestStatistics stats = new BrokerTestStatistics();
       BrokerContext brokerContext = message.getBrokerContext();
@@ -122,7 +118,6 @@ public class BrokerTestClient extends ConductorClient {
       brokerContext.disposeReadAccessToContracts();
 
       networkQueue_.add(new StatsMessage(serverJobId_, null, server_, stats));
-      return null;
     }
 
   }

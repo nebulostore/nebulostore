@@ -94,7 +94,7 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
   /**
    * Visitor class that acts as a state machine realizing the procedure of fetching the file.
    */
-  protected class StateMachineVisitor extends MessageVisitor<Void> {
+  protected class StateMachineVisitor extends MessageVisitor {
     private STATE state_;
     /* Recipients we are waiting answer from. */
     private final Set<CommAddress> recipientsSet_ = new HashSet<>();
@@ -112,7 +112,7 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       state_ = STATE.INIT;
     }
 
-    public Void visit(JobInitMessage message) {
+    public void visit(JobInitMessage message) {
       if (state_ == STATE.INIT) {
         logger_.debug("Initializing...");
         // State 1 - Send groupId to DHT and wait for reply.
@@ -126,10 +126,9 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) {
       logger_.debug("Got ValueDHTMessage " + message.toString());
       if (state_ == STATE.DHT_QUERY) {
 
@@ -170,10 +169,9 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ErrorDHTMessage message) {
+    public void visit(ErrorDHTMessage message) {
       if (state_ == STATE.DHT_QUERY) {
         logger_.debug("Received ErrorDHTMessage");
         endWithError(new NebuloException("Could not fetch metadata from DHT.",
@@ -181,10 +179,9 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ConfirmationMessage message) {
+    public void visit(ConfirmationMessage message) {
       logger_.debug("received confirmation");
       if (state_ == STATE.REPLICA_UPDATE || state_ == STATE.RETURNED_WAITING_FOR_REST) {
         confirmations_++;
@@ -193,10 +190,9 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(UpdateRejectMessage message) {
+    public void visit(UpdateRejectMessage message) {
       logger_.debug("received updateRejectMessage");
       switch (state_) {
         case REPLICA_UPDATE:
@@ -213,10 +209,9 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
         default:
           incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(UpdateWithholdMessage message) {
+    public void visit(UpdateWithholdMessage message) {
       logger_.debug("reject UpdateWithholdMessage");
       if (state_ == STATE.REPLICA_UPDATE || state_ == STATE.RETURNED_WAITING_FOR_REST) {
         recipientsSet_.remove(message.getSourceAddress());
@@ -226,10 +221,9 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
-    public Void visit(ErrorCommMessage message) {
+    public void visit(ErrorCommMessage message) {
       logger_.debug("received ErrorCommMessage");
       if (state_ == STATE.REPLICA_UPDATE || state_ == STATE.RETURNED_WAITING_FOR_REST) {
         waitingForTransactionResult_.remove(message.getMessage().getDestinationAddress());
@@ -237,7 +231,6 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       } else {
         incorrectState(state_.name(), message);
       }
-      return null;
     }
 
     private void tryReturnSemiResult() {
@@ -268,7 +261,7 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       }
     }
 
-    public Void visit(TransactionAnswerInMessage message) {
+    public void visit(TransactionAnswerInMessage message) {
       logger_.debug("received TransactionResult from parent");
       sendTransactionAnswer(message.answer_);
       if (message.answer_ == TransactionAnswer.COMMIT) {
@@ -290,7 +283,6 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
         object_.newVersionCommitted(commitVersion_);
       }
       endWithSuccess(null);
-      return null;
     }
 
     private void sendTransactionAnswer(TransactionAnswer answer) {
@@ -323,11 +315,6 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
 
     public TransactionAnswerInMessage(TransactionAnswer answer) {
       answer_ = answer;
-    }
-
-    @Override
-    public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-      return visitor.visit(this);
     }
   }
 

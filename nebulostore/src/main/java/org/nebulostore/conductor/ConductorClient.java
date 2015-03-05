@@ -166,10 +166,10 @@ public abstract class ConductorClient extends JobModule implements Serializable 
    *
    * @author szymonmatejczyk
    */
-  protected abstract class TestingModuleVisitor extends MessageVisitor<Void> {
-    public abstract Void visit(NewPhaseMessage message);
+  protected abstract class TestingModuleVisitor extends MessageVisitor {
+    public abstract void visit(NewPhaseMessage message);
 
-    public Void visit(TicMessage message) {
+    public void visit(TicMessage message) {
       logger_.debug("TicMessage received. Current phase: " + phase_ + "; Server phase: " +
           message.getPhase());
       if (message.getPhase() == phase_) {
@@ -180,33 +180,29 @@ public abstract class ConductorClient extends JobModule implements Serializable 
           advancedToNextPhase();
         }
       }
-      return null;
     }
 
-    public Void visit(UserCommMessage message) {
+    public void visit(UserCommMessage message) {
       if (message.getPhase() != phase_) {
         logger_.warn("Received UserCommMessage from phase " + message.getPhase() +
             " while in phase " + phase_);
       } else {
         visitCorrectPhaseUserCommMessage(message);
       }
-      return null;
     }
 
     protected void visitCorrectPhaseUserCommMessage(UserCommMessage message) {
       // Override in subclass.
     }
 
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       logger_.warn("Received TimeoutMessage from phase " + message.getMessageContent() +
           " while in phase " + phase_);
-      return null;
     }
 
-    public Void visit(FinishMessage message) {
+    public void visit(FinishMessage message) {
       logger_.info("Test finished by server.");
       endJobModule();
-      return null;
     }
   }
 
@@ -228,8 +224,7 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     }
 
     @Override
-    public Void visit(NewPhaseMessage message) {
-      return null;
+    public void visit(NewPhaseMessage message) {
     }
   }
 
@@ -243,10 +238,9 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     }
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.debug("Ignore Phase no: " + phase_);
       phaseFinished();
-      return null;
     }
   }
 
@@ -263,17 +257,15 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     }
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.debug("Phase delaying started... (" + timeout_ + " ms)");
       timer_.schedule(jobId_, timeout_);
-      return null;
     }
 
     @Override
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       logger_.debug("Phase delaying finished.");
       phaseFinished();
-      return null;
     }
   }
 
@@ -287,8 +279,7 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     }
 
     @Override
-    public Void visit(NewPhaseMessage message) {
-      return null;
+    public void visit(NewPhaseMessage message) {
     }
   }
 
@@ -311,9 +302,8 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     }
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       logger_.debug("Received NewPhaseMessage in GatherStats state.");
-      return null;
     }
   }
 
@@ -344,7 +334,7 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     }
 
     @Override
-    public Void visit(NewPhaseMessage message) {
+    public void visit(NewPhaseMessage message) {
       sleep(initialSleep_);
       logger_.debug("Sending NebuloAddress to " + clients_.size() + " peers.");
       for (int i = 0; i < clients_.size(); ++i) {
@@ -354,7 +344,6 @@ public abstract class ConductorClient extends JobModule implements Serializable 
       }
       visitorTimer_.schedule(jobId_, timeoutMillis_, String.valueOf(phase_));
       tryFinishPhase();
-      return null;
     }
 
     @Override
@@ -366,7 +355,7 @@ public abstract class ConductorClient extends JobModule implements Serializable 
     }
 
     @Override
-    public Void visit(TimeoutMessage message) {
+    public void visit(TimeoutMessage message) {
       if (message.getMessageContent().equals(String.valueOf(phase_))) {
         logger_.debug("Finishing AddressExchangeVisitor in phase " + phase_ + " due to timeout." +
             "Received " + addresses_.size() + " addresses, expected " + (clients_.size() - 1));
@@ -375,7 +364,6 @@ public abstract class ConductorClient extends JobModule implements Serializable 
         logger_.warn("Received TimeoutMessage from phase " + message.getMessageContent() +
             " while in phase " + phase_);
       }
-      return null;
     }
 
     private void tryFinishPhase() {

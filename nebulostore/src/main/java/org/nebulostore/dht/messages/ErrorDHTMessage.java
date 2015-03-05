@@ -1,7 +1,6 @@
 package org.nebulostore.dht.messages;
 
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.MessageVisitor;
 
 /**
  * @author marcin
@@ -17,9 +16,5 @@ public class ErrorDHTMessage extends OutDHTMessage {
 
   public NebuloException getException() {
     return exception_;
-  }
-
-  public <R> R accept(MessageVisitor<R> visitor) throws NebuloException {
-    return visitor.visit(this);
   }
 }
