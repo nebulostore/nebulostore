@@ -6,12 +6,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dht.core.Mergeable;
-import org.nebulostore.networkmonitor.PeerConnectionSurvey;
+import org.nebulostore.networkmonitor.StatisticsList;
 
 /**
  * Metadata stored in DHT for Nebulostore instance.
@@ -21,13 +20,17 @@ import org.nebulostore.networkmonitor.PeerConnectionSurvey;
 public class InstanceMetadata implements Serializable, Mergeable {
   private static final long serialVersionUID = -2246471507395388278L;
 
+  private static final double STATISTICS_LIST_MEAN_WEIGHT_SINGLE = 0.7;
+  private static final double STATISTICS_LIST_MEAN_WEIGHT_MULTI = 0.4;
+  private static final int STATISTICS_LIST_MAX_SIZE = 1000;
+
   /* Id of user, that this metadata applies to. */
   private AppKey owner_;
 
   /* Communication addresses of peers that store messages for @instance. */
   private Set<CommAddress> synchroGroup_;
 
-  /* Communication addresses of peers for which @instance store messages. */
+  /* Communication addresses of peers for which @instance stores messages. */
   private Set<CommAddress> recipients_;
   private int recipientsSetVersion_;
 
@@ -39,8 +42,8 @@ public class InstanceMetadata implements Serializable, Mergeable {
    */
   private Map<CommAddress, Integer> synchroPeerCounters_ = new HashMap<>();
 
-  private final ConcurrentLinkedQueue<PeerConnectionSurvey> statistics_ =
-      new ConcurrentLinkedQueue<PeerConnectionSurvey>();
+  private final StatisticsList statistics_ = new StatisticsList(STATISTICS_LIST_MEAN_WEIGHT_SINGLE,
+      STATISTICS_LIST_MEAN_WEIGHT_MULTI, STATISTICS_LIST_MAX_SIZE);
 
   public InstanceMetadata() {
   }
@@ -106,9 +109,13 @@ public class InstanceMetadata implements Serializable, Mergeable {
     // TODO(SZM): remove duplicated old statistics - design issue
     if (other instanceof InstanceMetadata) {
       InstanceMetadata o = (InstanceMetadata) other;
+
       if (owner_ == null) {
         owner_ = o.owner_;
       }
+
+      statistics_.addAllInFront(o.statistics_);
+
       if (synchroGroup_ == null) {
         synchroGroup_ = o.synchroGroup_;
       }
@@ -129,7 +136,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
         recipients_ = o.recipients_;
         recipientsSetVersion_ = o.recipientsSetVersion_;
       }
-      // TODO
+
       if (peerKey_ == null) {
         peerKey_ = o.peerKey_;
       }
@@ -137,7 +144,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
     return this;
   }
 
-  public ConcurrentLinkedQueue<PeerConnectionSurvey> getStatistics() {
+  public StatisticsList getStatistics() {
     return statistics_;
   }
 
@@ -146,6 +153,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
     return "InstanceMetadata: owner: " + owner_ + "\n\t" + "SynchroGroup: " +
         synchroGroup_ + "\n\t" + "Recipients: " + recipients_ + "\n\t" +
         "recipients set version: " + recipientsSetVersion_ + "\n\t" +
-        "peer key: " + peerKey_;
+        "peer key: " + peerKey_ + "\n\t" +
+        " statistics list size: " + statistics_.getAllStatisticsView().size() + "\n\t";
   }
 }

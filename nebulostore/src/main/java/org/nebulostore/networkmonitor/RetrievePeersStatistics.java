@@ -1,7 +1,6 @@
 package org.nebulostore.networkmonitor;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.InstanceMetadata;
@@ -21,7 +20,7 @@ import org.nebulostore.dispatcher.JobInitMessage;
  * @author szymonmatejczyk
  */
 public class RetrievePeersStatistics extends
-    ReturningJobModule<ConcurrentLinkedQueue<PeerConnectionSurvey>> {
+    ReturningJobModule<StatisticsList> {
   private static Logger logger_ = Logger.getLogger(RetrievePeersStatistics.class);
   private final CommAddress peer_;
 
@@ -42,7 +41,7 @@ public class RetrievePeersStatistics extends
     public void visit(ValueDHTMessage message) {
       InstanceMetadata metadata = (InstanceMetadata) message.getValue().getValue();
       logger_.debug("Retrived peers " + peer_ + " statistics");
-      for (PeerConnectionSurvey pcs : metadata.getStatistics()) {
+      for (PeerConnectionSurvey pcs : metadata.getStatistics().getAllStatisticsView()) {
         logger_.debug(pcs.toString());
       }
       endWithSuccess(metadata.getStatistics());

@@ -1,7 +1,5 @@
 package org.nebulostore.networkmonitor;
 
-import java.util.Queue;
-
 import com.google.common.base.Predicate;
 import com.google.inject.Inject;
 
@@ -54,8 +52,8 @@ public class GetPeersConnectionAverageStatisticModule extends ReturningJobModule
     public void visit(JobInitMessage message) {
       RetrievePeersStatistics allStatsModule = new RetrievePeersStatistics(peer_, outQueue_);
       try {
-        Queue<PeerConnectionSurvey> allStats = allStatsModule.getResult(config_
-            .getInt(CONFIGURATION_PREFIX + "get-stats-timeout-secs"));
+        Iterable<PeerConnectionSurvey> allStats = allStatsModule.getResult(config_
+            .getInt(CONFIGURATION_PREFIX + "get-stats-timeout-secs")).getAllStatisticsView();
         double sum = 0;
         int count = 0;
         for (PeerConnectionSurvey survey : allStats) {

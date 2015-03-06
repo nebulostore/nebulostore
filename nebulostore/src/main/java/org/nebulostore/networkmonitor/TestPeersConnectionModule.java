@@ -8,7 +8,6 @@ import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.InstanceMetadata;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -16,10 +15,7 @@ import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dht.core.ValueDHT;
-import org.nebulostore.dht.messages.ErrorDHTMessage;
-import org.nebulostore.dht.messages.GetDHTMessage;
 import org.nebulostore.dht.messages.PutDHTMessage;
-import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.messages.ConnectionTestMessage;
 import org.nebulostore.networkmonitor.messages.ConnectionTestResponseMessage;
@@ -39,7 +35,6 @@ public class TestPeersConnectionModule extends JobModule {
   private final TPCVisitor visitor_ = new TPCVisitor();
   private Timer timer_;
   private CommAddress myAddress_;
-  private AppKey appKey_;
 
   public TestPeersConnectionModule(CommAddress peer, BlockingQueue<Message> dispatcherQueue) {
     peerAddress_ = peer;
@@ -48,30 +43,21 @@ public class TestPeersConnectionModule extends JobModule {
   }
 
   @Inject
-  public void setDependencies(Timer timer, CommAddress commAddress, AppKey appKey) {
+  public void setDependencies(Timer timer, CommAddress commAddress) {
     timer_ = timer;
     myAddress_ = commAddress;
-    appKey_ = appKey;
   }
 
   long sendTime_;
-  private ValueDHTMessage valueDHTMessage_;
   private final List<PeerConnectionSurvey> stats_ = new LinkedList<PeerConnectionSurvey>();
 
   public class TPCVisitor extends MessageVisitor {
 
     public void visit(JobInitMessage message) {
       logger_.debug("Testing connection to: " + peerAddress_.toString());
-      networkQueue_.add(new GetDHTMessage(message.getId(), peerAddress_.toKeyDHT()));
       sendTime_ = System.currentTimeMillis();
       networkQueue_.add(new ConnectionTestMessage(jobId_, peerAddress_));
       timer_.schedule(jobId_, TIMEOUT_MILLIS);
-    }
-
-    public void visit(ErrorDHTMessage message) {
-      logger_.warn("Unable to retrive statistics from DHT: " + message.getException());
-      timer_.cancelTimer();
-      endJobModule();
     }
 
     public void visit(ConnectionTestResponseMessage message) {
@@ -83,48 +69,27 @@ public class TestPeersConnectionModule extends JobModule {
       stats_.add(new PeerConnectionSurvey(myAddress_, System.currentTimeMillis(),
           ConnectionAttribute.LATENCY, (System.currentTimeMillis() - sendTime_) / 2.0));
 
-      if (valueDHTMessage_ != null) {
-        appendStatisticsAndFinish(stats_, valueDHTMessage_);
-      }
-    }
-
-    public void visit(ValueDHTMessage message) {
-      if (!stats_.isEmpty()) {
-        appendStatisticsAndFinish(stats_, message);
-      } else {
-        valueDHTMessage_ = message;
-      }
+      appendStatisticsAndFinish(stats_);
     }
 
     public void visit(TimeoutMessage message) {
-      if (valueDHTMessage_ != null) {
-        logger_.debug("Timeout in ping.");
-        stats_.add(new PeerConnectionSurvey(myAddress_, System.currentTimeMillis(),
-            ConnectionAttribute.AVAILABILITY, 0.0));
-        appendStatisticsAndFinish(stats_, valueDHTMessage_);
-      } else {
-        logger_.warn("Timeout in DHT retrival.");
-        endJobModule();
-      }
+      logger_.debug("Timeout in ping.");
+      stats_.add(new PeerConnectionSurvey(myAddress_, System.currentTimeMillis(),
+          ConnectionAttribute.AVAILABILITY, 0.0));
+      appendStatisticsAndFinish(stats_);
     }
 
     public void visit(ErrorCommMessage message) {
       logger_.warn("Got ErrorCommMessage: " + message.getNetworkException());
-      if (valueDHTMessage_ != null) {
-        stats_.add(new PeerConnectionSurvey(myAddress_, System.currentTimeMillis(),
-            ConnectionAttribute.AVAILABILITY, 0.0));
-        appendStatisticsAndFinish(stats_, valueDHTMessage_);
-      } else {
-        endJobModule();
-      }
+      stats_.add(new PeerConnectionSurvey(myAddress_, System.currentTimeMillis(),
+          ConnectionAttribute.AVAILABILITY, 0.0));
+      appendStatisticsAndFinish(stats_);
     }
   }
 
-  private void appendStatisticsAndFinish(List<PeerConnectionSurvey> stats, ValueDHTMessage message)
-  {
+  private void appendStatisticsAndFinish(List<PeerConnectionSurvey> stats) {
     timer_.cancelTimer();
-    InstanceMetadata metadataValue = (InstanceMetadata) message.getValue().getValue();
-    InstanceMetadata metadata = new InstanceMetadata(metadataValue.getOwner());
+    InstanceMetadata metadata = new InstanceMetadata();
     for (PeerConnectionSurvey pcs : stats) {
       logger_.debug("Adding to DHT: " + pcs.toString());
       metadata.getStatistics().add(pcs);
