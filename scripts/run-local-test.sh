@@ -85,12 +85,12 @@ case $N in
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
            org.nebulostore.systest.networkmonitor.NetworkMonitorTestServer\
-           ${PEERS[7]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
+           ${PEERS[7]} 1 test.data ../nebulostore/src/main/resources/systest/broker-test-1.xml;;
     9) $SCRIPT_NAME\
            org.nebulostore.systest.TestingPeer\
            org.nebulostore.systest.TestingPeerConfiguration\
            org.nebulostore.systest.broker.BrokerTestServer\
-           ${PEERS[8]} 1 test.data ../src/main/resources/systest/broker-test-1.xml;;
+           ${PEERS[8]} 1 test.data ../nebulostore/src/main/resources/systest/broker-test-1.xml;;
     10) $SCRIPT_NAME\
            org.nebulostore.systest.async.AsyncTestingPeer\
            org.nebulostore.systest.async.AsyncTestingPeerConfiguration\

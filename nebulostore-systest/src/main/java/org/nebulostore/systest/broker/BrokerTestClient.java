@@ -35,14 +35,14 @@ public class BrokerTestClient extends ConductorClient {
 
   private static final int INITIAL_SLEEP = 4000;
 
-  private Timer timer_;
+  private Provider<Timer> timerProvider_;
   private Broker broker_;
 
-  private double availability_;
+  private final double availability_;
 
   @Inject
-  public void setDependencies(Timer timer, Broker broker) {
-    timer_ = timer;
+  public void setDependencies(Provider<Timer> timerProvider, Broker broker) {
+    timerProvider_ = timerProvider;
     broker_ = broker;
   }
 
@@ -66,8 +66,9 @@ public class BrokerTestClient extends ConductorClient {
     sleep(INITIAL_SLEEP);
     visitors_ = new TestingModuleVisitor[numPhases_ + 2];
     visitors_[0] = new EmptyInitializationVisitor();
-    visitors_[1] = new SimpleContractsConclusionCheckVisitor(1000L * FIRST_PHASE_TIME_SEC, timer_);
-    visitors_[2] = new DelayingVisitor(1000L * SECOND_PHASE_TIME_SEC, timer_);
+    visitors_[1] = new SimpleContractsConclusionCheckVisitor(1000L * FIRST_PHASE_TIME_SEC,
+        timerProvider_.get());
+    visitors_[2] = new DelayingVisitor(1000L * SECOND_PHASE_TIME_SEC, timerProvider_.get());
     visitors_[3] = new BrokerLastPhaseVisitor();
   }
 
