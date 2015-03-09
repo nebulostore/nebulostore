@@ -165,6 +165,7 @@ public class ValuationBasedBroker extends Broker {
           maxContractsMultiplicity_) {
         networkQueue_.add(new OfferReplyMessage(getJobId(), message.getSourceAddress(), message
             .getContract(), false));
+        context_.disposeReadAccessToContracts();
         return;
       }
       try {
