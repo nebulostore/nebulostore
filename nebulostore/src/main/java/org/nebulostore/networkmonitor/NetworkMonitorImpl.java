@@ -29,49 +29,47 @@ import org.nebulostore.timer.Timer;
 
 /**
  * Basic implementation of NetworkMonitor.
+ *
  * @author szymon
  *
  */
 public class NetworkMonitorImpl extends NetworkMonitor {
   private final Logger logger_ = Logger.getLogger(NetworkMonitor.class);
-  private Timer timer_;
+  private final Timer timer_;
 
   /**
    * Providers for NetworkMonitor submodules.
    */
-  private Provider<RandomPeersGossipingModule> randomPeersGossipingModuleProvider_;
+  private final Provider<RandomPeersGossipingModule> randomPeersGossipingModuleProvider_;
 
-  private static final String CONFIGURATION_PREFIX = "networkmonitor.";
+  protected static final String CONFIGURATION_PREFIX = "networkmonitor.";
 
   private final Set<CommAddress> knownPeers_ = new HashSet<CommAddress>();
   private final List<CommAddress> knownPeersVector_ = new Vector<CommAddress>();
 
-  private Set<CommAddress> randomPeersSample_ =
-      Collections.synchronizedSet(new HashSet<CommAddress>());
-  private CommAddress commAddress_;
+  private Set<CommAddress> randomPeersSample_ = Collections
+      .synchronizedSet(new HashSet<CommAddress>());
+  private final CommAddress commAddress_;
 
   protected BlockingQueue<Message> dispatcherQueue_;
 
   protected Provider<ConnectionTestMessageHandler> connectionTestMessageHandlerProvider_;
 
-  private long statisticsUpdateIntervalMillis_;
+  private final long statisticsUpdateIntervalMillis_;
 
   protected MessageVisitor visitor_;
 
-  private EncryptionAPI encryptionAPI_;
-
-  public NetworkMonitorImpl() {
-    visitor_ = new NetworkMonitorVisitor();
-  }
+  private final EncryptionAPI encryptionAPI_;
 
   @Inject
-  public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
-      CommAddress commAddress, Timer timer,
-      Provider<RandomPeersGossipingModule> randomPeersGossipingModuleProvider,
-      Provider<ConnectionTestMessageHandler> connectionTestMessageHandlerProvider,
-      @Named(CONFIGURATION_PREFIX + "statistics-update-interval-millis") long
-        statisticsUpdateIntervalMillis,
-      EncryptionAPI encryptionAPI) {
+  public NetworkMonitorImpl(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
+          CommAddress commAddress,
+          Timer timer,
+          Provider<RandomPeersGossipingModule> randomPeersGossipingModuleProvider,
+          Provider<ConnectionTestMessageHandler> connectionTestMessageHandlerProvider,
+          @Named(CONFIGURATION_PREFIX + "statistics-update-interval-millis")
+          long statisticsUpdateIntervalMillis,
+          EncryptionAPI encryptionAPI) {
     dispatcherQueue_ = dispatcherQueue;
     commAddress_ = commAddress;
     knownPeers_.add(commAddress_);
@@ -81,6 +79,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
     connectionTestMessageHandlerProvider_ = connectionTestMessageHandlerProvider;
     statisticsUpdateIntervalMillis_ = statisticsUpdateIntervalMillis;
     encryptionAPI_ = encryptionAPI;
+    visitor_ = new NetworkMonitorVisitor();
   }
 
   /**
@@ -121,8 +120,8 @@ public class NetworkMonitorImpl extends NetworkMonitor {
       knownPeers_.add(address);
       knownPeersVector_.add(address);
       try {
-        encryptionAPI_.load(CryptoUtils.getRandomString(),
-            new DHTKeySource(address, dispatcherQueue_), !EncryptionAPI.STORE_IN_DHT);
+        encryptionAPI_.load(CryptoUtils.getRandomString(), new DHTKeySource(address,
+            dispatcherQueue_), !EncryptionAPI.STORE_IN_DHT);
       } catch (CryptoException e) {
         logger_.error("Unable to load peer public key", e);
       }
