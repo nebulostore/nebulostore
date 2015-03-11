@@ -2,6 +2,7 @@ package org.nebulostore.dfuntest;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
  * It assumes that:
  * <ul>
  * <li> All required dependency libraries are in lib/ directory. </li>
+ * <li> Cryptographic keys are in keys/ directory. </li>
  * <li> Nebulostore is in Nebulostore.jar file. </li>
  * </ul>
  *
@@ -34,6 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 public class NebulostoreEnvironmentPreparator implements EnvironmentPreparator<Environment> {
   public static final String LOG_DIRECTORY = "logs";
+  public static final String KEYS_DIRECTORY = "keys/";
   public static final String RESOURCES_DIRECTORY = "resources";
   public static final String LIB_DIRECTORY = "lib";
   public static final String JAR_FILE = "Nebulostore.jar";
@@ -52,7 +55,10 @@ public class NebulostoreEnvironmentPreparator implements EnvironmentPreparator<E
       FileSystems.getDefault().getPath("resources/conf/Peer.xml");
   private static final Path RESOURCES_PATH = FileSystems.getDefault().getPath(RESOURCES_DIRECTORY);
   private static final Path LOCAL_JAR_PATH = FileSystems.getDefault().getPath(JAR_FILE);
+  private static final Path LOCAL_KEYS_PATH = FileSystems.getDefault().getPath(KEYS_DIRECTORY);
   private static final Path LOCAL_LIBS_PATH = FileSystems.getDefault().getPath(LIB_DIRECTORY);
+
+  private static final int KEY_SIZE = 4096;
 
   private final int commInitialPort_;
   private final int restInitialPort_;
@@ -71,6 +77,7 @@ public class NebulostoreEnvironmentPreparator implements EnvironmentPreparator<E
     for (Environment env : envs) {
       try {
         env.removeFile(LIB_DIRECTORY);
+        env.removeFile(KEYS_DIRECTORY);
         env.removeFile(JAR_FILE);
         env.removeFile(RESOURCES_DIRECTORY);
       } catch (InterruptedException | IOException e) {
@@ -110,12 +117,14 @@ public class NebulostoreEnvironmentPreparator implements EnvironmentPreparator<E
       try {
         XMLConfiguration xmlConfig = prepareXMLAndEnvConfiguration(env, zeroEnvironment);
         xmlConfig.save(XML_CONFIG_TARGET_PATH.toFile());
+        prepareCryptographicKeys();
         String targetPath = ".";
         env.copyFilesFromLocalDisk(RESOURCES_PATH, targetPath);
+        env.copyFilesFromLocalDisk(LOCAL_KEYS_PATH.toAbsolutePath(), targetPath);
         env.copyFilesFromLocalDisk(LOCAL_JAR_PATH.toAbsolutePath(), targetPath);
         env.copyFilesFromLocalDisk(LOCAL_LIBS_PATH.toAbsolutePath(), targetPath);
         preparedEnvs.add(env);
-      } catch (ConfigurationException | IOException e) {
+      } catch (ConfigurationException | IOException | InterruptedException e) {
         cleanAll(preparedEnvs);
         LOGGER.error("prepareEnvironments() -> Could not prepare environment.", e);
         throw new IOException(e);
@@ -139,6 +148,33 @@ public class NebulostoreEnvironmentPreparator implements EnvironmentPreparator<E
       }
     }
     throw new NoSuchElementException("No zero environment present");
+  }
+
+  private void prepareCryptographicKeys() throws IOException, InterruptedException {
+    String privatePEM = KEYS_DIRECTORY + "private.pem";
+    Path privatePEMPath = FileSystems.getDefault().getPath(privatePEM);
+    String privateKey = KEYS_DIRECTORY + "private.key";
+    String publicKey = KEYS_DIRECTORY + "public.key";
+
+    if (!Files.isDirectory(LOCAL_KEYS_PATH)) {
+      Files.createDirectory(LOCAL_KEYS_PATH);
+    }
+    ProcessBuilder pb = new ProcessBuilder();
+    pb.command("openssl", "genrsa", "-out", privatePEM, Integer.toString(KEY_SIZE));
+    Process proc = pb.start();
+    proc.waitFor();
+
+    pb.command("openssl", "pkcs8", "-topk8", "-inform", "PEM", "-outform" , "DER", "-in",
+        privatePEM, "-out", privateKey, "-nocrypt");
+    proc = pb.start();
+    proc.waitFor();
+
+    pb.command("openssl", "rsa", "-in", privatePEM, "-pubout", "-outform", "DER", "-out",
+        publicKey);
+    proc = pb.start();
+    proc.waitFor();
+
+    Files.delete(privatePEMPath);
   }
 
   private XMLConfiguration prepareXMLAndEnvConfiguration(Environment env,
