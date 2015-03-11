@@ -215,7 +215,7 @@
         </data-file>
     </systest>
     <rest-api>
-        <enabled type="Boolean">false</enabled>
+        <enabled type="Boolean">true</enabled>
         <server-config>
             <host>http://0.0.0.0</host>
             <port type="Integer">14000</port>

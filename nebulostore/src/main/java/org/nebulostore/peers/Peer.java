@@ -139,14 +139,16 @@ public class Peer extends AbstractPeer {
     msgReceivingCheckerThread_ = new Thread(msgReceivingChecker_, "Messages receiving checker");
   }
 
+  @Override
   public void quitNebuloStore() {
+    logger_.info("Started quitNebuloStore().");
     if (msgReceivingChecker_ != null) {
       msgReceivingChecker_.getInQueue().add(new EndModuleMessage());
     }
     if (asyncMessagingModule_ != null) {
       asyncMessagingModule_.getInQueue().add(new EndModuleMessage());
     }
-    if (networkInQueue_ != null) {
+    if (commPeerInQueue_ != null) {
       commPeerInQueue_.add(new EndModuleMessage());
     }
     if (dispatcherInQueue_ != null) {
@@ -155,6 +157,7 @@ public class Peer extends AbstractPeer {
     if (isRestEnabled_) {
       restModule_.shutDown();
     }
+    logger_.info("Finished quitNebuloStore().");
   }
 
   @Override

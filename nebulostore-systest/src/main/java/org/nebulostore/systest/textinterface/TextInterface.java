@@ -66,7 +66,7 @@ public final class TextInterface extends Peer implements ShellManageable {
   @Override
   public void cliLeaveLoop() {
     System.out.println("closing nebulostore");
-    quitNebuloStore();
+    super.quitNebuloStore();
     System.out.println("closing completed");
   }
 
@@ -114,6 +114,11 @@ public final class TextInterface extends Peer implements ShellManageable {
       quitNebuloStore();
       System.out.println("Done");
     }
+  }
+
+  @Override
+  public void quitNebuloStore() {
+    System.exit(0);
   }
 
   @Command(description = "Show nebulo parameters of this instance")

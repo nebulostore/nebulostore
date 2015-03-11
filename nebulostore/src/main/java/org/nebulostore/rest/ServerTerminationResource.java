@@ -7,6 +7,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.nebulostore.peers.AbstractPeer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,19 +18,19 @@ import org.slf4j.LoggerFactory;
 public class ServerTerminationResource {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ServerTerminationResource.class);
-  private final RestModule restModule_;
+  private final AbstractPeer abstractPeer_;
 
   @Inject
-  public ServerTerminationResource(RestModule restModule) {
-    this.restModule_ = restModule;
+  public ServerTerminationResource(AbstractPeer abstractPeer) {
+    this.abstractPeer_ = abstractPeer;
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response terminate() {
     LOGGER.info("Start method terminate()");
-    restModule_.shutDown();
-    LOGGER.info("End method terminate()");
+    abstractPeer_.quitNebuloStore();
+    LOGGER.info("Finished peer.quitNebulostore()");
     return Response.ok().build();
   }
 

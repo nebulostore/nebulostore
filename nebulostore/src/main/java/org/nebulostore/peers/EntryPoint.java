@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Singleton;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -127,7 +128,7 @@ public final class EntryPoint {
 
     @Override
     protected void configurePeer() {
-      bind(AbstractPeer.class).to(peerClass_);
+      bind(AbstractPeer.class).to(peerClass_).in(Singleton.class);
     }
   }
 
