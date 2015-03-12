@@ -9,6 +9,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.replicator.messages.SendObjectMessage;
 import org.nebulostore.utils.Pair;
 
@@ -45,8 +46,14 @@ public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, Se
       if (state_ == STATE.REPLICA_FETCH) {
         // State 3 - Finally got the file, return it;
         state_ = STATE.FILE_RECEIVED;
-        endWithSuccess(new Pair<EncryptedObject, Set<String>>(message.getEncryptedEntity(),
-            message.getVersions()));
+        EncryptedObject object = null;
+        try {
+          object = (EncryptedObject) decryptWithSessionKey(
+              message.getEncryptedEntity(), message.getSourceAddress());
+        } catch (CryptoException e) {
+          endWithError(new NebuloException(e));
+        }
+        endWithSuccess(new Pair<EncryptedObject, Set<String>>(object, message.getVersions()));
       } else {
         logger_.warn("SendObjectMessage received in state " + state_);
       }

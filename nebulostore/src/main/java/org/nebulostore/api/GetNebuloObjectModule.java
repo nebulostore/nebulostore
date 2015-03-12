@@ -1,15 +1,12 @@
 package org.nebulostore.api;
 
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
-
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
+import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.appcore.model.NebuloObject;
 import org.nebulostore.appcore.model.ObjectGetter;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.replicator.messages.SendObjectMessage;
 
 /**
@@ -19,15 +16,6 @@ import org.nebulostore.replicator.messages.SendObjectMessage;
 public class GetNebuloObjectModule extends GetModule<NebuloObject> implements ObjectGetter {
   private static Logger logger_ = Logger.getLogger(GetNebuloObjectModule.class);
   private final StateMachineVisitor visitor_ = new StateMachineVisitor();
-  private EncryptionAPI encryption_;
-  private String privateKeyPeerId_;
-
-  @Inject
-  public GetNebuloObjectModule(EncryptionAPI encryption,
-      @Named("PrivateKeyPeerId") String privateKeyPeerId) {
-    encryption_ = encryption;
-    privateKeyPeerId_ = privateKeyPeerId;
-  }
 
   @Override
   public NebuloObject awaitResult(int timeoutSec) throws NebuloException {
@@ -42,8 +30,9 @@ public class GetNebuloObjectModule extends GetModule<NebuloObject> implements Ob
         logger_.debug("Got object - returning");
         NebuloObject nebuloObject;
         try {
-          nebuloObject = (NebuloObject) encryption_.decrypt(
-              message.getEncryptedEntity(), privateKeyPeerId_);
+          EncryptedObject object = (EncryptedObject) decryptWithSessionKey(
+              message.getEncryptedEntity(), message.getSourceAddress());
+          nebuloObject = (NebuloObject) encryption_.decrypt(object, privateKeyPeerId_);
           nebuloObject.setSender(message.getSourceAddress());
           nebuloObject.setVersions(message.getVersions());
         } catch (CryptoException exception) {

@@ -15,6 +15,6 @@ public class OutReplicatorMessage extends ReplicatorMessage {
   }
 
   public OutReplicatorMessage(String jobId, CommAddress destAddress) {
-    super(jobId, destAddress);
+    super(jobId, null, destAddress);
   }
 }

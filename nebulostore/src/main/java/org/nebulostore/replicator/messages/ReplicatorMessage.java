@@ -16,7 +16,7 @@ public abstract class ReplicatorMessage extends CommMessage {
     super(null, destAddress);
   }
 
-  public ReplicatorMessage(String jobId, CommAddress destAddress) {
-    super(jobId, null, destAddress);
+  public ReplicatorMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress) {
+    super(jobId, sourceAddress, destAddress);
   }
 }

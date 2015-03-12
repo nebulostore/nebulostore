@@ -21,7 +21,11 @@ public abstract class InReplicatorMessage extends ReplicatorMessage {
   }
 
   public InReplicatorMessage(String jobId, CommAddress destAddress) {
-    super(jobId, destAddress);
+    super(jobId, null, destAddress);
+  }
+
+  public InReplicatorMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress) {
+    super(jobId, sourceAddress, destAddress);
   }
 
   @Inject

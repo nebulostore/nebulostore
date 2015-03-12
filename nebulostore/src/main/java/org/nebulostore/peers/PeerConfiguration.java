@@ -39,6 +39,7 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.crypto.RSABasedEncryptionAPI;
+import org.nebulostore.crypto.session.InitSessionContext;
 import org.nebulostore.networkmonitor.ConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.DefaultConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -97,6 +98,7 @@ public class PeerConfiguration extends GenericConfiguration {
     configurePeer();
     configureReplicator(appKey);
     configureRestModule();
+    configureSessionNegotiator();
   }
 
   protected void configureEncryption() {
@@ -105,6 +107,13 @@ public class PeerConfiguration extends GenericConfiguration {
         Names.named("PublicKeyPeerId")).toInstance(CryptoUtils.getRandomString());
     bind(String.class).annotatedWith(
         Names.named("PrivateKeyPeerId")).toInstance(CryptoUtils.getRandomString());
+  }
+
+  private void configureSessionNegotiator() {
+    bind(InitSessionContext.class).annotatedWith(
+        Names.named("BrokerInitSessionContext")).toInstance(new InitSessionContext());
+    bind(InitSessionContext.class).annotatedWith(
+        Names.named("GetObjectInitSessionContext")).toInstance(new InitSessionContext());
   }
 
   private void configureReplicator(AppKey appKey) {

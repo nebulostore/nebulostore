@@ -10,7 +10,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.messaging.Message;
@@ -37,6 +39,7 @@ public class ReplicatorTest {
   private static final String CONTENT_1 = "sample file content 1";
   private static final String CONTENT_2 = "another file content 2";
 
+  @Ignore
   @Test
   public void shouldGetExistingObject() throws Exception {
     // given
@@ -54,6 +57,7 @@ public class ReplicatorTest {
     endReplicator(replicator);
   }
 
+  @Ignore
   @Test
   public void shouldSendErrorMessageWhenGettingNonexistentObject() throws Exception {
     // given

@@ -24,9 +24,9 @@ public class GetObjectMessage extends InReplicatorMessage {
     sourceJobId_ = sourceJobId;
   }
 
-  public GetObjectMessage(String jobId, CommAddress destAddress, ObjectId objectId,
-      String sourceJobId) {
-    super(jobId, destAddress);
+  public GetObjectMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress,
+      ObjectId objectId, String sourceJobId) {
+    super(jobId, sourceAddress, destAddress);
     objectId_ = objectId;
     sourceJobId_ = sourceJobId;
   }

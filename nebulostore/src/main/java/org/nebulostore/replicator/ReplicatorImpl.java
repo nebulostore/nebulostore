@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.crypto.SecretKey;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -16,6 +18,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+
 import org.apache.log4j.Logger;
 import org.nebulostore.api.GetEncryptedObjectModule;
 import org.nebulostore.appcore.addressing.ObjectId;
@@ -23,12 +26,19 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.model.EncryptedObject;
+import org.nebulostore.broker.messages.CheckContractMessage;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.session.message.GetSessionKeyGetObjectMessage;
+import org.nebulostore.crypto.session.message.GetSessionKeyResponseMessage;
+import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
 import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.core.DeleteObjectException;
 import org.nebulostore.replicator.core.Replicator;
 import org.nebulostore.replicator.core.TransactionAnswer;
+import org.nebulostore.replicator.messages.CheckContractResultMessage;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
 import org.nebulostore.replicator.messages.DeleteObjectMessage;
 import org.nebulostore.replicator.messages.GetObjectMessage;
@@ -65,9 +75,22 @@ public class ReplicatorImpl extends Replicator {
 
   private final KeyValueStore<byte[]> store_;
   private final MessageVisitor visitor_ = new ReplicatorVisitor();
+  private EncryptionAPI encryptionAPI_;
+  private Map<CommAddress, GetObjectMessage> workingMessages_ =
+        new HashMap<CommAddress, GetObjectMessage>();
+  private Map<CommAddress, SecretKey> workingSecretKeys_ =
+      new HashMap<CommAddress, SecretKey>();
+
 
   @Inject
-  public ReplicatorImpl(@Named("ReplicatorStore") KeyValueStore<byte[]> store) {
+  public ReplicatorImpl(@Named("ReplicatorStore") KeyValueStore<byte[]> store,
+                        EncryptionAPI encryptionAPI) {
+    super(getOrCreateStoredObjectsIndex(store));
+    store_ = store;
+    encryptionAPI_ = encryptionAPI;
+  }
+
+  public ReplicatorImpl(KeyValueStore<byte[]> store) {
     super(getOrCreateStoredObjectsIndex(store));
     store_ = store;
   }
@@ -185,26 +208,56 @@ public class ReplicatorImpl extends Replicator {
     }
 
     public void visit(GetObjectMessage message) {
-      logger_.debug("GetObjectMessage with objectID = " + message.getObjectId());
-      EncryptedObject enc = getObject(message.getObjectId());
-      Set<String> versions;
-      try {
-        versions = getPreviousVersions(message.getObjectId());
-      } catch (IOException e) {
-        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
-            message.getSourceAddress(), "Unable to retrieve object.");
+      CommAddress peerAddress = message.getSourceAddress();
+      workingMessages_.put(peerAddress, message);
+      outQueue_.add(new GetSessionKeyGetObjectMessage(peerAddress, getJobId()));
+    }
+
+    public void visit(GetSessionKeyResponseMessage message) {
+      workingSecretKeys_.put(message.getPeerAddress(), message.getSessionKey());
+      outQueue_.add(new CheckContractMessage(getJobId(), message.getPeerAddress()));
+    }
+
+    public void visit(InitSessionEndWithErrorMessage message) {
+      logger_.debug("InitSessionEndWithErrorMessage " + message.getErrorMessage());
+      GetObjectMessage getObjectMessage = workingMessages_.remove(message.getPeerAddress());
+      dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
+          message.getPeerAddress(), "Unable to retrieve object.");
+    }
+
+    public void visit(CheckContractResultMessage message) {
+      GetObjectMessage getObjectMessage = workingMessages_.remove(message.getPeerAddress());
+      CommAddress peerAddress = getObjectMessage.getSourceAddress();
+      SecretKey sessionKey = workingSecretKeys_.remove(message.getPeerAddress());
+      logger_.debug("CheckContractResultMessage Peer " + peerAddress);
+      if (!message.getResult()) {
+        dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
+            peerAddress, "Unable to retrieve object.");
         return;
       }
 
-      if (enc == null) {
-        logger_.debug("Could not retrieve given object. Dying with error.");
-        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
-            message.getSourceAddress(), "Unable to retrieve object.");
-      } else {
-        networkQueue_.add(new SendObjectMessage(message.getSourceJobId(),
-            message.getSourceAddress(), enc, versions));
-        endJobModule();
+      EncryptedObject enc = null;
+      try {
+        enc = encryptionAPI_.encryptWithSessionKey(
+            getObject(getObjectMessage.getObjectId()), sessionKey);
+      } catch (NullPointerException | CryptoException e) {
+        dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
+            peerAddress, "Unable to retrieve object.");
+        return;
+
       }
+      Set<String> versions;
+      try {
+        versions = getPreviousVersions(getObjectMessage.getObjectId());
+      } catch (IOException e) {
+        dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
+            peerAddress, "Unable to retrieve object.");
+        return;
+      }
+
+      networkQueue_.add(new SendObjectMessage(getObjectMessage.getSourceJobId(),
+          peerAddress, enc, versions));
+      endJobModule();
     }
 
     public void visit(DeleteObjectMessage message) {
@@ -366,12 +419,12 @@ public class ReplicatorImpl extends Replicator {
    * @return Encrypted object or null if and only if object can't be read from disk(either because
    * it wasn't stored or there was a problem reading file).
    */
-  public EncryptedObject getObject(ObjectId objectId) {
+  private EncryptedObject getObject(ObjectId objectId) {
     logger_.debug("getObject with objectID = " + objectId);
     byte[] bytes = store_.get(objectId.toString());
 
     if (bytes == null) {
-      return null;
+      throw new NullPointerException();
     } else {
       return new EncryptedObject(bytes);
     }

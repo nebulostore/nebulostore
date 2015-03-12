@@ -1,9 +1,14 @@
 package org.nebulostore.api;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import javax.crypto.SecretKey;
+
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.Metadata;
@@ -13,9 +18,16 @@ import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
+import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.appcore.modules.ReturningJobModule;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.session.InitSessionNegotiatorGetObjectModule;
+import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
+import org.nebulostore.crypto.session.message.InitSessionEndMessage;
+import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
@@ -42,10 +54,23 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
   protected NebuloAddress address_;
   protected CommAddress replicaAddress_;
   protected Timer timer_;
+  protected EncryptionAPI encryption_;
+  protected CommAddress myAddress_;
+
+  protected String privateKeyPeerId_;
+  protected Map<CommAddress, SecretKey> sessionKeys_ = new HashMap<CommAddress, SecretKey>();
+
+
 
   @Inject
-  public void setTimer(Timer timer) {
+  public void setDependencies(CommAddress myAddress,
+                              Timer timer,
+                              EncryptionAPI encryptionAPI,
+                              @Named("PrivateKeyPeerId") String privateKeyPeerId) {
+    myAddress_ = myAddress;
     timer_ = timer;
+    encryption_ = encryptionAPI;
+    privateKeyPeerId_ = privateKeyPeerId;
   }
 
   public void fetchObject(NebuloAddress address, CommAddress replicaAddress) {
@@ -131,8 +156,7 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
         CommAddress replicator = replicationGroupSet_.first();
         replicationGroupSet_.remove(replicator);
         logger_.debug("Querying replica (" + replicator + ")");
-        networkQueue_.add(new GetObjectMessage(CryptoUtils.getRandomId().toString(),
-            replicator, address_.getObjectId(), jobId_));
+        startSessionAgreement(replicator);
         timer_.schedule(jobId_, REPLICA_WAIT_MILLIS, STATE.REPLICA_FETCH.name());
       }
     }
@@ -155,9 +179,32 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       }
     }
 
+    public void visit(InitSessionEndMessage message) {
+      logger_.debug("Process " + message);
+      sessionKeys_.put(message.getPeerAddress(), message.getSessionKey());
+      networkQueue_.add(new GetObjectMessage(CryptoUtils.getRandomId().toString(),
+          myAddress_, message.getPeerAddress(), address_.getObjectId(), jobId_));
+    }
+
+    public void visit(InitSessionEndWithErrorMessage message) {
+      logger_.debug("Process InitSessionEndWithErrorMessage " + message);
+    }
+
     protected void incorrectState(String stateName, Message message) {
       logger_.warn(message.getClass().getSimpleName() + " received in state " + stateName);
     }
+
+    protected EncryptedObject decryptWithSessionKey(EncryptedObject cipher, CommAddress peerAddress)
+        throws CryptoException {
+      return (EncryptedObject) encryption_.decryptWithSessionKey(cipher,
+          sessionKeys_.remove(peerAddress));
+    }
+  }
+
+  private void startSessionAgreement(CommAddress replicator) {
+    InitSessionNegotiatorModule initSessionNegotiatorModule =
+        new InitSessionNegotiatorGetObjectModule(replicator, getJobId());
+    outQueue_.add(new JobInitMessage(initSessionNegotiatorModule));
   }
 
 }
