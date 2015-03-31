@@ -92,6 +92,11 @@ public final class AsyncMessagesContext {
    */
   private final Set<CommAddress> recipientsChangesLocks_ = new HashSet<>();
 
+  /**
+   * Set containing addresses of owners of groups for which we are currently retrieving messages.
+   */
+  private final Set<CommAddress> groupLocks_ = new HashSet<>();
+
   private final CommAddress myAddress_;
 
   @Inject
@@ -466,7 +471,7 @@ public final class AsyncMessagesContext {
    */
   public synchronized void storeAsynchronousMessage(CommAddress peer, AsynchronousMessage message) {
     synchroClocks_.get(peer).tick();
-    VectorClockValue messageTimestamp = synchroClocks_.get(peer);
+    VectorClockValue messageTimestamp = synchroClocks_.get(peer).getValueCopy();
     if (recipients_.contains(peer)) {
       logger_.debug("Storing message: " + message + " for peer: " + peer + " with timestamp " +
           messageTimestamp);
@@ -517,5 +522,17 @@ public final class AsyncMessagesContext {
     synchroClocks_.remove(recipient);
     setClearTimestamps_.remove(recipient);
     recipientsSetVersion_++;
+  }
+
+  public synchronized boolean tryLockGroup(CommAddress address) {
+    if (groupLocks_.contains(address)) {
+      return false;
+    }
+    groupLocks_.add(address);
+    return true;
+  }
+
+  public synchronized void unlockGroup(CommAddress address) {
+    groupLocks_.remove(address);
   }
 }

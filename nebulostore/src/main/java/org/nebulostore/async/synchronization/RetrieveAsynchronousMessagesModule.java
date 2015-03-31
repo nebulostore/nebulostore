@@ -77,6 +77,11 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
     private final Set<CommAddress> waitingForMessages_ = new HashSet<>();
 
     public void visit(JobInitMessage message) {
+      if (!context_.tryLockGroup(synchroGroupOwner_)) {
+        timer_.cancelTimer();
+        endJobModule();
+        return;
+      }
       logger_.debug("Starting " + RetrieveAsynchronousMessagesModule.class + " for " +
           synchroGroupOwner_ + " with synchro-group: " + synchroGroup_);
       timer_.schedule(jobId_, INSTANCE_TIMEOUT);
@@ -158,7 +163,7 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
       logger_.warn("Timeout in RetrieveAsynchronousMessagesModule.");
       logger_.debug(waitingForMessages_.size() + " get requests were not finished");
       handleReceivedMessages();
-      endJobModule();
+      finishModule();
     }
 
     public void visit(ErrorCommMessage message) {
@@ -198,6 +203,7 @@ public class RetrieveAsynchronousMessagesModule extends JobModule {
     }
 
     private void finishModule() {
+      context_.unlockGroup(synchroGroupOwner_);
       timer_.cancelTimer();
       endJobModule();
     }
