@@ -13,6 +13,7 @@ public class GetObjectMessage extends InReplicatorMessage {
 
   private final ObjectId objectId_;
   private final String sourceJobId_;
+  private String sessionId_;
 
   public ObjectId getObjectId() {
     return objectId_;
@@ -25,13 +26,19 @@ public class GetObjectMessage extends InReplicatorMessage {
   }
 
   public GetObjectMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress,
-      ObjectId objectId, String sourceJobId) {
+      ObjectId objectId, String sourceJobId, String sessionId) {
     super(jobId, sourceAddress, destAddress);
     objectId_ = objectId;
     sourceJobId_ = sourceJobId;
+    sessionId_ = sessionId;
   }
 
   public String getSourceJobId() {
     return sourceJobId_;
   }
+
+  public String getSessionId() {
+    return sessionId_;
+  }
+
 }

@@ -10,17 +10,23 @@ import org.nebulostore.communication.naming.CommAddress;
 public class OfferReplyMessage extends BrokerMessage {
   private static final long serialVersionUID = -6854062479094405282L;
   private EncryptedObject encryptedContract_;
+  private String sessionId_;
   private boolean result_;
 
   public OfferReplyMessage(String jobId, CommAddress destAddress,
-      EncryptedObject encryptedContract, boolean result) {
+      EncryptedObject encryptedContract, String sessionId, boolean result) {
     super(jobId, destAddress);
     encryptedContract_ = encryptedContract;
+    sessionId_ = sessionId;
     result_ = result;
   }
 
   public boolean getResult() {
     return result_;
+  }
+
+  public String getSessionId() {
+    return sessionId_;
   }
 
   public EncryptedObject getEncryptedContract() {

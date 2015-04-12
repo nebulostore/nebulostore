@@ -25,9 +25,8 @@ import org.nebulostore.broker.messages.OfferReplyMessage;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.session.InitSessionNegotiatorBrokerModule;
 import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
-import org.nebulostore.crypto.session.message.GetSessionKeyBrokerMessage;
+import org.nebulostore.crypto.session.message.GetSessionKeyMessage;
 import org.nebulostore.crypto.session.message.GetSessionKeyResponseMessage;
 import org.nebulostore.crypto.session.message.InitSessionEndMessage;
 import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
@@ -44,9 +43,9 @@ import org.nebulostore.timer.Timer;
 public class ValuationBasedBroker extends Broker {
   private static Logger logger_ = Logger.getLogger(ValuationBasedBroker.class);
   private static final String CONFIGURATION_PREFIX = "broker.";
-  private Map<CommAddress, SecretKey> sessionKeys_ = new HashMap<CommAddress, SecretKey>();
-  private Map<CommAddress, EncryptedObject> contractOffer_ =
-      new HashMap<CommAddress, EncryptedObject>();
+  private Map<String, SecretKey> sessionKeys_ = new HashMap<String, SecretKey>();
+  private Map<String, EncryptedObject> contractOffer_ =
+      new HashMap<String, EncryptedObject>();
 
   public ValuationBasedBroker() {
   }
@@ -159,12 +158,13 @@ public class ValuationBasedBroker extends Broker {
       logger_.debug("Process " + message);
       CommAddress peerAddress = message.getPeerAddress();
       SecretKey sessionKey = message.getSessionKey();
-      sessionKeys_.put(peerAddress, sessionKey);
+      sessionKeys_.put(message.getSessionId(), sessionKey);
       try {
         EncryptedObject offer = encryptionAPI_.encryptWithSessionKey(message.getData(), sessionKey);
-        networkQueue_.add(new ContractOfferMessage(getJobId(), peerAddress, offer));
+        networkQueue_.add(new ContractOfferMessage(getJobId(), peerAddress, offer,
+            message.getSessionId()));
       } catch (CryptoException e) {
-        clearInitSessionVariables(peerAddress);
+        clearInitSessionVariables(message.getSessionId());
       }
     }
 
@@ -173,9 +173,8 @@ public class ValuationBasedBroker extends Broker {
     }
 
     public void visit(OfferReplyMessage message) {
-      CommAddress peerAddress = message.getSourceAddress();
       Contract contract = null;
-      SecretKey secretKey = sessionKeys_.remove(peerAddress);
+      SecretKey secretKey = sessionKeys_.remove(message.getSessionId());
       try {
         contract = (Contract)
             encryptionAPI_.decryptWithSessionKey(message.getEncryptedContract(), secretKey);
@@ -203,35 +202,37 @@ public class ValuationBasedBroker extends Broker {
 
     public void visit(ContractOfferMessage message) {
       CommAddress peerAddress = message.getSourceAddress();
-      contractOffer_.put(peerAddress, message.getEncryptedContract());
-      outQueue_.add(new GetSessionKeyBrokerMessage(peerAddress, getJobId()));
+      String sessionId = message.getSessionId();
+      contractOffer_.put(sessionId, message.getEncryptedContract());
+      outQueue_.add(new GetSessionKeyMessage(peerAddress, getJobId(), sessionId));
     }
 
     public void visit(GetSessionKeyResponseMessage message) {
       CommAddress peerAddress = message.getPeerAddress();
       ContractsSet contracts = context_.acquireReadAccessToContracts();
+      String sessionId = message.getSessionId();
       OfferResponse response;
       Contract offer = null;
       EncryptedObject encryptedOffer = null;
       try {
         offer = (Contract) encryptionAPI_.decryptWithSessionKey(
-            contractOffer_.remove(peerAddress), message.getSessionKey());
+            contractOffer_.remove(sessionId), message.getSessionKey());
         offer.toLocalAndRemoteSwapped();
         encryptedOffer = encryptionAPI_.encryptWithSessionKey(offer, message.getSessionKey());
       } catch (CryptoException e) {
         logger_.error(e.getMessage(), e);
         context_.disposeReadAccessToContracts();
         networkQueue_.add(new OfferReplyMessage(getJobId(), peerAddress,
-            encryptedOffer, false));
+            encryptedOffer, sessionId, false));
         return;
       } finally {
-        clearInitSessionVariables(peerAddress);
+        clearInitSessionVariables(sessionId);
       }
       if (context_.getContractsRealSize() > spaceContributedKb_ ||
           context_.getNumberOfContractsWith(offer.getPeer()) >=
           maxContractsMultiplicity_) {
         networkQueue_.add(new OfferReplyMessage(getJobId(), peerAddress,
-            encryptedOffer, false));
+            encryptedOffer, sessionId, false));
         context_.disposeReadAccessToContracts();
         return;
       }
@@ -244,7 +245,7 @@ public class ValuationBasedBroker extends Broker {
         logger_.debug("Concluding contract: " + offer);
         context_.addContract(offer);
         networkQueue_.add(new OfferReplyMessage(getJobId(), peerAddress,
-            encryptedOffer, true));
+            encryptedOffer, sessionId, true));
         for (Contract contract : response.contractsToBreak_) {
           sendBreakContractMessage(contract);
         }
@@ -255,7 +256,7 @@ public class ValuationBasedBroker extends Broker {
         }
       } else {
         networkQueue_.add(new OfferReplyMessage(getJobId(), peerAddress,
-            encryptedOffer, false));
+            encryptedOffer, sessionId, false));
       }
     }
 
@@ -280,13 +281,13 @@ public class ValuationBasedBroker extends Broker {
 
   private void startSessionAgreement(Contract offer) {
     InitSessionNegotiatorModule initSessionNegotiatorModule =
-        new InitSessionNegotiatorBrokerModule(offer.getPeer(), getJobId(), offer);
+        new InitSessionNegotiatorModule(offer.getPeer(), getJobId(), offer);
     outQueue_.add(new JobInitMessage(initSessionNegotiatorModule));
   }
 
-  private void clearInitSessionVariables(CommAddress peerAddress) {
-    sessionKeys_.remove(peerAddress);
-    contractOffer_.remove(peerAddress);
+  private void clearInitSessionVariables(String sessionId) {
+    sessionKeys_.remove(sessionId);
+    contractOffer_.remove(sessionId);
   }
 
   private void sendBreakContractMessage(Contract contract) {

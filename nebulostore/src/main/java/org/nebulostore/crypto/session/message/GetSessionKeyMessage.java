@@ -3,20 +3,23 @@ package org.nebulostore.crypto.session.message;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
 
 /**
  * @author lukaszsiczek
  */
-public abstract class GetSessionKeyMessage extends Message {
+public class GetSessionKeyMessage extends Message {
 
   private static final long serialVersionUID = -7818319991343348884L;
 
   private CommAddress peerAddress_;
   private String sourceJobId_;
+  private String sessionId_;
 
-  public GetSessionKeyMessage(CommAddress peerAddress, String sourceJobId) {
+  public GetSessionKeyMessage(CommAddress peerAddress, String sourceJobId, String sessionId) {
     peerAddress_ = peerAddress;
     sourceJobId_ = sourceJobId;
+    sessionId_ = sessionId;
   }
 
   public CommAddress getPeerAddress() {
@@ -27,7 +30,13 @@ public abstract class GetSessionKeyMessage extends Message {
     return sourceJobId_;
   }
 
+  public String getSessionId() {
+    return sessionId_;
+  }
+
   @Override
-  public abstract JobModule getHandler();
+  public JobModule getHandler() {
+    return new InitSessionNegotiatorModule();
+  }
 
 }

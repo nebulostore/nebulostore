@@ -11,8 +11,8 @@ public class InitSessionResponseMessage extends SessionCryptoMessage {
   private static final long serialVersionUID = -5774260936905244967L;
 
   public InitSessionResponseMessage(String jobId, CommAddress sourceAddress,
-      CommAddress destAddress, String sourceJobId, EncryptedObject data) {
-    super(jobId, sourceAddress, destAddress, sourceJobId, data);
+      CommAddress destAddress, String sessionId, String sourceJobId, EncryptedObject data) {
+    super(jobId, sourceAddress, destAddress, sessionId, sourceJobId, data);
   }
 
 }

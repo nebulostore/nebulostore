@@ -66,7 +66,7 @@ public class AlwaysAcceptingBroker extends Broker {
           message.getSourceAddress());
       // TODO(bolek): Should we accept same offer twice?
       networkQueue_.add(new OfferReplyMessage(message.getId(), message.getSourceAddress(),
-          message.getEncryptedContract(), true));
+          message.getEncryptedContract(), null, true));
     }
 
     public void visit(OfferReplyMessage message) throws CryptoException {

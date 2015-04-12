@@ -31,7 +31,7 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
-import org.nebulostore.crypto.session.message.GetSessionKeyGetObjectMessage;
+import org.nebulostore.crypto.session.message.GetSessionKeyMessage;
 import org.nebulostore.crypto.session.message.GetSessionKeyResponseMessage;
 import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
 import org.nebulostore.persistence.KeyValueStore;
@@ -76,10 +76,10 @@ public class ReplicatorImpl extends Replicator {
   private final KeyValueStore<byte[]> store_;
   private final MessageVisitor visitor_ = new ReplicatorVisitor();
   private EncryptionAPI encryptionAPI_;
-  private Map<CommAddress, GetObjectMessage> workingMessages_ =
-        new HashMap<CommAddress, GetObjectMessage>();
-  private Map<CommAddress, SecretKey> workingSecretKeys_ =
-      new HashMap<CommAddress, SecretKey>();
+  private Map<String, GetObjectMessage> workingMessages_ =
+        new HashMap<String, GetObjectMessage>();
+  private Map<String, SecretKey> workingSecretKeys_ =
+      new HashMap<String, SecretKey>();
 
 
   @Inject
@@ -209,13 +209,15 @@ public class ReplicatorImpl extends Replicator {
 
     public void visit(GetObjectMessage message) {
       CommAddress peerAddress = message.getSourceAddress();
-      workingMessages_.put(peerAddress, message);
-      outQueue_.add(new GetSessionKeyGetObjectMessage(peerAddress, getJobId()));
+      workingMessages_.put(message.getSessionId(), message);
+      outQueue_.add(new GetSessionKeyMessage(peerAddress, getJobId(),
+          message.getSessionId()));
     }
 
     public void visit(GetSessionKeyResponseMessage message) {
-      workingSecretKeys_.put(message.getPeerAddress(), message.getSessionKey());
-      outQueue_.add(new CheckContractMessage(getJobId(), message.getPeerAddress()));
+      workingSecretKeys_.put(message.getSessionId(), message.getSessionKey());
+      outQueue_.add(new CheckContractMessage(getJobId(), message.getPeerAddress(),
+          message.getSessionId()));
     }
 
     public void visit(InitSessionEndWithErrorMessage message) {
@@ -226,9 +228,10 @@ public class ReplicatorImpl extends Replicator {
     }
 
     public void visit(CheckContractResultMessage message) {
-      GetObjectMessage getObjectMessage = workingMessages_.remove(message.getPeerAddress());
+      String sessionId = message.getSessionId();
+      GetObjectMessage getObjectMessage = workingMessages_.remove(sessionId);
       CommAddress peerAddress = getObjectMessage.getSourceAddress();
-      SecretKey sessionKey = workingSecretKeys_.remove(message.getPeerAddress());
+      SecretKey sessionKey = workingSecretKeys_.remove(sessionId);
       logger_.debug("CheckContractResultMessage Peer " + peerAddress);
       if (!message.getResult()) {
         dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
@@ -256,7 +259,7 @@ public class ReplicatorImpl extends Replicator {
       }
 
       networkQueue_.add(new SendObjectMessage(getObjectMessage.getSourceJobId(),
-          peerAddress, enc, versions));
+          peerAddress, sessionId, enc, versions));
       endJobModule();
     }
 

@@ -15,6 +15,7 @@ public class SendObjectMessage extends OutReplicatorMessage {
   private static final long serialVersionUID = 5852937000391705084L;
 
   private final EncryptedObject encryptedEntity_;
+  private String sessionId_;
 
   private final Set<String> versions_;
 
@@ -26,10 +27,11 @@ public class SendObjectMessage extends OutReplicatorMessage {
     versions_ = c.deepClone(versions);
   }
 
-  public SendObjectMessage(String jobId, CommAddress destAddress, EncryptedObject encryptedObject,
-      Set<String> versions) {
+  public SendObjectMessage(String jobId, CommAddress destAddress, String sessionId,
+      EncryptedObject encryptedObject, Set<String> versions) {
     super(jobId, destAddress);
     encryptedEntity_ = encryptedObject;
+    sessionId_ = sessionId;
     Cloner c = new Cloner();
     versions_ = c.deepClone(versions);
   }
@@ -40,5 +42,9 @@ public class SendObjectMessage extends OutReplicatorMessage {
 
   public Set<String> getVersions() {
     return versions_;
+  }
+
+  public String getSessionId() {
+    return sessionId_;
   }
 }

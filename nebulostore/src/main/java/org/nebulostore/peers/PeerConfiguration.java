@@ -110,10 +110,7 @@ public class PeerConfiguration extends GenericConfiguration {
   }
 
   private void configureSessionNegotiator() {
-    bind(InitSessionContext.class).annotatedWith(
-        Names.named("BrokerInitSessionContext")).toInstance(new InitSessionContext());
-    bind(InitSessionContext.class).annotatedWith(
-        Names.named("GetObjectInitSessionContext")).toInstance(new InitSessionContext());
+    bind(InitSessionContext.class).in(Scopes.SINGLETON);
   }
 
   private void configureReplicator(AppKey appKey) {

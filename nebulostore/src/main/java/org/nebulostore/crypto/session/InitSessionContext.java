@@ -6,7 +6,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoUtils;
 
 /**
  * @author lukaszsiczek
@@ -17,8 +17,8 @@ public class InitSessionContext {
   private final Lock readLock_ = readWriteLock_.readLock();
   private final Lock writeLock_ = readWriteLock_.writeLock();
 
-  private final Map<CommAddress, InitSessionObject> workingSessions_ =
-      new HashMap<CommAddress, InitSessionObject>();
+  private final Map<String, InitSessionObject> workingSessions_ =
+      new HashMap<String, InitSessionObject>();
 
   public void acquireWriteLock() {
     writeLock_.lock();
@@ -36,27 +36,33 @@ public class InitSessionContext {
     readLock_.unlock();
   }
 
-  public void tryAllocFreeSlot(CommAddress commAddress, InitSessionObject initSessionObject) {
-    if (workingSessions_.containsKey(commAddress)) {
-      throw new SessionRuntimeException("InitSessionContext already contains " +
-          "InitSessionObject for peer " + commAddress);
-    }
-    workingSessions_.put(commAddress, initSessionObject);
+  public String tryAllocFreeSlot(InitSessionObject initSessionObject) {
+    String id = CryptoUtils.getRandomString();
+    allocFreeSlot(id, initSessionObject);
+    return id;
   }
 
-  public InitSessionObject tryGetInitSessionObject(CommAddress peerAddress) {
-    InitSessionObject initSessionObject = workingSessions_.get(peerAddress);
+  public void allocFreeSlot(String id, InitSessionObject initSessionObject) {
+    if (workingSessions_.containsKey(id)) {
+      throw new SessionRuntimeException("InitSessionContext already contains " +
+          "InitSessionObject for id " + id);
+    }
+    initSessionObject.setSessionId(id);
+    workingSessions_.put(id, initSessionObject);
+  }
+
+  public InitSessionObject tryGetInitSessionObject(String id) {
+    InitSessionObject initSessionObject = workingSessions_.get(id);
     if (initSessionObject == null) {
-      throw new SessionRuntimeException("Unable to get InitSessionObject for peer " + peerAddress);
+      throw new SessionRuntimeException("Unable to get InitSessionObject for id " + id);
     }
     return initSessionObject;
   }
 
-  public InitSessionObject tryRemoveInitSessionObject(CommAddress peerAddress) {
-    InitSessionObject initSessionObject = workingSessions_.remove(peerAddress);
+  public InitSessionObject tryRemoveInitSessionObject(String id) {
+    InitSessionObject initSessionObject = workingSessions_.remove(id);
     if (initSessionObject == null) {
-      throw new SessionRuntimeException("Unable to remove InitSessionObject for peer " +
-          peerAddress);
+      throw new SessionRuntimeException("Unable to remove InitSessionObject for id " + id);
     }
     return initSessionObject;
   }

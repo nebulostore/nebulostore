@@ -13,18 +13,21 @@ public abstract class SessionCryptoMessage extends CommMessage {
 
   private EncryptedObject data_;
   private String sourceJobId_;
+  private String sessionId_;
 
   public SessionCryptoMessage(String jobId, CommAddress sourceAddress, CommAddress destAddress,
-      String sourceJobId, EncryptedObject data) {
+      String sessionId, String sourceJobId, EncryptedObject data) {
     super(jobId, sourceAddress, destAddress);
     sourceJobId_ = sourceJobId;
+    sessionId_ = sessionId;
     data_ = data;
   }
 
   public SessionCryptoMessage(CommAddress sourceAddress, CommAddress destAddress,
-      String sourceJobId, EncryptedObject data) {
+      String sessionId, String sourceJobId, EncryptedObject data) {
     super(sourceAddress, destAddress);
     sourceJobId_ = sourceJobId;
+    sessionId_ = sessionId;
     data_ = data;
   }
 
@@ -34,5 +37,14 @@ public abstract class SessionCryptoMessage extends CommMessage {
 
   public String getSourceJobId() {
     return sourceJobId_;
+  }
+
+  public String getSessionId() {
+    return sessionId_;
+  }
+
+  public String toString() {
+    return "{SessionCryptoMessage: peerAddress = " + getDestinationAddress() +
+        "; sessionId = " + sessionId_ + "}";
   }
 }

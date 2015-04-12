@@ -13,7 +13,7 @@ public class InitSessionErrorMessage extends SessionCryptoMessage {
 
   public InitSessionErrorMessage(String jobId, CommAddress sourceAddress,
       CommAddress destAddress, String errorMessage) {
-    super(jobId, sourceAddress, destAddress, null, null);
+    super(jobId, sourceAddress, destAddress, null, null, null);
     errorMessage_ = errorMessage;
   }
 

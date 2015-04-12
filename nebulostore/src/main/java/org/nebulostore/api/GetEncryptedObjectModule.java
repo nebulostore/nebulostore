@@ -49,7 +49,7 @@ public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, Se
         EncryptedObject object = null;
         try {
           object = (EncryptedObject) decryptWithSessionKey(
-              message.getEncryptedEntity(), message.getSourceAddress());
+              message.getEncryptedEntity(), message.getSessionId());
         } catch (CryptoException e) {
           endWithError(new NebuloException(e));
         }

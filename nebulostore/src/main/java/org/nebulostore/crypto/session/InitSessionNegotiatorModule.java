@@ -4,6 +4,9 @@ import java.io.Serializable;
 
 import javax.crypto.KeyAgreement;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
@@ -30,19 +33,21 @@ import org.nebulostore.utils.Pair;
 /**
  * @author lukaszsiczek
  */
-public abstract class InitSessionNegotiatorModule extends JobModule {
+public class InitSessionNegotiatorModule extends JobModule {
 
   private static final Logger LOGGER = Logger.getLogger(InitSessionNegotiatorModule.class);
 
   private enum ErrorNotificationMethod { NONE, LOCAL, REMOTE, ALL };
 
-  protected InitSessionNegotiatorModuleVisitor sessionNegotiatorModuleVisitor_;
-  protected InitSessionContext initSessionContext_;
+  private InitSessionNegotiatorModuleVisitor sessionNegotiatorModuleVisitor_ =
+      new InitSessionNegotiatorModuleVisitor();
+  private InitSessionContext initSessionContext_;
 
   private CommAddress myAddress_;
   private NetworkMonitor networkMonitor_;
   private EncryptionAPI encryptionAPI_;
   private String privateKeyPeerId_;
+  private String sessionId_;
 
   private CommAddress peerAddress_;
   private String localSourceJobId_;
@@ -50,6 +55,7 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
   private Serializable data_;
 
   public InitSessionNegotiatorModule() {
+
   }
 
   public InitSessionNegotiatorModule(CommAddress peerAddress, String sourceJobId,
@@ -59,11 +65,12 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
     data_ = data;
   }
 
-  protected void setModuleDependencies(
+  @Inject
+  public void setModuleDependencies(
       CommAddress myAddress,
       NetworkMonitor networkMonitor,
       EncryptionAPI encryptionAPI,
-      String privateKeyPeerId,
+      @Named("PrivateKeyPeerId") String privateKeyPeerId,
       InitSessionContext initSessionContext) {
     myAddress_ = myAddress;
     networkMonitor_ = networkMonitor;
@@ -72,16 +79,16 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
     initSessionContext_ = initSessionContext;
   }
 
-  protected abstract class InitSessionNegotiatorModuleVisitor extends MessageVisitor {
+  protected class InitSessionNegotiatorModuleVisitor extends MessageVisitor {
 
     public void visit(JobInitMessage message) {
       LOGGER.debug("Process JobInitMessage: " + message);
       initSessionContext_.acquireWriteLock();
       try {
-        initSessionContext_.tryAllocFreeSlot(peerAddress_,
-            new InitSessionObject(peerAddress_, localSourceJobId_, data_));
+        sessionId_ = initSessionContext_.tryAllocFreeSlot(new InitSessionObject(
+            peerAddress_, localSourceJobId_, data_));
       } catch (SessionRuntimeException e) {
-        endWithError(e, ErrorNotificationMethod.LOCAL);
+        endWithError(e, ErrorNotificationMethod.REMOTE);
         return;
       } finally {
         initSessionContext_.releaseWriteLock();
@@ -91,9 +98,9 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
         Pair<KeyAgreement, DiffieHellmanInitPackage> firstStep =
             DiffieHellmanProtocol.firstStepDHKeyAgreement();
         EncryptedObject encryptedData = encryptionAPI_.encrypt(firstStep.getSecond(), peerKeyId);
-        initSessionContext_.tryGetInitSessionObject(
-            peerAddress_).setKeyAgreement(firstStep.getFirst());
-        Message initSessionMessage = createInitMessage(myAddress_, peerAddress_,
+        initSessionContext_.tryGetInitSessionObject(sessionId_).setKeyAgreement(
+            firstStep.getFirst());
+        Message initSessionMessage = new InitSessionMessage(myAddress_, peerAddress_, sessionId_,
             getJobId(), encryptedData);
         networkQueue_.add(initSessionMessage);
       } catch (CryptoException e) {
@@ -101,16 +108,14 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
       }
     }
 
-    public abstract InitSessionMessage createInitMessage(CommAddress myAddress,
-        CommAddress peerAddress, String sourceJobId, EncryptedObject encryptedData);
-
     public void visit(InitSessionMessage message) {
       LOGGER.debug("Process InitSessionMessage: " + message);
       peerAddress_ = message.getSourceAddress();
       remoteSourceJobId_ = message.getSourceJobId();
+      sessionId_ = message.getSessionId();
       initSessionContext_.acquireWriteLock();
       try {
-        initSessionContext_.tryAllocFreeSlot(peerAddress_, new InitSessionObject(peerAddress_));
+        initSessionContext_.allocFreeSlot(sessionId_, new InitSessionObject(peerAddress_));
       } catch (SessionRuntimeException e) {
         endWithError(e, ErrorNotificationMethod.REMOTE);
         return;
@@ -123,13 +128,13 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
 
         Pair<KeyAgreement, DiffieHellmanResponsePackage> secondStep =
             DiffieHellmanProtocol.secondStepDHKeyAgreement(diffieHellmanInitPackage);
-        initSessionContext_.tryGetInitSessionObject(peerAddress_).setSessionKey(
+        initSessionContext_.tryGetInitSessionObject(sessionId_).setSessionKey(
             DiffieHellmanProtocol.fourthStepDHKeyAgreement(secondStep.getFirst()));
         String peerKeyId = networkMonitor_.getPeerPublicKeyId(peerAddress_);
         EncryptedObject encryptedData = encryptionAPI_.encrypt(secondStep.getSecond(), peerKeyId);
 
-        Message initSessionResponseMessage = new InitSessionResponseMessage(
-            message.getSourceJobId(), myAddress_, peerAddress_, getJobId(), encryptedData);
+        Message initSessionResponseMessage = new InitSessionResponseMessage(remoteSourceJobId_,
+            myAddress_, peerAddress_, sessionId_, getJobId(), encryptedData);
         networkQueue_.add(initSessionResponseMessage);
         endWithSuccess();
       } catch (CryptoException e) {
@@ -143,7 +148,7 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
       InitSessionObject initSessionObject = null;
       initSessionContext_.acquireReadLock();
       try {
-        initSessionObject = initSessionContext_.tryGetInitSessionObject(peerAddress_);
+        initSessionObject = initSessionContext_.tryGetInitSessionObject(sessionId_);
       } catch (SessionRuntimeException e) {
         endWithErrorAndClear(e, ErrorNotificationMethod.ALL);
         return;
@@ -168,15 +173,15 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
       }
     }
 
-    protected void visit(GetSessionKeyMessage message) {
+    public void visit(GetSessionKeyMessage message) {
       LOGGER.debug("Process GetSessionKeyMessage: " + message);
       peerAddress_ = message.getPeerAddress();
       localSourceJobId_ = message.getSourceJobId();
+      sessionId_ = message.getSessionId();
       InitSessionObject initSessionObject = null;
       initSessionContext_.acquireReadLock();
       try {
-        initSessionObject = initSessionContext_.
-            tryGetInitSessionObject(peerAddress_);
+        initSessionObject = initSessionContext_.tryGetInitSessionObject(sessionId_);
         if (initSessionObject.getSessionKey() == null) {
           throw new SessionRuntimeException("SessionKey null");
         }
@@ -187,7 +192,7 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
         initSessionContext_.releaseReadLock();
       }
       outQueue_.add(new GetSessionKeyResponseMessage(localSourceJobId_,
-          message.getPeerAddress(), initSessionObject.getSessionKey()));
+          message.getPeerAddress(), initSessionObject.getSessionKey(), sessionId_));
       endWithSuccessAndClear();
     }
 
@@ -197,17 +202,21 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
           ErrorNotificationMethod.LOCAL);
     }
 
-    private void removeSessionObjectFromContext(CommAddress peerAddress) {
+    private void removeSessionObjectFromContext(String id) {
       initSessionContext_.acquireWriteLock();
       try {
-        initSessionContext_.tryRemoveInitSessionObject(peerAddress);
+        initSessionContext_.tryRemoveInitSessionObject(id);
       } finally {
         initSessionContext_.releaseWriteLock();
       }
     }
 
     private void endWithErrorAndClear(Throwable e, ErrorNotificationMethod method) {
-      removeSessionObjectFromContext(peerAddress_);
+      try {
+        removeSessionObjectFromContext(sessionId_);
+      } catch (SessionRuntimeException exception) {
+        LOGGER.error(exception.getMessage(), exception);
+      }
       endWithError(e, method);
     }
 
@@ -242,7 +251,7 @@ public abstract class InitSessionNegotiatorModule extends JobModule {
     }
 
     private void endWithSuccessAndClear() {
-      removeSessionObjectFromContext(peerAddress_);
+      removeSessionObjectFromContext(sessionId_);
       endWithSuccess();
     }
 

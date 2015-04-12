@@ -40,6 +40,10 @@ public class InitSessionEndMessage extends Message {
     return sourceJobId_;
   }
 
+  public String getSessionId() {
+    return initSessionObject_.getSessionId();
+  }
+
   @Override
   public String toString() {
     return "InitSessionEndMessage{ initSessionObject_='" +

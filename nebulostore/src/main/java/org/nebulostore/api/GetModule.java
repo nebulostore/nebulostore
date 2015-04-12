@@ -24,7 +24,6 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
-import org.nebulostore.crypto.session.InitSessionNegotiatorGetObjectModule;
 import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
 import org.nebulostore.crypto.session.message.InitSessionEndMessage;
 import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
@@ -58,7 +57,7 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
   protected CommAddress myAddress_;
 
   protected String privateKeyPeerId_;
-  protected Map<CommAddress, SecretKey> sessionKeys_ = new HashMap<CommAddress, SecretKey>();
+  protected Map<String, SecretKey> sessionKeys_ = new HashMap<String, SecretKey>();
 
 
 
@@ -181,9 +180,10 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
 
     public void visit(InitSessionEndMessage message) {
       logger_.debug("Process " + message);
-      sessionKeys_.put(message.getPeerAddress(), message.getSessionKey());
+      sessionKeys_.put(message.getSessionId(), message.getSessionKey());
       networkQueue_.add(new GetObjectMessage(CryptoUtils.getRandomId().toString(),
-          myAddress_, message.getPeerAddress(), address_.getObjectId(), jobId_));
+          myAddress_, message.getPeerAddress(), address_.getObjectId(), jobId_,
+          message.getSessionId()));
     }
 
     public void visit(InitSessionEndWithErrorMessage message) {
@@ -194,16 +194,16 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       logger_.warn(message.getClass().getSimpleName() + " received in state " + stateName);
     }
 
-    protected EncryptedObject decryptWithSessionKey(EncryptedObject cipher, CommAddress peerAddress)
+    protected EncryptedObject decryptWithSessionKey(EncryptedObject cipher, String sessionId)
         throws CryptoException {
       return (EncryptedObject) encryption_.decryptWithSessionKey(cipher,
-          sessionKeys_.remove(peerAddress));
+          sessionKeys_.remove(sessionId));
     }
   }
 
   private void startSessionAgreement(CommAddress replicator) {
     InitSessionNegotiatorModule initSessionNegotiatorModule =
-        new InitSessionNegotiatorGetObjectModule(replicator, getJobId());
+        new InitSessionNegotiatorModule(replicator, getJobId(), null);
     outQueue_.add(new JobInitMessage(initSessionNegotiatorModule));
   }
 

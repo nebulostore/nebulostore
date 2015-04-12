@@ -16,14 +16,20 @@ public class CheckContractMessage extends Message {
 
   private String sourceJobId_;
   private CommAddress peerAddress_;
+  private String sessionId_;
 
-  public CheckContractMessage(String sourceJobId, CommAddress peerAddress) {
+  public CheckContractMessage(String sourceJobId, CommAddress peerAddress, String sessionId) {
     sourceJobId_ = sourceJobId;
     peerAddress_ = peerAddress;
+    sessionId_ = sessionId;
   }
 
   public CommAddress getContractPeer() {
     return peerAddress_;
+  }
+
+  public String getSessionId() {
+    return sessionId_;
   }
 
   @Override
@@ -32,6 +38,6 @@ public class CheckContractMessage extends Message {
   }
 
   public CheckContractResultMessage getResponse(boolean result) {
-    return new CheckContractResultMessage(sourceJobId_, peerAddress_, result);
+    return new CheckContractResultMessage(sourceJobId_, peerAddress_, sessionId_, result);
   }
 }

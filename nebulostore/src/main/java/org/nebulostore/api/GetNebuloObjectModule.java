@@ -31,7 +31,7 @@ public class GetNebuloObjectModule extends GetModule<NebuloObject> implements Ob
         NebuloObject nebuloObject;
         try {
           EncryptedObject object = (EncryptedObject) decryptWithSessionKey(
-              message.getEncryptedEntity(), message.getSourceAddress());
+              message.getEncryptedEntity(), message.getSessionId());
           nebuloObject = (NebuloObject) encryption_.decrypt(object, privateKeyPeerId_);
           nebuloObject.setSender(message.getSourceAddress());
           nebuloObject.setVersions(message.getVersions());

@@ -10,6 +10,7 @@ import org.nebulostore.communication.naming.CommAddress;
 public class ContractOfferMessage extends BrokerMessage {
   private static final long serialVersionUID = -578571854606199914L;
   private EncryptedObject encryptedContract_;
+  private String sessionId_;
 
   public ContractOfferMessage(String jobId, CommAddress destAddress,
       EncryptedObject encryptedContract) {
@@ -17,7 +18,18 @@ public class ContractOfferMessage extends BrokerMessage {
     encryptedContract_ = encryptedContract;
   }
 
+  public ContractOfferMessage(String jobId, CommAddress destAddress, EncryptedObject offer,
+      String sessionId) {
+    this(jobId, destAddress, offer);
+    sessionId_ = sessionId;
+  }
+
   public EncryptedObject getEncryptedContract() {
     return encryptedContract_;
   }
+
+  public String getSessionId() {
+    return sessionId_;
+  }
+
 }

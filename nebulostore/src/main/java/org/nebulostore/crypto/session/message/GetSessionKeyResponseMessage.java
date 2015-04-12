@@ -11,12 +11,14 @@ public class GetSessionKeyResponseMessage extends Message {
 
   private CommAddress peerAddress_;
   private SecretKey sessionKey_;
+  private String sessionId_;
 
   public GetSessionKeyResponseMessage(String jobId, CommAddress peerAddress,
-      SecretKey sessionKey) {
+      SecretKey sessionKey, String sessionId) {
     super(jobId);
     peerAddress_ = peerAddress;
     sessionKey_ = sessionKey;
+    sessionId_ = sessionId;
   }
 
   public CommAddress getPeerAddress() {
@@ -25,5 +27,9 @@ public class GetSessionKeyResponseMessage extends Message {
 
   public SecretKey getSessionKey() {
     return sessionKey_;
+  }
+
+  public String getSessionId() {
+    return sessionId_;
   }
 }

@@ -16,6 +16,7 @@ public class InitSessionObject implements Serializable {
 
   private Serializable data_;
   private CommAddress peerAddress_;
+  private String sessionId_;
   private String sourceJobId_;
   private transient KeyAgreement keyAgreement_;
   private SecretKey sessionKey_;
@@ -30,12 +31,20 @@ public class InitSessionObject implements Serializable {
     peerAddress_ = peerAddress;
   }
 
+  public void setSessionId(String sessionId) {
+    sessionId_ = sessionId;
+  }
+
   public void setKeyAgreement(KeyAgreement keyAgreement) {
     keyAgreement_ = keyAgreement;
   }
 
   public void setSessionKey(SecretKey sessionKey) {
     sessionKey_ = sessionKey;
+  }
+
+  public String getSessionId() {
+    return sessionId_;
   }
 
   public KeyAgreement getKeyAgreement() {
