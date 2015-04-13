@@ -34,9 +34,11 @@ import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.crypto.session.message.GetSessionKeyMessage;
 import org.nebulostore.crypto.session.message.GetSessionKeyResponseMessage;
 import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
+import org.nebulostore.crypto.session.message.SessionInnerMessageInterface;
 import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.core.DeleteObjectException;
 import org.nebulostore.replicator.core.Replicator;
+import org.nebulostore.replicator.core.StoreData;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.replicator.messages.CheckContractResultMessage;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
@@ -71,15 +73,18 @@ public class ReplicatorImpl extends Replicator {
   private static final String TMP_SUFFIX = ".tmp.";
   private static final String INDEX_ID = "object.index";
 
+  private enum ActionType { WRITE, READ }
+
   private static LockMap lockMap_ = new LockMap();
 
   private final KeyValueStore<byte[]> store_;
   private final MessageVisitor visitor_ = new ReplicatorVisitor();
   private EncryptionAPI encryptionAPI_;
-  private Map<String, GetObjectMessage> workingMessages_ =
-        new HashMap<String, GetObjectMessage>();
+  private Map<String, SessionInnerMessageInterface> workingMessages_ =
+        new HashMap<String, SessionInnerMessageInterface>();
   private Map<String, SecretKey> workingSecretKeys_ =
       new HashMap<String, SecretKey>();
+  private Map<String, ActionType> actionTypes_ = new HashMap<String, ActionType>();
 
 
   @Inject
@@ -132,19 +137,29 @@ public class ReplicatorImpl extends Replicator {
    * @author szymonmatejczyk
    */
   protected class ReplicatorVisitor extends MessageVisitor {
-    private QueryToStoreObjectMessage storeWaitingForCommit_;
+    private StoreData storeData_;
 
-    public void visit(QueryToStoreObjectMessage message) throws NebuloException {
-      logger_.debug("StoreObjectMessage received");
+    private void saveObject(SecretKey sessionKey, QueryToStoreObjectMessage message)
+        throws NebuloException {
+      EncryptedObject enc = null;
+      try {
+        enc = (EncryptedObject) encryptionAPI_.decryptWithSessionKey(
+            message.getEncryptedEntity(), sessionKey);
+      } catch (NullPointerException | CryptoException e) {
+        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+            message.getSourceAddress(), "Unable to save object.");
+        return;
 
+      }
       QueryToStoreResult result = queryToUpdateObject(message.getObjectId(),
-          message.getEncryptedEntity(), message.getPreviousVersionSHAs(), message.getId());
+          enc, message.getPreviousVersionSHAs(), message.getId());
       logger_.debug("queryToUpdateObject returned " + result.name());
       switch (result) {
         case OK:
           networkQueue_.add(new ConfirmationMessage(message.getSourceJobId(),
               message.getSourceAddress()));
-          storeWaitingForCommit_ = message;
+          storeData_ = new StoreData(message.getId(), message.getObjectId(), enc,
+              message.getPreviousVersionSHAs());
           try {
             TransactionResultMessage m = (TransactionResultMessage) inQueue_.poll(LOCK_TIMEOUT_SEC,
                 TimeUnit.SECONDS);
@@ -188,21 +203,30 @@ public class ReplicatorImpl extends Replicator {
       }
     }
 
+    public void visit(QueryToStoreObjectMessage message) throws NebuloException {
+      logger_.debug("StoreObjectMessage received");
+      CommAddress peerAddress = message.getSourceAddress();
+      workingMessages_.put(message.getSessionId(), message);
+      actionTypes_.put(message.getSessionId(), ActionType.WRITE);
+      outQueue_.add(new GetSessionKeyMessage(peerAddress, getJobId(),
+          message.getSessionId()));
+    }
+
     public void visit(TransactionResultMessage message) {
       logger_.debug("TransactionResultMessage received: " + message.getResult());
-      if (storeWaitingForCommit_ == null) {
+      if (storeData_ == null) {
         //TODO(szm): ignore late abort transaction messages send by timer.
         logger_.warn("Unexpected commit message received.");
         endJobModule();
         return;
       }
       if (message.getResult() == TransactionAnswer.COMMIT) {
-        commitUpdateObject(storeWaitingForCommit_.getObjectId(),
-                           storeWaitingForCommit_.getPreviousVersionSHAs(),
-                           CryptoUtils.sha(storeWaitingForCommit_.getEncryptedEntity()),
+        commitUpdateObject(storeData_.getObjectId(),
+                           storeData_.getPreviousVersionSHAs(),
+                           CryptoUtils.sha(storeData_.getData()),
                            message.getId());
       } else {
-        abortUpdateObject(storeWaitingForCommit_.getObjectId(), message.getId());
+        abortUpdateObject(storeData_.getObjectId(), message.getId());
       }
       endJobModule();
     }
@@ -210,6 +234,7 @@ public class ReplicatorImpl extends Replicator {
     public void visit(GetObjectMessage message) {
       CommAddress peerAddress = message.getSourceAddress();
       workingMessages_.put(message.getSessionId(), message);
+      actionTypes_.put(message.getSessionId(), ActionType.READ);
       outQueue_.add(new GetSessionKeyMessage(peerAddress, getJobId(),
           message.getSessionId()));
     }
@@ -222,23 +247,14 @@ public class ReplicatorImpl extends Replicator {
 
     public void visit(InitSessionEndWithErrorMessage message) {
       logger_.debug("InitSessionEndWithErrorMessage " + message.getErrorMessage());
-      GetObjectMessage getObjectMessage = workingMessages_.remove(message.getPeerAddress());
+      SessionInnerMessageInterface getObjectMessage =
+          workingMessages_.remove(message.getPeerAddress());
       dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
           message.getPeerAddress(), "Unable to retrieve object.");
     }
 
-    public void visit(CheckContractResultMessage message) {
-      String sessionId = message.getSessionId();
-      GetObjectMessage getObjectMessage = workingMessages_.remove(sessionId);
-      CommAddress peerAddress = getObjectMessage.getSourceAddress();
-      SecretKey sessionKey = workingSecretKeys_.remove(sessionId);
-      logger_.debug("CheckContractResultMessage Peer " + peerAddress);
-      if (!message.getResult()) {
-        dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
-            peerAddress, "Unable to retrieve object.");
-        return;
-      }
-
+    private void retrieveObject(CommAddress peerAddress, String sessionId,
+        SecretKey sessionKey, GetObjectMessage getObjectMessage) {
       EncryptedObject enc = null;
       try {
         enc = encryptionAPI_.encryptWithSessionKey(
@@ -261,6 +277,31 @@ public class ReplicatorImpl extends Replicator {
       networkQueue_.add(new SendObjectMessage(getObjectMessage.getSourceJobId(),
           peerAddress, sessionId, enc, versions));
       endJobModule();
+    }
+
+    public void visit(CheckContractResultMessage message) throws NebuloException {
+      String sessionId = message.getSessionId();
+      SessionInnerMessageInterface insideSessionMessage = workingMessages_.remove(sessionId);
+      CommAddress peerAddress = insideSessionMessage.getSourceAddress();
+      SecretKey sessionKey = workingSecretKeys_.remove(sessionId);
+      ActionType actionType = actionTypes_.remove(sessionId);
+      logger_.debug("CheckContractResultMessage Peer " + peerAddress);
+      if (!message.getResult()) {
+        dieWithError(insideSessionMessage.getSourceJobId(),
+            insideSessionMessage.getDestinationAddress(), peerAddress, "CheckContract error.");
+        return;
+      }
+      switch (actionType) {
+        case READ:
+          retrieveObject(peerAddress, sessionId, sessionKey,
+              (GetObjectMessage) insideSessionMessage);
+          break;
+        case WRITE:
+          saveObject(sessionKey, (QueryToStoreObjectMessage) insideSessionMessage);
+          break;
+        default:
+          break;
+      }
     }
 
     public void visit(DeleteObjectMessage message) {

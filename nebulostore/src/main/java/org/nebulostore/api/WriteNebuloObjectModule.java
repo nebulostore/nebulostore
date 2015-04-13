@@ -1,5 +1,6 @@
 package org.nebulostore.api;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,11 +30,15 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
+import org.nebulostore.crypto.session.message.InitSessionEndMessage;
+import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
 import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.replicator.core.StoreData;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
 import org.nebulostore.replicator.messages.ObjectOutdatedMessage;
@@ -156,8 +161,8 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
             for (CommAddress replicator : group) {
               String remoteJobId = CryptoUtils.getRandomId().toString();
               waitingForTransactionResult_.put(replicator, remoteJobId);
-              networkQueue_.add(new QueryToStoreObjectMessage(remoteJobId, replicator,
-                  object_.getObjectId(), encryptedObject, previousVersionSHAs_, getJobId()));
+              startSession(replicator, new StoreData(remoteJobId, object_.getObjectId(),
+                  encryptedObject, previousVersionSHAs_));
               logger_.debug("added recipient: " + replicator);
             }
             recipientsSet_.addAll(group.getReplicatorSet());
@@ -169,6 +174,24 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
       } else {
         incorrectState(state_.name(), message);
       }
+    }
+
+    public void visit(InitSessionEndMessage message) {
+      logger_.debug("Process " + message);
+      StoreData storeData = (StoreData) message.getData();
+      try {
+        EncryptedObject data = encryption_.encryptWithSessionKey(
+            storeData.getData(), message.getSessionKey());
+        networkQueue_.add(new QueryToStoreObjectMessage(storeData.getRemoteJobId(),
+            message.getPeerAddress(), storeData.getObjectId(), data,
+            storeData.getPreviousVersionSHAs(), getJobId(), message.getSessionId()));
+      } catch (CryptoException e) {
+        endWithError(e);
+      }
+    }
+
+    public void visit(InitSessionEndWithErrorMessage message) {
+      logger_.debug("Process InitSessionEndWithErrorMessage " + message);
     }
 
     public void visit(ErrorDHTMessage message) {
@@ -316,6 +339,12 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
     public TransactionAnswerInMessage(TransactionAnswer answer) {
       answer_ = answer;
     }
+  }
+
+  private void startSession(CommAddress replicator, Serializable data) {
+    InitSessionNegotiatorModule initSessionNegotiatorModule =
+        new InitSessionNegotiatorModule(replicator, getJobId(), data);
+    outQueue_.add(new JobInitMessage(initSessionNegotiatorModule));
   }
 
   @Override

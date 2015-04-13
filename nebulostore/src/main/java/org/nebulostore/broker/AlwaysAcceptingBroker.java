@@ -10,6 +10,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.model.EncryptedObject;
+import org.nebulostore.broker.messages.CheckContractMessage;
 import org.nebulostore.broker.messages.ContractOfferMessage;
 import org.nebulostore.broker.messages.OfferReplyMessage;
 import org.nebulostore.communication.messages.CommPeerFoundMessage;
@@ -88,6 +89,10 @@ public class AlwaysAcceptingBroker extends Broker {
             message.getSourceAddress() + " rejected our offer.");
       }
       context_.removeOffer(message.getSourceAddress());
+    }
+
+    public void visit(CheckContractMessage message) {
+      outQueue_.add(message.getResponse(true));
     }
 
     public void visit(CommPeerFoundMessage message) throws CryptoException {
