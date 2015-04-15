@@ -1,21 +1,27 @@
 package org.nebulostore.api;
 
-import org.apache.log4j.Logger;
+import com.google.inject.Inject;
+
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.appcore.model.NebuloObject;
 import org.nebulostore.appcore.model.ObjectGetter;
-import org.nebulostore.crypto.CryptoException;
+import org.nebulostore.coding.ObjectRecreator;
 import org.nebulostore.replicator.messages.SendObjectMessage;
 
 /**
  * Job module that fetches an existing object from NebuloStore.
+ *
  * @author Bolek Kulbabinski
  */
 public class GetNebuloObjectModule extends GetModule<NebuloObject> implements ObjectGetter {
-  private static Logger logger_ = Logger.getLogger(GetNebuloObjectModule.class);
   private final StateMachineVisitor visitor_ = new StateMachineVisitor();
+
+  @Inject
+  public GetNebuloObjectModule(ObjectRecreator recreator) {
+    recreator_ = recreator;
+  }
 
   @Override
   public NebuloObject awaitResult(int timeoutSec) throws NebuloException {
@@ -25,30 +31,31 @@ public class GetNebuloObjectModule extends GetModule<NebuloObject> implements Ob
   protected class StateMachineVisitor extends GetModuleVisitor {
 
     @Override
-    public Void visit(SendObjectMessage message) {
-      if (state_ == STATE.REPLICA_FETCH) {
-        logger_.debug("Got object - returning");
+    public void visit(SendObjectMessage message) {
+      EncryptedObject fullObject;
+      try {
+        fullObject = tryRecreateFullObject(message);
+      } catch (NebuloException e) {
+        endWithError(e);
+        return;
+      }
+
+      if (fullObject != null) {
         NebuloObject nebuloObject;
         try {
-          EncryptedObject object = (EncryptedObject) decryptWithSessionKey(
-              message.getEncryptedEntity(), message.getSessionId());
-          nebuloObject = (NebuloObject) encryption_.decrypt(object, privateKeyPeerId_);
-          nebuloObject.setSender(message.getSourceAddress());
+          nebuloObject = (NebuloObject) encryption_.decrypt(fullObject, privateKeyPeerId_);
           nebuloObject.setVersions(message.getVersions());
-        } catch (CryptoException exception) {
+        } catch (NebuloException exception) {
           // TODO(bolek): Error not fatal? Retry?
           endWithError(exception);
-          return null;
+          return;
         }
+
         // State 3 - Finally got the file, return it;
         state_ = STATE.FILE_RECEIVED;
         endWithSuccess(nebuloObject);
-      } else {
-        logger_.warn("SendObjectMessage received in state " + state_);
       }
-      return null;
     }
-
   }
 
   @Override

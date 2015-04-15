@@ -6,9 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.nebulostore.communication.naming.CommAddress;
 
@@ -35,12 +34,22 @@ public class ReplicationGroup implements Serializable, Comparable<ObjectId>, Ite
     return replicators_.size();
   }
 
-  public SortedSet<CommAddress> getReplicatorSet() {
-    return new TreeSet<CommAddress>(replicators_);
+  public List<CommAddress> getReplicators() {
+    return new LinkedList<CommAddress>(replicators_);
   }
 
+  @Override
   public Iterator<CommAddress> iterator() {
     return replicators_.iterator();
+  }
+
+  public void swapReplicators(CommAddress replicator, CommAddress newReplicator) {
+    replicators_.set(replicators_.indexOf(replicator), newReplicator);
+  }
+
+  public boolean fitsIntoGroup(ObjectId objectId) {
+    return lowerBound_.compareTo(objectId.getKey()) <= 0 &&
+        upperBound_.compareTo(objectId.getKey()) > 0;
   }
 
   @Override
@@ -127,4 +136,5 @@ public class ReplicationGroup implements Serializable, Comparable<ObjectId>, Ite
         ", upperBound: " + upperBound_ + ", replicators: " + replicators_ +
         " ] ";
   }
+
 }

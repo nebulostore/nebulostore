@@ -37,7 +37,7 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
   @Override
   public NebuloObject fetchExistingNebuloObject(NebuloAddress address) throws NebuloException {
     ObjectGetter getter = injector_.getInstance(ObjectGetter.class);
-    getter.fetchObject(address, null);
+    getter.fetchObject(address);
     NebuloObject result = getter.awaitResult(TIMEOUT_SEC);
     injector_.injectMembers(result);
     return result;

@@ -29,9 +29,9 @@ public class NebuloFile extends NebuloObject {
     private static final long serialVersionUID = -6723808968821818811L;
 
     // FileChunk stores (endByte_ - startByte_) bytes from interval [startByte_, endByte_).
-    private int startByte_;
+    private final int startByte_;
     private int endByte_;
-    private NebuloAddress chunkAddress_;
+    private final NebuloAddress chunkAddress_;
 
     // These fields are set to null after deserializaton of NebuloFile.
     private transient FileChunk chunk_;
@@ -50,7 +50,7 @@ public class NebuloFile extends NebuloObject {
         // Use metadata holder for chunk query.
         // TODO(bolek): Retry with full address if unsuccessful.
         ObjectGetter getter = objectGetterProvider_.get();
-        getter.fetchObject(chunkAddress_, sender_);
+        getter.fetchObject(chunkAddress_);
         chunk_ = (FileChunk) getter.awaitResult(TIMEOUT_SEC);
       }
       return chunk_.getData();

@@ -36,7 +36,6 @@ public abstract class NebuloObject implements Serializable {
 
   protected final NebuloAddress address_;
   private transient CommAddress commAddress_;
-  protected transient CommAddress sender_;
 
   protected transient Set<String> previousVersions_;
   protected Subscribers subscribers_;
@@ -76,10 +75,6 @@ public abstract class NebuloObject implements Serializable {
 
   public NebuloAddress getAddress() {
     return address_;
-  }
-
-  public void setSender(CommAddress sender) {
-    sender_ = sender;
   }
 
   public Set<String> getVersions() {

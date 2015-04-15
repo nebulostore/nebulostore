@@ -34,6 +34,8 @@ import org.nebulostore.broker.ContractsSelectionAlgorithm;
 import org.nebulostore.broker.GreedyContractsSelection;
 import org.nebulostore.broker.OnlySizeContractsEvaluator;
 import org.nebulostore.broker.ValuationBasedBroker;
+import org.nebulostore.coding.ObjectRecreator;
+import org.nebulostore.coding.repetition.RepetitionObjectRecreator;
 import org.nebulostore.communication.CommunicationFacadeAdapterConfiguration;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoUtils;
@@ -99,6 +101,7 @@ public class PeerConfiguration extends GenericConfiguration {
     configureReplicator(appKey);
     configureRestModule();
     configureSessionNegotiator();
+    configureErasureCoding();
   }
 
   protected void configureEncryption() {
@@ -197,5 +200,9 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(NetworkMonitorResource.class);
     bind(ReplicatorResource.class);
     bind(RestModule.class).to(RestModuleImpl.class);
+  }
+
+  protected void configureErasureCoding() {
+    bind(ObjectRecreator.class).to(RepetitionObjectRecreator.class);
   }
 }

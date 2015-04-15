@@ -165,7 +165,7 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
                   encryptedObject, previousVersionSHAs_));
               logger_.debug("added recipient: " + replicator);
             }
-            recipientsSet_.addAll(group.getReplicatorSet());
+            recipientsSet_.addAll(group.getReplicators());
             nRecipients_ += group.getSize();
           } catch (CryptoException exception) {
             endWithError(new NebuloException("Unable to encrypt object.", exception));

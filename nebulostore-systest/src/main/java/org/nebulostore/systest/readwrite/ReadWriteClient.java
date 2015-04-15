@@ -32,7 +32,7 @@ public class ReadWriteClient extends ConductorClient {
   private static final int ADDRESS_EXCHANGE_TIMEOUT_MILLIS = 60 * 1000;
   protected static final int ITER_SLEEP = 500;
 
-  private List<CommAddress> clients_;
+  private final List<CommAddress> clients_;
   protected List<NebuloAddress> files_;
   protected AppKey myAppKey_;
   protected int clientId_;
@@ -80,6 +80,7 @@ public class ReadWriteClient extends ConductorClient {
   }
 
   private NebuloFile createFile() {
+    sleep(INITIAL_SLEEP);
     NebuloFile file = objectFactory_.createNewNebuloFile(
         new ObjectId(new BigInteger((clientId_ + 1) + "000")));
     try {
@@ -117,7 +118,8 @@ public class ReadWriteClient extends ConductorClient {
               break;
             }
           } catch (NebuloException e) {
-            logger_.debug("Unable to fetch file with address " + address + " in iteration " + iter);
+            logger_.debug("Unable to fetch file with address " + address + " in iteration " + iter,
+                e);
           } catch (UnsupportedEncodingException e) {
             logger_.debug("Unable to decode received string in UTF-8.");
           }

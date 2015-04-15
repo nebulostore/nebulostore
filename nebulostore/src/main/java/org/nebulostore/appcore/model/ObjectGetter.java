@@ -2,7 +2,6 @@ package org.nebulostore.appcore.model;
 
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.communication.naming.CommAddress;
 
 /**
  * Interface for modules capable of fetching NebuloObjects from the system.
@@ -12,9 +11,8 @@ public interface ObjectGetter {
   /**
    * Fetch the object from NebuloStore asynchronously.
    * @param address NebuloAddress of object that is going to be fetched.
-   * @param replicaAddress Optionally, CommAddress of the replica to query or null.
    */
-  void fetchObject(NebuloAddress address, CommAddress replicaAddress);
+  void fetchObject(NebuloAddress address);
 
   /**
    * Blocking method that waits for the result of fetchObject().
