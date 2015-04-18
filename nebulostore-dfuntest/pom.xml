@@ -28,7 +28,7 @@
     <dependency>
       <groupId>me.gregorias</groupId>
       <artifactId>dfuntest</artifactId>
-      <version>0.6</version>
+      <version>0.6.1</version>
     </dependency>
 
     <dependency>
