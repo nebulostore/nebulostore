@@ -63,7 +63,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
 
   private final EncryptionAPI encryptionAPI_;
 
-  private Map<CommAddress, String> peersPublicKeyId_;
+  private final Map<CommAddress, String> peersPublicKeyId_;
 
   @Inject
   public NetworkMonitorImpl(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
@@ -133,14 +133,14 @@ public class NetworkMonitorImpl extends NetworkMonitor {
 
   @Override
   public synchronized Set<CommAddress> getRandomPeersSample() {
-    return randomPeersSample_;
+    return new HashSet<CommAddress>(randomPeersSample_);
   }
 
   @Override
   public synchronized void setRandomPeersSample(Set<CommAddress> randomPeersSample) {
     logger_.debug("Set random peers sample size: " + randomPeersSample.size() + " was: " +
         randomPeersSample_.size());
-    randomPeersSample_ = Collections.synchronizedSet(randomPeersSample);
+    randomPeersSample_ = Collections.synchronizedSet(new HashSet<CommAddress>(randomPeersSample));
   }
 
   @Override
@@ -177,7 +177,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
   }
 
   @Override
-  protected void processMessage(Message message) throws NebuloException {
+  protected synchronized void processMessage(Message message) throws NebuloException {
     message.accept(visitor_);
   }
 

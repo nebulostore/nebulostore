@@ -6,6 +6,6 @@ package org.nebulostore.peers;
  */
 public abstract class AbstractPeer implements Runnable {
 
-    public abstract void quitNebuloStore();
+  public abstract void quitNebuloStore();
 
 }

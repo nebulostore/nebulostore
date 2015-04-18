@@ -43,8 +43,8 @@ import org.nebulostore.timer.Timer;
 public class ValuationBasedBroker extends Broker {
   private static Logger logger_ = Logger.getLogger(ValuationBasedBroker.class);
   private static final String CONFIGURATION_PREFIX = "broker.";
-  private Map<String, SecretKey> sessionKeys_ = new HashMap<String, SecretKey>();
-  private Map<String, EncryptedObject> contractOffer_ =
+  private final Map<String, SecretKey> sessionKeys_ = new HashMap<String, SecretKey>();
+  private final Map<String, EncryptedObject> contractOffer_ =
       new HashMap<String, EncryptedObject>();
 
   public ValuationBasedBroker() {
@@ -121,7 +121,6 @@ public class ValuationBasedBroker extends Broker {
       logger_.debug("Improving contracts...");
 
       Set<Contract> possibleContracts = new HashSet<Contract>();
-      //FIXME concurrentModificationException was seen here
       Set<CommAddress> randomPeersSample = networkMonitor_.getRandomPeersSample();
 
       if (context_.getContractsRealSize() > spaceContributedKb_) {
