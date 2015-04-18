@@ -19,6 +19,7 @@ import org.nebulostore.async.messages.AsyncModuleErrorMessage;
 import org.nebulostore.async.synchrogroup.messages.AddAsSynchroPeerMessage;
 import org.nebulostore.async.synchrogroup.messages.AddedAsSynchroPeerMessage;
 import org.nebulostore.async.synchrogroup.messages.RemoveFromSynchroPeerSetMessage;
+import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
@@ -148,10 +149,12 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
     public void visit(AsyncModuleErrorMessage message) {
       logger_.warn("Received " + message.getClass() + " from " + message.getSourceAddress() +
           " in " + ChangeSynchroPeerSetModule.class);
-      synchroPeersToAdd_.remove(message.getSourceAddress());
-      if (allPeersAdded() && state_.equals(State.ADDING_SYNCHRO_PEERS_TO_DHT)) {
-        updateSynchroPeers();
-      }
+      tryUpdateSynchroPeers(message.getSourceAddress());
+    }
+
+    public void visit(ErrorCommMessage message) {
+      logger_.warn("Received ErrorCommMessage for message: " + message.getMessage());
+      tryUpdateSynchroPeers(message.getMessage().getDestinationAddress());
     }
 
     public void visit(TimeoutMessage message) {
@@ -220,6 +223,13 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
         }
       }
       return new HashSet<CommAddress>();
+    }
+
+    private void tryUpdateSynchroPeers(CommAddress peerAddress) {
+      synchroPeersToAdd_.remove(peerAddress);
+      if (allPeersAdded() && state_.equals(State.ADDING_SYNCHRO_PEERS_TO_DHT)) {
+        updateSynchroPeers();
+      }
     }
   }
 
