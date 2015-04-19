@@ -113,14 +113,16 @@ public class InitSessionNegotiatorModule extends JobModule {
       peerAddress_ = message.getSourceAddress();
       remoteSourceJobId_ = message.getSourceJobId();
       sessionId_ = message.getSessionId();
-      initSessionContext_.acquireWriteLock();
-      try {
-        initSessionContext_.allocFreeSlot(sessionId_, new InitSessionObject(peerAddress_));
-      } catch (SessionRuntimeException e) {
-        endWithError(e, ErrorNotificationMethod.REMOTE);
-        return;
-      } finally {
-        initSessionContext_.releaseWriteLock();
+      if (!peerAddress_.equals(myAddress_)) {
+        initSessionContext_.acquireWriteLock();
+        try {
+          initSessionContext_.allocFreeSlot(sessionId_, new InitSessionObject(peerAddress_));
+        } catch (SessionRuntimeException e) {
+          endWithError(e, ErrorNotificationMethod.REMOTE);
+          return;
+        } finally {
+          initSessionContext_.releaseWriteLock();
+        }
       }
       try {
         DiffieHellmanInitPackage diffieHellmanInitPackage = (DiffieHellmanInitPackage)
@@ -167,7 +169,11 @@ public class InitSessionNegotiatorModule extends JobModule {
         InitSessionEndMessage initSessionEndMessage =
             new InitSessionEndMessage(initSessionObject, getJobId());
         outQueue_.add(initSessionEndMessage);
-        endWithSuccessAndClear();
+        if (peerAddress_.equals(myAddress_)) {
+          endWithSuccess();
+        } else {
+          endWithSuccessAndClear();
+        }
       } catch (CryptoException e) {
         endWithErrorAndClear(e, ErrorNotificationMethod.ALL);
       }

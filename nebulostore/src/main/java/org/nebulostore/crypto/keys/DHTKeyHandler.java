@@ -32,10 +32,13 @@ public class DHTKeyHandler implements KeyHandler {
       GetKeyModule getKeyModule = new GetKeyModule(dispatcherQueue_, peerAddress_.toKeyDHT());
       InstanceMetadata instanceMetadata =
         (InstanceMetadata) getKeyModule.getResult(TIMEOUT_SEC).getValue();
-      return instanceMetadata.getPeerKey();
+      Key key = instanceMetadata.getPeerKey();
+      if (key == null) {
+        throw new CryptoException("Unable to get Key from DHT");
+      }
+      return key;
     } catch (NebuloException e) {
-      throw new CryptoException("Unable to get instance metadata from DHT because of " +
-          e.getMessage(), e);
+      throw new CryptoException("Unable to get Key from DHT because of " + e.getMessage(), e);
     }
   }
 
