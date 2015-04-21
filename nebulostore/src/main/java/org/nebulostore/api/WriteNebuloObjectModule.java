@@ -3,6 +3,7 @@ package org.nebulostore.api;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -63,14 +64,14 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
 
   private NebuloObject object_;
 
-  private Set<String> previousVersionSHAs_;
+  private List<String> previousVersionSHAs_;
   private final StateMachineVisitor visitor_ = new StateMachineVisitor();
 
   private String commitVersion_;
   private int nRecipients_;
 
-  private EncryptionAPI encryption_;
-  private String publicKeyPeerId_;
+  private final EncryptionAPI encryption_;
+  private final String publicKeyPeerId_;
 
   @Inject
   public WriteNebuloObjectModule(EncryptionAPI encryption,
@@ -80,7 +81,7 @@ public class WriteNebuloObjectModule extends TwoStepReturningJobModule<Void, Voi
   }
 
   @Override
-  public void writeObject(NebuloObject objectToWrite, Set<String> previousVersionSHAs) {
+  public void writeObject(NebuloObject objectToWrite, List<String> previousVersionSHAs) {
     object_ = objectToWrite;
     previousVersionSHAs_ = previousVersionSHAs;
     runThroughDispatcher();

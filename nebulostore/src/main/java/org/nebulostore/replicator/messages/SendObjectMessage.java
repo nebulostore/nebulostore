@@ -1,6 +1,6 @@
 package org.nebulostore.replicator.messages;
 
-import java.util.Set;
+import java.util.List;
 
 import com.rits.cloning.Cloner;
 
@@ -17,10 +17,10 @@ public class SendObjectMessage extends OutReplicatorMessage {
   private final EncryptedObject encryptedEntity_;
   private String sessionId_;
 
-  private final Set<String> versions_;
+  private final List<String> versions_;
 
   public SendObjectMessage(CommAddress destAddress, EncryptedObject encryptedObject,
-      Set<String> versions) {
+      List<String> versions) {
     super(destAddress);
     encryptedEntity_ = encryptedObject;
     Cloner c = new Cloner();
@@ -28,7 +28,7 @@ public class SendObjectMessage extends OutReplicatorMessage {
   }
 
   public SendObjectMessage(String jobId, CommAddress destAddress, String sessionId,
-      EncryptedObject encryptedObject, Set<String> versions) {
+      EncryptedObject encryptedObject, List<String> versions) {
     super(jobId, destAddress);
     encryptedEntity_ = encryptedObject;
     sessionId_ = sessionId;
@@ -40,7 +40,7 @@ public class SendObjectMessage extends OutReplicatorMessage {
     return encryptedEntity_;
   }
 
-  public Set<String> getVersions() {
+  public List<String> getVersions() {
     return versions_;
   }
 

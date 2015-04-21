@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
@@ -19,9 +20,8 @@ import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.subscription.model.Subscribers;
 import org.nebulostore.subscription.model.SubscriptionNotification;
+import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
 import org.nebulostore.subscription.modules.NotifySubscribersModule;
-
-import static org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
 
 /**
  * NebuloObject - object that is stored in replicas and identified by NebuloAddress
@@ -37,7 +37,7 @@ public abstract class NebuloObject implements Serializable {
   protected final NebuloAddress address_;
   private transient CommAddress commAddress_;
 
-  protected transient Set<String> previousVersions_;
+  protected transient List<String> previousVersions_;
   protected Subscribers subscribers_;
   protected transient BlockingQueue<Message> dispatcherQueue_;
 
@@ -48,7 +48,7 @@ public abstract class NebuloObject implements Serializable {
   protected NebuloObject(NebuloAddress address) {
     address_ = address;
     subscribers_ = new Subscribers();
-    previousVersions_ = new HashSet<String>();
+    previousVersions_ = new LinkedList<String>();
     objectGetterProvider_ = null;
     objectWriterProvider_ = null;
     objectDeleterProvider_ = null;
@@ -77,11 +77,11 @@ public abstract class NebuloObject implements Serializable {
     return address_;
   }
 
-  public Set<String> getVersions() {
+  public List<String> getVersions() {
     return previousVersions_;
   }
 
-  public void setVersions(Set<String> versions) {
+  public void setVersions(List<String> versions) {
     previousVersions_ = versions;
   }
 
@@ -141,6 +141,6 @@ public abstract class NebuloObject implements Serializable {
 
   private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
     in.defaultReadObject();
-    previousVersions_ = new HashSet<String>();
+    previousVersions_ = new LinkedList<String>();
   }
 }

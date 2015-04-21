@@ -1,7 +1,7 @@
 package org.nebulostore.replicator.core;
 
 import java.io.Serializable;
-import java.util.Set;
+import java.util.List;
 
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.model.EncryptedObject;
@@ -13,13 +13,13 @@ public class StoreData implements Serializable {
 
   private static final long serialVersionUID = 3493488149204782292L;
 
-  private String remoteJobId_;
-  private ObjectId objectId_;
-  private EncryptedObject data_;
-  private Set<String> previousVersionSHAs_;
+  private final String remoteJobId_;
+  private final ObjectId objectId_;
+  private final EncryptedObject data_;
+  private final List<String> previousVersionSHAs_;
 
   public StoreData(String remoteJobId, ObjectId objectId, EncryptedObject data,
-      Set<String> previousVersionSHAs) {
+      List<String> previousVersionSHAs) {
     remoteJobId_ = remoteJobId;
     objectId_ = objectId;
     data_ = data;
@@ -38,7 +38,7 @@ public class StoreData implements Serializable {
     return data_;
   }
 
-  public Set<String> getPreviousVersionSHAs() {
+  public List<String> getPreviousVersionSHAs() {
     return previousVersionSHAs_;
   }
 

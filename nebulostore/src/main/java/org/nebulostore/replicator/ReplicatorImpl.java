@@ -2,9 +2,9 @@ package org.nebulostore.replicator;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.crypto.SecretKey;
@@ -13,7 +13,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
@@ -80,11 +80,11 @@ public class ReplicatorImpl extends Replicator {
   private final KeyValueStore<byte[]> store_;
   private final MessageVisitor visitor_ = new ReplicatorVisitor();
   private EncryptionAPI encryptionAPI_;
-  private Map<String, SessionInnerMessageInterface> workingMessages_ =
+  private final Map<String, SessionInnerMessageInterface> workingMessages_ =
         new HashMap<String, SessionInnerMessageInterface>();
-  private Map<String, SecretKey> workingSecretKeys_ =
+  private final Map<String, SecretKey> workingSecretKeys_ =
       new HashMap<String, SecretKey>();
-  private Map<String, ActionType> actionTypes_ = new HashMap<String, ActionType>();
+  private final Map<String, ActionType> actionTypes_ = new HashMap<String, ActionType>();
 
 
   @Inject
@@ -265,7 +265,7 @@ public class ReplicatorImpl extends Replicator {
         return;
 
       }
-      Set<String> versions;
+      List<String> versions;
       try {
         versions = getPreviousVersions(getObjectMessage.getObjectId());
       } catch (IOException e) {
@@ -321,7 +321,7 @@ public class ReplicatorImpl extends Replicator {
       try {
         GetEncryptedObjectModule getModule = new GetEncryptedObjectModule(message.getAddress(),
             outQueue_);
-        Pair<EncryptedObject, Set<String>> res = getModule.getResult(GET_OBJECT_TIMEOUT_SEC);
+        Pair<EncryptedObject, List<String>> res = getModule.getResult(GET_OBJECT_TIMEOUT_SEC);
         EncryptedObject encryptedObject = res.getFirst();
         try {
           deleteObject(message.getAddress().getObjectId());
@@ -359,7 +359,7 @@ public class ReplicatorImpl extends Replicator {
    * Begins transaction: tries to store object to temporal location.
    */
   public QueryToStoreResult queryToUpdateObject(ObjectId objectId,
-      EncryptedObject encryptedObject, Set<String> previousVersions, String transactionToken) {
+      EncryptedObject encryptedObject, List<String> previousVersions, String transactionToken) {
     logger_.debug("Checking store consistency");
     try {
       if (!lockMap_.tryLock(objectId.toString(), UPDATE_TIMEOUT_SEC, TimeUnit.SECONDS)) {
@@ -374,8 +374,7 @@ public class ReplicatorImpl extends Replicator {
     try {
       byte[] metaData = store_.get(objectId.toString() + METADATA_SUFFIX);
       if (metaData != null) {
-        Set<String> localPreviousVersions;
-        localPreviousVersions = getPreviousVersions(objectId);
+        List<String> localPreviousVersions = getPreviousVersions(objectId);
 
         // checking whether remote file is up to date (update is not concurrent)
         if (!previousVersions.containsAll(localPreviousVersions)) {
@@ -401,7 +400,7 @@ public class ReplicatorImpl extends Replicator {
     }
   }
 
-  public void commitUpdateObject(ObjectId objectId, Set<String> previousVersions,
+  public void commitUpdateObject(ObjectId objectId, List<String> previousVersions,
       String currentVersion, String transactionToken) {
     logger_.debug("Commit storing object " + objectId.toString());
 
@@ -413,7 +412,7 @@ public class ReplicatorImpl extends Replicator {
       store_.put(objId, bytes);
       addToIndex(new MetaData(objId, bytes.length));
 
-      Set<String> newVersions = new HashSet<String>(previousVersions);
+      List<String> newVersions = new LinkedList<String>(previousVersions);
       newVersions.add(currentVersion);
       setPreviousVersions(objectId, newVersions);
 
@@ -496,16 +495,16 @@ public class ReplicatorImpl extends Replicator {
     }
   }
 
-  private Set<String> getPreviousVersions(ObjectId objectId) throws IOException {
+  private List<String> getPreviousVersions(ObjectId objectId) throws IOException {
     byte[] bytes = store_.get(objectId.toString() + METADATA_SUFFIX);
     if (bytes == null) {
       return null;
     } else {
-      return Sets.newHashSet(Splitter.on(",").split(new String(bytes, Charsets.UTF_8)));
+      return Lists.newLinkedList(Splitter.on(",").split(new String(bytes, Charsets.UTF_8)));
     }
   }
 
-  private void setPreviousVersions(ObjectId objectId, Set<String> versions) throws IOException {
+  private void setPreviousVersions(ObjectId objectId, List<String> versions) throws IOException {
     String joined = Joiner.on(",").join(versions);
     store_.put(objectId.toString() + METADATA_SUFFIX, joined.getBytes(Charsets.UTF_8));
   }

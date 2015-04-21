@@ -1,6 +1,6 @@
 package org.nebulostore.api;
 
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 import org.nebulostore.appcore.addressing.NebuloAddress;
@@ -13,7 +13,7 @@ import org.nebulostore.utils.Pair;
 /**
  * @author szymonmatejczyk
  */
-public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, Set<String>>> {
+public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, List<String>>> {
   private final GetEncryptedObjectVisitor visitor_ = new GetEncryptedObjectVisitor();
 
   public GetEncryptedObjectModule(NebuloAddress nebuloAddress) {
@@ -43,7 +43,7 @@ public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, Se
       }
 
       if (fullObject != null) {
-        endWithSuccess(new Pair<EncryptedObject, Set<String>>(fullObject, message.getVersions()));
+        endWithSuccess(new Pair<EncryptedObject, List<String>>(fullObject, message.getVersions()));
       }
     }
   }

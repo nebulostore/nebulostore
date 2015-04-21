@@ -1,6 +1,6 @@
 package org.nebulostore.replicator.messages;
 
-import java.util.Set;
+import java.util.List;
 
 import com.rits.cloning.Cloner;
 
@@ -19,13 +19,13 @@ public class QueryToStoreObjectMessage extends InReplicatorMessage
 
   ObjectId objectId_;
   EncryptedObject encryptedEntity_;
-  Set<String> previousVersionSHAs_;
+  List<String> previousVersionSHAs_;
   private final String sourceJobId_;
-  private String sessionId_;
+  private final String sessionId_;
 
   public QueryToStoreObjectMessage(String jobId,
       CommAddress destAddress, ObjectId objectId, EncryptedObject encryptedEntity,
-      Set<String> previousVersionSHAs, String sourceJobId, String sessionId) {
+      List<String> previousVersionSHAs, String sourceJobId, String sessionId) {
     super(jobId, destAddress);
     objectId_ = objectId;
     encryptedEntity_ = encryptedEntity;
@@ -48,7 +48,7 @@ public class QueryToStoreObjectMessage extends InReplicatorMessage
     return sourceJobId_;
   }
 
-  public Set<String> getPreviousVersionSHAs() {
+  public List<String> getPreviousVersionSHAs() {
     return previousVersionSHAs_;
   }
 
