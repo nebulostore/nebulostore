@@ -13,7 +13,8 @@ import org.nebulostore.utils.Pair;
 /**
  * @author szymonmatejczyk
  */
-public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, List<String>>> {
+public class GetEncryptedObjectModule extends
+    GetFullObjectModule<Pair<EncryptedObject, List<String>>> {
   private final GetEncryptedObjectVisitor visitor_ = new GetEncryptedObjectVisitor();
 
   public GetEncryptedObjectModule(NebuloAddress nebuloAddress) {
@@ -30,7 +31,7 @@ public class GetEncryptedObjectModule extends GetModule<Pair<EncryptedObject, Li
   }
 
 
-  protected class GetEncryptedObjectVisitor extends GetModuleVisitor {
+  protected class GetEncryptedObjectVisitor extends GetFullObjectModuleVisitor {
 
     @Override
     public void visit(SendObjectMessage message) {

@@ -63,5 +63,9 @@ public interface ObjectRecreator {
    */
   void removeReplicator(CommAddress replicator);
 
+  /**
+   * Ignore all fragments that had been received until now.
+   */
+  void clearReceivedFragments();
 
 }

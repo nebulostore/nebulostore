@@ -24,7 +24,7 @@ public class RepetitionObjectRecreator implements ObjectRecreator {
 
   @Override
   public boolean addNextFragment(EncryptedObject fragment, CommAddress replicator) {
-    if (replicators_.contains(replicator)) {
+    if (replicators_.remove(replicator)) {
       object_ = fragment;
     }
     return object_ != null;
@@ -59,6 +59,11 @@ public class RepetitionObjectRecreator implements ObjectRecreator {
   @Override
   public void removeReplicator(CommAddress replicator) {
     replicators_.remove(replicator);
+  }
+
+  @Override
+  public void clearReceivedFragments() {
+    object_ = null;
   }
 
 }

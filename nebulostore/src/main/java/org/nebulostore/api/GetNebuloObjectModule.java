@@ -15,7 +15,8 @@ import org.nebulostore.replicator.messages.SendObjectMessage;
  *
  * @author Bolek Kulbabinski
  */
-public class GetNebuloObjectModule extends GetModule<NebuloObject> implements ObjectGetter {
+public class GetNebuloObjectModule extends
+    GetFullObjectModule<NebuloObject> implements ObjectGetter {
   private final StateMachineVisitor visitor_ = new StateMachineVisitor();
 
   @Inject
@@ -28,7 +29,7 @@ public class GetNebuloObjectModule extends GetModule<NebuloObject> implements Ob
     return getResult(timeoutSec);
   }
 
-  protected class StateMachineVisitor extends GetModuleVisitor {
+  protected class StateMachineVisitor extends GetFullObjectModuleVisitor {
 
     @Override
     public void visit(SendObjectMessage message) {
@@ -44,7 +45,7 @@ public class GetNebuloObjectModule extends GetModule<NebuloObject> implements Ob
         NebuloObject nebuloObject;
         try {
           nebuloObject = (NebuloObject) encryption_.decrypt(fullObject, privateKeyPeerId_);
-          nebuloObject.setVersions(message.getVersions());
+          nebuloObject.setVersions(currentVersions_);
         } catch (NebuloException exception) {
           // TODO(bolek): Error not fatal? Retry?
           endWithError(exception);
