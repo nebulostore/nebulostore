@@ -17,13 +17,15 @@ public class StoreData implements Serializable {
   private final ObjectId objectId_;
   private final EncryptedObject data_;
   private final List<String> previousVersionSHAs_;
+  private final String newVersionSHA_;
 
   public StoreData(String remoteJobId, ObjectId objectId, EncryptedObject data,
-      List<String> previousVersionSHAs) {
+      List<String> previousVersionSHAs, String newVersionSHA) {
     remoteJobId_ = remoteJobId;
     objectId_ = objectId;
     data_ = data;
     previousVersionSHAs_ = previousVersionSHAs;
+    newVersionSHA_ = newVersionSHA;
   }
 
   public String getRemoteJobId() {
@@ -40,6 +42,10 @@ public class StoreData implements Serializable {
 
   public List<String> getPreviousVersionSHAs() {
     return previousVersionSHAs_;
+  }
+
+  public String getNewVersionSHA() {
+    return newVersionSHA_;
   }
 
 }

@@ -15,6 +15,7 @@ import org.apache.commons.configuration.XMLConfiguration;
 import org.nebulostore.api.DeleteNebuloObjectModule;
 import org.nebulostore.api.GetNebuloObjectModule;
 import org.nebulostore.api.WriteNebuloObjectModule;
+import org.nebulostore.api.WriteNebuloObjectPartsModule;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
@@ -22,6 +23,7 @@ import org.nebulostore.appcore.model.NebuloObjectFactoryImpl;
 import org.nebulostore.appcore.model.ObjectDeleter;
 import org.nebulostore.appcore.model.ObjectGetter;
 import org.nebulostore.appcore.model.ObjectWriter;
+import org.nebulostore.appcore.model.PartialObjectWriter;
 import org.nebulostore.async.AsyncMessagesContext;
 import org.nebulostore.async.checker.MessageReceivingCheckerModule;
 import org.nebulostore.async.synchrogroup.SynchroPeerSetChangeSequencerModule;
@@ -35,7 +37,9 @@ import org.nebulostore.broker.GreedyContractsSelection;
 import org.nebulostore.broker.OnlySizeContractsEvaluator;
 import org.nebulostore.broker.ValuationBasedBroker;
 import org.nebulostore.coding.ObjectRecreator;
+import org.nebulostore.coding.ReplicaPlacementPreparator;
 import org.nebulostore.coding.repetition.RepetitionObjectRecreator;
+import org.nebulostore.coding.repetition.RepetitionReplicaPlacementPreparator;
 import org.nebulostore.communication.CommunicationFacadeAdapterConfiguration;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoUtils;
@@ -85,6 +89,7 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(NebuloObjectFactory.class).to(NebuloObjectFactoryImpl.class);
     bind(ObjectGetter.class).to(GetNebuloObjectModule.class);
     bind(ObjectWriter.class).to(WriteNebuloObjectModule.class);
+    bind(PartialObjectWriter.class).to(WriteNebuloObjectPartsModule.class);
     bind(ObjectDeleter.class).to(DeleteNebuloObjectModule.class);
 
     bind(SubscriptionNotificationHandler.class).to(SimpleSubscriptionNotificationHandler.class);
@@ -203,6 +208,7 @@ public class PeerConfiguration extends GenericConfiguration {
   }
 
   protected void configureErasureCoding() {
+    bind(ReplicaPlacementPreparator.class).to(RepetitionReplicaPlacementPreparator.class);
     bind(ObjectRecreator.class).to(RepetitionObjectRecreator.class);
   }
 }

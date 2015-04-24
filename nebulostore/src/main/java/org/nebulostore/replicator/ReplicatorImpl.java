@@ -159,7 +159,7 @@ public class ReplicatorImpl extends Replicator {
           networkQueue_.add(new ConfirmationMessage(message.getSourceJobId(),
               message.getSourceAddress()));
           storeData_ = new StoreData(message.getId(), message.getObjectId(), enc,
-              message.getPreviousVersionSHAs());
+              message.getPreviousVersionSHAs(), message.getNewVersionSHA());
           try {
             TransactionResultMessage m = (TransactionResultMessage) inQueue_.poll(LOCK_TIMEOUT_SEC,
                 TimeUnit.SECONDS);
@@ -260,6 +260,7 @@ public class ReplicatorImpl extends Replicator {
         enc = encryptionAPI_.encryptWithSessionKey(
             getObject(getObjectMessage.getObjectId()), sessionKey);
       } catch (NullPointerException | CryptoException e) {
+        logger_.debug("Encryption with session key failed!", e);
         dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
             peerAddress, "Unable to retrieve object.");
         return;
@@ -269,6 +270,7 @@ public class ReplicatorImpl extends Replicator {
       try {
         versions = getPreviousVersions(getObjectMessage.getObjectId());
       } catch (IOException e) {
+        logger_.debug("Exception when getting previous versions ", e);
         dieWithError(getObjectMessage.getSourceJobId(), getObjectMessage.getDestinationAddress(),
             peerAddress, "Unable to retrieve object.");
         return;

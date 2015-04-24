@@ -17,21 +17,24 @@ public class QueryToStoreObjectMessage extends InReplicatorMessage
     implements SessionInnerMessageInterface {
   private static final long serialVersionUID = 3283983404037381657L;
 
-  ObjectId objectId_;
-  EncryptedObject encryptedEntity_;
-  List<String> previousVersionSHAs_;
+  private final ObjectId objectId_;
+  private final EncryptedObject encryptedEntity_;
+  private final List<String> previousVersionSHAs_;
   private final String sourceJobId_;
+  private final String newVersionSHA_;
   private final String sessionId_;
 
   public QueryToStoreObjectMessage(String jobId,
       CommAddress destAddress, ObjectId objectId, EncryptedObject encryptedEntity,
-      List<String> previousVersionSHAs, String sourceJobId, String sessionId) {
+      List<String> previousVersionSHAs, String sourceJobId, String newVersionSHA,
+      String sessionId) {
     super(jobId, destAddress);
     objectId_ = objectId;
     encryptedEntity_ = encryptedEntity;
     Cloner c = new Cloner();
     previousVersionSHAs_ = c.deepClone(previousVersionSHAs);
     sourceJobId_ = sourceJobId;
+    newVersionSHA_ = newVersionSHA;
     sessionId_ = sessionId;
   }
 
@@ -54,5 +57,9 @@ public class QueryToStoreObjectMessage extends InReplicatorMessage
 
   public String getSessionId() {
     return sessionId_;
+  }
+
+  public String getNewVersionSHA() {
+    return newVersionSHA_;
   }
 }

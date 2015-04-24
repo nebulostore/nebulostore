@@ -146,8 +146,8 @@ public class ReplicatorTest {
   private void storeObject(ReplicatorWrapper replicator, ObjectId id, String content)
       throws InterruptedException {
     replicator.sendMsg(new QueryToStoreObjectMessage("1", null, id,
-        new EncryptedObject(content.getBytes(Charsets.UTF_8)), new LinkedList<String>(),
-        "1", null));
+        new EncryptedObject(content.getBytes(Charsets.UTF_8)), new LinkedList<String>(), "1",
+        null, null));
     Message reply = replicator.receiveMsg();
     Preconditions.checkArgument(reply instanceof ConfirmationMessage, "Incorrect msg type " +
         reply.getClass());
