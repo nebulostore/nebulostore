@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import com.google.common.base.Functions;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Names;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -54,6 +55,7 @@ import org.nebulostore.persistence.FileStore;
 import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.ReplicatorImpl;
 import org.nebulostore.replicator.core.Replicator;
+import org.nebulostore.replicator.repairer.ReplicaRepairerModuleFactory;
 import org.nebulostore.rest.BrokerResource;
 import org.nebulostore.rest.NetworkMonitorResource;
 import org.nebulostore.rest.ReplicatorResource;
@@ -210,5 +212,6 @@ public class PeerConfiguration extends GenericConfiguration {
   protected void configureErasureCoding() {
     bind(ReplicaPlacementPreparator.class).to(RepetitionReplicaPlacementPreparator.class);
     bind(ObjectRecreator.class).to(RepetitionObjectRecreator.class);
+    install(new FactoryModuleBuilder().build(ReplicaRepairerModuleFactory.class));
   }
 }
