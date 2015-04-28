@@ -9,7 +9,6 @@ import org.nebulostore.appcore.Metadata;
 import org.nebulostore.appcore.addressing.ContractList;
 import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.coding.ObjectRecreator;
 import org.nebulostore.communication.naming.CommAddress;
@@ -55,11 +54,7 @@ public abstract class GetFullObjectModule<V> extends GetModule<V> {
    * Visitor class that acts as a state machine realizing the procedure of fetching the file.
    */
   protected abstract class GetFullObjectModuleVisitor extends GetModuleVisitor {
-    protected STATE state_;
-
-    public GetFullObjectModuleVisitor() {
-      state_ = STATE.INIT;
-    }
+    private boolean isProcessingDHTQuery_;
 
     @Override
     public void visit(JobInitMessage message) {
@@ -176,10 +171,6 @@ public abstract class GetFullObjectModule<V> extends GetModule<V> {
       waitingForReplicators_.remove(replicator);
       replicationGroupList_ = recreator_.calcReplicatorsToAsk();
       queryNextReplicas();
-    }
-
-    protected void incorrectState(String stateName, Message message) {
-      logger_.warn(message.getClass().getSimpleName() + " received in state " + stateName);
     }
   }
 }

@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 import org.nebulostore.api.GetFullObjectModule.STATE;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
+import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.appcore.modules.ReturningJobModule;
@@ -28,6 +29,7 @@ import org.nebulostore.crypto.session.message.InitSessionEndMessage;
 import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.replicator.messages.GetObjectMessage;
+import org.nebulostore.replicator.messages.ReplicatorErrorMessage;
 import org.nebulostore.replicator.messages.SendObjectMessage;
 import org.nebulostore.timer.TimeoutMessage;
 import org.nebulostore.timer.Timer;
@@ -70,6 +72,7 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
 
     protected List<CommAddress> replicationGroupList_;
     protected final Set<CommAddress> waitingForReplicators_ = new HashSet<>();
+    protected STATE state_ = STATE.INIT;
 
     public abstract void visit(JobInitMessage message);
 
@@ -87,6 +90,15 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
     public void visit(InitSessionEndWithErrorMessage message) {
       logger_.debug("Process InitSessionEndWithErrorMessage " + message);
       failReplicator(message.getPeerAddress());
+    }
+
+    public void visit(ReplicatorErrorMessage message) {
+      logger_.warn("ReplicatorErrorMessage received.");
+      if (state_ == STATE.REPLICA_FETCH) {
+        failReplicator(message.getSourceAddress());
+      } else {
+        incorrectState(state_.name(), message);
+      }
     }
 
     protected abstract void failReplicator(CommAddress replicator);
@@ -136,6 +148,10 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
       }
 
       return false;
+    }
+
+    protected void incorrectState(String stateName, Message message) {
+      logger_.warn(message.getClass().getSimpleName() + " received in state " + stateName);
     }
 
     private void startSessionAgreement(CommAddress replicator) {

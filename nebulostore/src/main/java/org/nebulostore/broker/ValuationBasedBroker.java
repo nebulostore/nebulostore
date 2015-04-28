@@ -265,7 +265,8 @@ public class ValuationBasedBroker extends Broker {
       boolean result = false;
       try {
         List<Contract> contracts = context_.getContractList().get(message.getContractPeer());
-        result = contracts != null && !contracts.isEmpty();
+        result = (contracts != null && !contracts.isEmpty()) ||
+            message.getContractPeer().equals(myAddress_);
       } finally {
         context_.disposeReadAccessToContracts();
       }
