@@ -162,6 +162,7 @@ public class AsyncTestCommunicationOverlay extends Module {
     }
 
     public void visit(EndModuleMessage msg) {
+      communicationInQueue_.add(msg);
       endModule();
     }
 

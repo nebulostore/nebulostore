@@ -134,6 +134,8 @@ public class MessageReceivingCheckerModule extends Module {
         logger_.debug("Ending the module, sending remaining messages: " + message);
         msg.message_.generateErrorResponder(dispatcherQueue_).handleError();
       }
+      logger_.debug("Forwarding EndModuleMessage to the next module");
+      networkQueue_.add(message);
       logger_.debug("Ending the module");
       endModule();
     }

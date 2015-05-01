@@ -148,9 +148,6 @@ public class Peer extends AbstractPeer {
     if (asyncMessagingModule_ != null) {
       asyncMessagingModule_.getInQueue().add(new EndModuleMessage());
     }
-    if (commPeerInQueue_ != null) {
-      commPeerInQueue_.add(new EndModuleMessage());
-    }
     if (dispatcherInQueue_ != null) {
       dispatcherInQueue_.add(new EndModuleMessage());
     }
