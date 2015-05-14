@@ -1,11 +1,11 @@
 package org.nebulostore.rest;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -18,6 +18,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import com.google.common.io.ByteStreams;
 import com.google.gson.JsonElement;
@@ -72,22 +73,26 @@ public class ReplicatorResource {
 
   @GET
   @Path("read_file_data")
-  @Produces(MediaType.APPLICATION_JSON)
-  public String readFileData(@QueryParam("appKey") String key, @QueryParam("objectId") long id)
+  @Produces(MediaType.APPLICATION_OCTET_STREAM)
+  public Response readFileData(@QueryParam("appKey") String key, @QueryParam("objectId") long id)
       throws NebuloException {
     LOGGER.info("Start method readFileData()");
     AppKey appKey = new AppKey(key);
     ObjectId objectId = new ObjectId(BigInteger.valueOf(id));
-    JsonPrimitive result;
+    byte[] result;
     try {
-      result = new JsonPrimitive(readFile(appKey, objectId));
+      result = readFile(appKey, objectId);
     } catch (NebuloException e) {
       LOGGER.error(e.getMessage());
       throw e;
+    } catch (IOException e) {
+      LOGGER.error(e.getMessage());
+      throw new NebuloException(e);
     }
-    LOGGER.info(result.toString());
     LOGGER.info("End method readFileData()");
-    return result.toString();
+    return Response.ok(result, MediaType.APPLICATION_OCTET_STREAM)
+        .header("content-disposition", "attachment; filename = " + objectId.getKey().toString())
+        .build();
   }
 
   @POST
@@ -171,19 +176,19 @@ public class ReplicatorResource {
     return new JsonPrimitive("OK").toString();
   }
 
-  private String readFile(AppKey appKey, ObjectId objectId) throws NebuloException {
+  private byte[] readFile(AppKey appKey, ObjectId objectId) throws NebuloException, IOException {
     NebuloFile nebuloFile = (NebuloFile) nebuloObjectFactory_.fetchExistingNebuloObject(
         new NebuloAddress(appKey, objectId));
-    StringBuilder stringBuilder = new StringBuilder();
     int currpos = 0;
     int bufSize = 100;
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     byte[] data;
     do {
       data = nebuloFile.read(currpos, bufSize);
       currpos += data.length;
-      stringBuilder.append(new String(data, StandardCharsets.UTF_8));
+      byteArrayOutputStream.write(data);
     } while (data.length > 0);
-    return stringBuilder.toString();
+    return byteArrayOutputStream.toByteArray();
   }
 
   private int writeFile(AppKey appKey, ObjectId objectId, InputStream uploadedInputStream)
