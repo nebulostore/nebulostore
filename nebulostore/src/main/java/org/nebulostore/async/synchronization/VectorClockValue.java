@@ -127,7 +127,7 @@ public class VectorClockValue implements Comparable<VectorClockValue>, Serializa
     boolean compare(ClockValue firstValue, ClockValue secondValue);
   }
 
-  private class ClockValue implements Comparable<ClockValue>, Serializable {
+  private static class ClockValue implements Comparable<ClockValue>, Serializable {
 
     private static final long serialVersionUID = -3430725994817691084L;
 
