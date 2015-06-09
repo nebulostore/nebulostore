@@ -71,7 +71,7 @@ public final class AsyncMessagesContext {
 
   /**
    * Freshnesses of recipients. Fresshness counter is decremented each time when synchro group cache
-   * is refreshed and its value is bigger then 0. When freshness equals 0 we assume that recipient
+   * is refreshed and its value is bigger than 0. When freshness equals 0 we assume that recipient
    * has been already added to synchro group in DHT. If it's not the case, we remove him.
    */
   private final Map<CommAddress, Integer> recipientsFreshnesses_ = new HashMap<>();
@@ -414,11 +414,11 @@ public final class AsyncMessagesContext {
       for (AsynchronousMessage message : messages) {
         VectorClockValue timestamp = messagesTimestamps_.get(recipient).get(message.getMessageId());
         VectorClockValue receivedTimestamp = messagesTimestamps.get(message.getMessageId());
-        if (!waitingMsgs.contains(message) ||
-            (timestamp != null && timestamp.compareTo(receivedTimestamp) >= 0)) {
+        if (!waitingMsgs.contains(message) || timestamp == null ||
+            timestamp.compareTo(receivedTimestamp) >= 0) {
           waitingMsgs.add(message);
+          messagesTimestamps_.get(recipient).put(message.getMessageId(), receivedTimestamp);
         }
-        messagesTimestamps_.get(recipient).put(message.getMessageId(), receivedTimestamp);
       }
 
       synchroClocks_.get(recipient).updateClockValue(clockValue);
@@ -492,6 +492,9 @@ public final class AsyncMessagesContext {
         messages.add(message);
         messagesTimestamps_.get(peer).put(message.getMessageId(), messageTimestamp.getValueCopy());
       }
+      logger_.debug("Current messages for peer " + peer + ": " + messages);
+      logger_.debug("Current messages timestamps for peer " + peer + ": " +
+          messagesTimestamps_.get(peer));
     } else {
       logger_.info("Peer " + peer + " is not present in recipients set, message won't be stored");
     }
