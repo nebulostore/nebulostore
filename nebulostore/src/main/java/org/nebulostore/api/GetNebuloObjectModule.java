@@ -44,7 +44,7 @@ public class GetNebuloObjectModule extends
       if (fullObject != null) {
         NebuloObject nebuloObject;
         try {
-          nebuloObject = (NebuloObject) encryption_.decrypt(fullObject, privateKeyPeerId_);
+          nebuloObject = (NebuloObject) decryptWrapper_.decrypt(fullObject);
           nebuloObject.setVersions(currentVersions_);
         } catch (NebuloException exception) {
           // TODO(bolek): Error not fatal? Retry?

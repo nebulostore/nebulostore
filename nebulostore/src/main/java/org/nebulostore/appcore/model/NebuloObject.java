@@ -18,6 +18,8 @@ import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.DecryptWrapper;
+import org.nebulostore.crypto.EncryptWrapper;
 import org.nebulostore.subscription.model.Subscribers;
 import org.nebulostore.subscription.model.SubscriptionNotification;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
@@ -36,6 +38,8 @@ public abstract class NebuloObject implements Serializable {
 
   protected final NebuloAddress address_;
   private transient CommAddress commAddress_;
+  protected transient EncryptWrapper encryptWrapper_;
+  protected transient DecryptWrapper decryptWrapper_;
 
   protected transient List<String> previousVersions_;
   protected Subscribers subscribers_;
@@ -87,6 +91,14 @@ public abstract class NebuloObject implements Serializable {
 
   public ObjectId getObjectId() {
     return address_.getObjectId();
+  }
+
+  public void setEncryptWrapper(EncryptWrapper encryptWrapper) {
+    encryptWrapper_ = encryptWrapper;
+  }
+
+  public void setDecryptWrapper(DecryptWrapper decryptWrapper) {
+    decryptWrapper_ = decryptWrapper;
   }
 
   /**

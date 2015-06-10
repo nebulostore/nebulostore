@@ -10,7 +10,6 @@ import java.util.Set;
 import javax.crypto.SecretKey;
 
 import com.google.inject.Provider;
-import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.api.GetFullObjectModule.STATE;
@@ -23,6 +22,7 @@ import org.nebulostore.appcore.modules.ReturningJobModule;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.DecryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
 import org.nebulostore.crypto.session.message.InitSessionEndMessage;
@@ -49,22 +49,21 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
 
   protected Provider<Timer> timerProvider_;
   protected EncryptionAPI encryption_;
+  protected DecryptWrapper decryptWrapper_;
   protected CommAddress myAddress_;
-  protected String privateKeyPeerId_;
   protected List<String> currentVersions_;
 
   protected NebuloAddress address_;
   protected Map<String, SecretKey> sessionKeys_ = new HashMap<String, SecretKey>();
 
-  public void setDependencies(CommAddress myAddress, Provider<Timer> timerProvider,
-      EncryptionAPI encryptionAPI, @Named("PrivateKeyPeerId") String privateKeyPeerId) {
+  public void setDependencies(Provider<Timer> timerProvider, EncryptionAPI encryptionAPI) {
     timerProvider_ = timerProvider;
     encryption_ = encryptionAPI;
-    privateKeyPeerId_ = privateKeyPeerId;
   }
 
-  public void fetchObject(NebuloAddress address) {
+  public void fetchObject(NebuloAddress address, DecryptWrapper decryptWrapper) {
     address_ = checkNotNull(address);
+    decryptWrapper_ = decryptWrapper;
     runThroughDispatcher();
   }
 

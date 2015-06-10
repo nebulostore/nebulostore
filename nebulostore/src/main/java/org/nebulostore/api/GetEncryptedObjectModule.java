@@ -18,7 +18,7 @@ public class GetEncryptedObjectModule extends
   private final GetEncryptedObjectVisitor visitor_ = new GetEncryptedObjectVisitor();
 
   public GetEncryptedObjectModule(NebuloAddress nebuloAddress) {
-    fetchObject(nebuloAddress);
+    fetchObject(nebuloAddress, null);
   }
 
   /**
@@ -27,7 +27,7 @@ public class GetEncryptedObjectModule extends
   public GetEncryptedObjectModule(NebuloAddress nebuloAddress,
       BlockingQueue<Message> dispatcherQueue) {
     setDispatcherQueue(dispatcherQueue);
-    fetchObject(nebuloAddress);
+    fetchObject(nebuloAddress, null);
   }
 
 

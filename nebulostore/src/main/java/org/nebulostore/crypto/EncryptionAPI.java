@@ -23,6 +23,12 @@ public abstract class EncryptionAPI {
 
   public abstract Object decrypt(EncryptedObject cipher, String keyId) throws CryptoException;
 
+  public abstract EncryptedObject encryptSymetric(Serializable object, SecretKey key)
+      throws CryptoException;
+
+  public abstract Object decryptSymetric(EncryptedObject cipher, SecretKey key)
+      throws CryptoException;
+
   public abstract EncryptedObject encryptWithSessionKey(Serializable object,
       SecretKey key) throws CryptoException;
 

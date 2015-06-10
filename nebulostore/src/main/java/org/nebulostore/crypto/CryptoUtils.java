@@ -194,7 +194,17 @@ public final class CryptoUtils {
     return deserializeObject(decryptDES(object.getEncryptedData(), secretKey));
   }
 
-  private static SecretKey generateSecretKey() throws CryptoException {
+  public static EncryptedObject encryptObjectWithSecretKey(Serializable object,
+      SecretKey secretKey) throws CryptoException {
+    return new EncryptedObject(encryptAES(serializeObject(object), secretKey));
+  }
+
+  public static Object decryptObjectWithSecretKey(EncryptedObject object,
+      SecretKey secretKey) throws CryptoException {
+    return deserializeObject(decryptAES(object.getEncryptedData(), secretKey));
+  }
+
+  public static SecretKey generateSecretKey() throws CryptoException {
     try {
       KeyGenerator keyGen = KeyGenerator.getInstance(AES_ALGORITHM);
       keyGen.init(CryptoUtils.SYMETRIC_KEY_BYTE_LENGTH);

@@ -50,7 +50,7 @@ public class NebuloFile extends NebuloObject {
         // Use metadata holder for chunk query.
         // TODO(bolek): Retry with full address if unsuccessful.
         ObjectGetter getter = objectGetterProvider_.get();
-        getter.fetchObject(chunkAddress_);
+        getter.fetchObject(chunkAddress_, decryptWrapper_);
         chunk_ = (FileChunk) getter.awaitResult(TIMEOUT_SEC);
       }
       return chunk_.getData();
@@ -70,7 +70,7 @@ public class NebuloFile extends NebuloObject {
     public ObjectWriter sync() {
       if (isChanged_) {
         ObjectWriter writer = objectWriterProvider_.get();
-        writer.writeObject(chunk_, chunk_.getVersions());
+        writer.writeObject(chunk_, chunk_.getVersions(), encryptWrapper_);
         return writer;
       } else {
         return null;
@@ -190,9 +190,7 @@ public class NebuloFile extends NebuloObject {
       throws NebuloException {
     if (chunkIdx >= chunks_.size()) {
       // Create new chunk at the end.
-      // TODO(bolek): Better ID generation!
-      ObjectId chunkId = new ObjectId(
-          chunks_.get(chunks_.size() - 1).chunkAddress_.getObjectId().getKey().add(BigInteger.ONE));
+      ObjectId chunkId = getNextId();
       chunks_.add(new FileChunkWrapper(chunkIdx * chunkSize_, chunkIdx * chunkSize_ + len,
           new NebuloAddress(address_.getAppKey(), chunkId)));
     }
@@ -213,6 +211,15 @@ public class NebuloFile extends NebuloObject {
     }
   }
 
+  public ObjectId getNextId() {
+    // TODO(bolek): Better ID generation!
+    if (chunks_.isEmpty()) {
+      return new ObjectId(address_.getObjectId().getKey().add(BigInteger.ONE));
+    } else {
+      return new ObjectId(chunks_.get(chunks_.size() - 1).chunkAddress_.getObjectId().
+          getKey().add(BigInteger.ONE));
+    }
+  }
   /**
    * Truncates the file to newSize.
    * @param newSize
@@ -244,8 +251,7 @@ public class NebuloFile extends NebuloObject {
     isNew_ = true;
     chunks_ = new ArrayList<FileChunkWrapper>();
     // TODO(bolek): How to assign IDs for new chunks?
-    ObjectId chunkId = new ObjectId(address_.getObjectId().getKey().add(BigInteger.ONE));
-    chunks_.add(new FileChunkWrapper(0, 0, new NebuloAddress(address_.getAppKey(), chunkId)));
+    chunks_.add(new FileChunkWrapper(0, 0, new NebuloAddress(address_.getAppKey(), getNextId())));
   }
 
   @Override
@@ -259,7 +265,7 @@ public class NebuloFile extends NebuloObject {
     }
     // Run sync for NebuloFile (metadata).
     ObjectWriter writer = objectWriterProvider_.get();
-    writer.writeObject(this, previousVersions_);
+    writer.writeObject(this, previousVersions_, encryptWrapper_);
     updateModules.add(writer);
 
     // Wait for all results.

@@ -23,6 +23,7 @@ import org.nebulostore.coding.ReplicaPlacementPreparator;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.EncryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
@@ -46,10 +47,10 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
   private static final int CONFIRMATIONS_REQUIRED = 2;
 
   private NebuloObject object_;
+  private EncryptWrapper encryptWrapper_;
 
   private List<String> previousVersionSHAs_;
 
-  private final String publicKeyPeerId_;
   private final ReplicaPlacementPreparator replicaPlacementPreparator_;
   private ReplicationGroup group_;
 
@@ -58,7 +59,6 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
       @Named("PublicKeyPeerId") String publicKeyPeerId,
       ReplicaPlacementPreparator replicaPlacementPreparator) {
     super(encryption);
-    publicKeyPeerId_ = publicKeyPeerId;
     replicaPlacementPreparator_ = replicaPlacementPreparator;
   }
 
@@ -68,9 +68,11 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
   }
 
   @Override
-  public void writeObject(NebuloObject objectToWrite, List<String> previousVersionSHAs) {
+  public void writeObject(NebuloObject objectToWrite, List<String> previousVersionSHAs,
+      EncryptWrapper encryptWrapper) {
     object_ = objectToWrite;
     previousVersionSHAs_ = previousVersionSHAs;
+    encryptWrapper_ = encryptWrapper;
     super.writeObject(CONFIRMATIONS_REQUIRED);
   }
 
@@ -125,8 +127,7 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
           endWithError(new NebuloException("No peers replicating this object."));
         } else {
           try {
-            EncryptedObject encryptedObject =
-                encryption_.encrypt(object_, publicKeyPeerId_);
+            EncryptedObject encryptedObject = encryptWrapper_.encrypt(object_);
             commitVersion_ = CryptoUtils.sha(encryptedObject);
             boolean isSmallFile = encryptedObject.size() < SMALL_FILE_THRESHOLD;
 

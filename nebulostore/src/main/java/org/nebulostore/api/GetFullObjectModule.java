@@ -2,7 +2,6 @@ package org.nebulostore.api;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.Metadata;
@@ -36,10 +35,9 @@ public abstract class GetFullObjectModule<V> extends GetModule<V> {
   protected ObjectRecreator recreator_;
 
   @Inject
-  public void setDependencies(CommAddress myAddress, Provider<Timer> timerProvider,
-      EncryptionAPI encryptionAPI, @Named("PrivateKeyPeerId") String privateKeyPeerId,
-      ObjectRecreator recreator) {
-    super.setDependencies(myAddress, timerProvider, encryptionAPI, privateKeyPeerId);
+  public void setDependencies(Provider<Timer> timerProvider,
+      EncryptionAPI encryptionAPI, ObjectRecreator recreator) {
+    super.setDependencies(timerProvider, encryptionAPI);
     recreator_ = recreator;
   }
 
@@ -54,7 +52,6 @@ public abstract class GetFullObjectModule<V> extends GetModule<V> {
    * Visitor class that acts as a state machine realizing the procedure of fetching the file.
    */
   protected abstract class GetFullObjectModuleVisitor extends GetModuleVisitor {
-    private boolean isProcessingDHTQuery_;
 
     @Override
     public void visit(JobInitMessage message) {

@@ -140,7 +140,8 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
         if (fragmentsData == null ||
             fragmentsData.fragmentsMap_.size() < replicatorsToReplaceMap.size()) {
           ObjectGetter getModule = getModuleProvider_.get();
-          getModule.fetchObject(new NebuloAddress(appKey_, objectId));
+          // TODO: fix it
+          getModule.fetchObject(new NebuloAddress(appKey_, objectId), null);
           try {
             objects.put(objectId, getModule.awaitResult(FETCH_OBJECT_TIMEOUT_MILIS));
           } catch (NebuloException e) {

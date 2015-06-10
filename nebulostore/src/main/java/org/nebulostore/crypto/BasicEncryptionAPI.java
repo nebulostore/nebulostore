@@ -24,6 +24,17 @@ public class BasicEncryptionAPI extends EncryptionAPI {
   }
 
   @Override
+  public EncryptedObject encryptSymetric(Serializable object, SecretKey key)
+      throws CryptoException {
+    return new EncryptedObject(CryptoUtils.serializeObject(object));
+  }
+
+  @Override
+  public Object decryptSymetric(EncryptedObject cipher, SecretKey key) throws CryptoException {
+    return CryptoUtils.deserializeObject(cipher.getEncryptedData());
+  };
+
+  @Override
   public EncryptedObject encryptWithSessionKey(Serializable object, SecretKey key)
       throws CryptoException {
     return new EncryptedObject(CryptoUtils.serializeObject(object));

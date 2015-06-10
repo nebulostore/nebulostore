@@ -56,6 +56,17 @@ public class RSABasedEncryptionAPI extends EncryptionAPI {
   }
 
   @Override
+  public EncryptedObject encryptSymetric(Serializable object, SecretKey key)
+      throws CryptoException {
+    return CryptoUtils.encryptObjectWithSecretKey(object, key);
+  };
+
+  @Override
+  public Object decryptSymetric(EncryptedObject cipher, SecretKey key) throws CryptoException {
+    return CryptoUtils.decryptObjectWithSecretKey(cipher, key);
+  };
+
+  @Override
   public EncryptedObject encryptWithSessionKey(Serializable object, SecretKey key)
       throws CryptoException {
     LOGGER.debug("encrypt session key");

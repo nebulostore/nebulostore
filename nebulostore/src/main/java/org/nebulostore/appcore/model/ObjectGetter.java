@@ -2,6 +2,7 @@ package org.nebulostore.appcore.model;
 
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.exceptions.NebuloException;
+import org.nebulostore.crypto.DecryptWrapper;
 
 /**
  * Interface for modules capable of fetching NebuloObjects from the system.
@@ -11,8 +12,9 @@ public interface ObjectGetter {
   /**
    * Fetch the object from NebuloStore asynchronously.
    * @param address NebuloAddress of object that is going to be fetched.
+   * @param decryptWrapper
    */
-  void fetchObject(NebuloAddress address);
+  void fetchObject(NebuloAddress address, DecryptWrapper decryptWrapper);
 
   /**
    * Blocking method that waits for the result of fetchObject().

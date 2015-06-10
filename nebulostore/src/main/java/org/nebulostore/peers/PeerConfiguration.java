@@ -17,6 +17,9 @@ import org.nebulostore.api.DeleteNebuloObjectModule;
 import org.nebulostore.api.GetNebuloObjectModule;
 import org.nebulostore.api.WriteNebuloObjectModule;
 import org.nebulostore.api.WriteNebuloObjectPartsModule;
+import org.nebulostore.api.acl.DeleteObjectACLModule;
+import org.nebulostore.api.acl.ReadObjectACLModule;
+import org.nebulostore.api.acl.WriteObjectACLModule;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
@@ -97,7 +100,9 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(SubscriptionNotificationHandler.class).to(SimpleSubscriptionNotificationHandler.class);
 
     bind(Timer.class).to(TimerImpl.class);
-
+    bind(DeleteObjectACLModule.class);
+    bind(ReadObjectACLModule.class);
+    bind(WriteObjectACLModule.class);
 
     configureAdditional();
     configureBroker();

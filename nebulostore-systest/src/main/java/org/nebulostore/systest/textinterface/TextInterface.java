@@ -5,6 +5,8 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 import asg.cliche.Command;
 import asg.cliche.InputConverter;
@@ -75,8 +77,10 @@ public final class TextInterface extends Peer implements ShellManageable {
   }
 
   @Inject
-  public void setDependencies(NebuloObjectFactory objectFactory) {
+  public void setDependencies(NebuloObjectFactory objectFactory,
+      AppKey appKey) {
     objectFactory_ = objectFactory;
+    appKey_ = appKey;
   }
 
   @Override
@@ -127,11 +131,13 @@ public final class TextInterface extends Peer implements ShellManageable {
     System.out.println("commAddress: " + commAddress_);
   }
 
-  @Command(description = "Download a nebulo file and show it contents")
+  @Command(abbrev = "r", description = "Download a nebulo file and show it contents")
   public void read(
       @Param(name = "appkey", description = "app key part of the file name") AppKey appKey,
-      @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId) {
-    NebuloFile file = getNebuloFile(appKey, objectId);
+      @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId)
+      throws NebuloException {
+    NebuloAddress address = new NebuloAddress(appKey, objectId);
+    NebuloFile file = (NebuloFile) objectFactory_.fetchNebuloObject(address);
     if (file == null) {
       return;
     }
@@ -154,21 +160,16 @@ public final class TextInterface extends Peer implements ShellManageable {
   }
 
 
-  @Command(description = "Create and write a nebulo file with specified contents")
+  @Command(abbrev = "w", description = "Create and write a nebulo file with specified contents")
   public void write(
-      @Param(name = "appkey", description = "app key part of the file name") AppKey appKey,
       @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId,
+      @Param(name = "appkeys", description = "Access list") String appKeys,
       @Param(name = "content", description = "content of the file") String... content) {
-    NebuloFile file;
     try {
-      file = (NebuloFile) objectFactory_.fetchExistingNebuloObject(
-          new NebuloAddress(appKey, objectId));
-      System.out.println("Successfully fetched existing file");
-    } catch (NebuloException e) {
-      file = objectFactory_.createNewNebuloFile(new NebuloAddress(appKey, objectId));
+      Set<AppKey> accessList = buildAccessList(appKeys);
+      NebuloFile file = objectFactory_.createNewAccessNebuloFile(
+          new NebuloAddress(appKey_, objectId), accessList);
       System.out.println("Successfully created new file");
-    }
-    try {
       int bytesWritten = file.write(
           StringUtils.join(content, " ").getBytes(StandardCharsets.UTF_8), 0);
       System.out.println("Successfully written " + bytesWritten + " bytes");
@@ -177,18 +178,11 @@ public final class TextInterface extends Peer implements ShellManageable {
     }
   }
 
-
   @Command(description = "Delete a nebulo file")
   public void delete(
-      @Param(name = "appkey", description = "app key part of the file name") AppKey appKey,
       @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId) {
-    NebuloFile file = getNebuloFile(appKey, objectId);
-    if (file == null) {
-      return;
-    }
-
     try {
-      file.delete();
+      objectFactory_.deleteNebuloObject(new NebuloAddress(appKey_, objectId));
       System.out.println("Successfully deleted file");
     } catch (NebuloException exception) {
       System.out.println("Got exception from 'delete()':\n");
@@ -197,6 +191,13 @@ public final class TextInterface extends Peer implements ShellManageable {
     }
   }
 
+  private Set<AppKey> buildAccessList(String appKeys) {
+    Set<AppKey> result = new HashSet<AppKey>();
+    for (String appKey : appKeys.split(",")) {
+      result.add(new AppKey(appKey));
+    }
+    return result;
+  }
 
   protected NebuloFile getNebuloFile(AppKey appKey, ObjectId objectId) {
     try {
