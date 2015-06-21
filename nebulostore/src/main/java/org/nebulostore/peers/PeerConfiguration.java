@@ -119,9 +119,9 @@ public class PeerConfiguration extends GenericConfiguration {
   protected void configureEncryption() {
     bind(EncryptionAPI.class).to(RSABasedEncryptionAPI.class).in(Scopes.SINGLETON);
     bind(String.class).annotatedWith(
-        Names.named("PublicKeyPeerId")).toInstance(CryptoUtils.getRandomString());
+        Names.named("InstancePublicKeyId")).toInstance(CryptoUtils.getRandomString());
     bind(String.class).annotatedWith(
-        Names.named("PrivateKeyPeerId")).toInstance(CryptoUtils.getRandomString());
+        Names.named("InstancePrivateKeyId")).toInstance(CryptoUtils.getRandomString());
   }
 
   private void configureSessionNegotiator() {

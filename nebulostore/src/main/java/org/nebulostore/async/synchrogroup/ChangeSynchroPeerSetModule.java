@@ -9,7 +9,6 @@ import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.InstanceMetadata;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -50,17 +49,15 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
 
   private CommAddress myAddress_;
   private AsyncMessagesContext context_;
-  private AppKey appKey_;
   private Timer timer_;
 
   private final Set<CommAddress> addedPeers_ = new HashSet<>();
 
   @Inject
   private void setDependencies(CommAddress myAddress, NetworkMonitor networkMonitor,
-      AsyncMessagesContext context, AppKey appKey, Timer timer) {
+      AsyncMessagesContext context, Timer timer) {
     context_ = context;
     myAddress_ = myAddress;
-    appKey_ = appKey;
     timer_ = timer;
   }
 
@@ -97,7 +94,7 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
          * Update synchro peer counters to be sure that their values in DHT are not lower than
          * values held by synchro-peers in their vector clocks.
          */
-        InstanceMetadata metadata = new InstanceMetadata(appKey_);
+        InstanceMetadata metadata = new InstanceMetadata();
         for (CommAddress peer : synchroPeersToAdd_) {
           int counter = 0;
           if (synchroPeerCounters.containsKey(peer)) {
@@ -201,7 +198,7 @@ public class ChangeSynchroPeerSetModule extends ReturningJobModule<Void> {
 
     private void updateSynchroPeers() {
       timer_.cancelTimer();
-      InstanceMetadata metadata = new InstanceMetadata(appKey_);
+      InstanceMetadata metadata = new InstanceMetadata();
       Set<CommAddress> synchroGroup = context_.getSynchroGroupForPeerCopy(myAddress_);
       synchroGroup.addAll(addedPeers_);
       metadata.setSynchroGroup(synchroGroup);

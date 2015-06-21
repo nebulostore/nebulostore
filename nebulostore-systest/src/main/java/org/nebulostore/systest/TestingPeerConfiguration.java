@@ -35,9 +35,9 @@ public class TestingPeerConfiguration extends PeerConfiguration {
   protected void configureEncryption() {
     bind(EncryptionAPI.class).to(BasicEncryptionAPI.class).in(Scopes.SINGLETON);
     bind(String.class).annotatedWith(
-        Names.named("PublicKeyPeerId")).toInstance("");
+        Names.named("InstancePublicKeyId")).toInstance("");
     bind(String.class).annotatedWith(
-        Names.named("PrivateKeyPeerId")).toInstance("");
+        Names.named("InstancePrivateKeyId")).toInstance("");
   }
 
   @Override

@@ -32,6 +32,7 @@ import org.nebulostore.coding.ReplicaPlacementData;
 import org.nebulostore.coding.ReplicaPlacementPreparator;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
+import org.nebulostore.crypto.EncryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.replicator.core.TransactionAnswer;
@@ -48,8 +49,7 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
   private static Logger logger_ = Logger.getLogger(ReplicaRepairerModule.class);
 
   private final AppKey appKey_;
-  private final EncryptionAPI encryption_;
-  private final String publicKeyPeerId_;
+  private final EncryptWrapper encryptWrapper_;
   private final List<CommAddress> currentReplicators_;
   private final List<ReplicatorData> newReplicators_;
   private final Collection<ObjectId> objectIds_;
@@ -65,7 +65,7 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
       @Assisted("NewReplicators") List<ReplicatorData> newReplicators,
       @Assisted Collection<ObjectId> objectIds, Provider<ObjectGetter> getModuleProvider,
       Provider<PartialObjectWriter> writeModuleProvider, AppKey appKey, EncryptionAPI encryption,
-      @Named("PublicKeyPeerId") String publicKeyPeerId,
+      @Named("InstancePublicKeyId") String instancePublicKeyId,
       ReplicaPlacementPreparator placementPreparator) {
     currentReplicators_ = currentReplicators;
     newReplicators_ = newReplicators;
@@ -73,8 +73,7 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
     getModuleProvider_ = getModuleProvider;
     writeModuleProvider_ = writeModuleProvider;
     appKey_ = appKey;
-    encryption_ = encryption;
-    publicKeyPeerId_ = publicKeyPeerId;
+    encryptWrapper_ = new EncryptWrapper(encryption, instancePublicKeyId);
     placementPreparator_ = placementPreparator;
     visitor_ = new ReplicaRepairerVisitor();
   }
@@ -166,7 +165,7 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
           NebuloObject object = objects.get(objectId);
           EncryptedObject encryptedObject;
           try {
-            encryptedObject = encryption_.encrypt(object, publicKeyPeerId_);
+            encryptedObject = encryptWrapper_.encrypt(object);
           } catch (CryptoException e) {
             endWithError(new NebuloException("Error in object encryption", e));
             return;

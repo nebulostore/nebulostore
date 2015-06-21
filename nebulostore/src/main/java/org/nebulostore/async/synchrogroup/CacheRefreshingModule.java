@@ -7,7 +7,6 @@ import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.InstanceMetadata;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -44,15 +43,12 @@ public class CacheRefreshingModule extends JobModule {
   private AsyncMessagesContext context_;
   private Timer timer_;
   private CommAddress myAddress_;
-  private AppKey appKey_;
 
   @Inject
-  public void setDependencies(AsyncMessagesContext context, Timer timer, CommAddress myAddress,
-      AppKey appKey) {
+  public void setDependencies(AsyncMessagesContext context, Timer timer, CommAddress myAddress) {
     context_ = context;
     timer_ = timer;
     myAddress_ = myAddress;
-    appKey_ = appKey;
   }
 
   private enum ModuleState {
@@ -128,7 +124,7 @@ public class CacheRefreshingModule extends JobModule {
       state_ = ModuleState.UPDATING_DHT;
       context_.removeUnnecessarySynchroGroups();
 
-      InstanceMetadata metadata = new InstanceMetadata(appKey_);
+      InstanceMetadata metadata = new InstanceMetadata();
       RecipientsData recipientsData = context_.getRecipientsData();
       metadata.setRecipients(recipientsData.getRecipients());
       metadata.setRecipientsSetVersion(recipientsData.getRecipientsSetVersion());

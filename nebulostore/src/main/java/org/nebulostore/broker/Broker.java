@@ -31,7 +31,7 @@ public abstract class Broker extends JobModule {
   protected BrokerContext context_;
   private AppKey appKey_;
   protected EncryptionAPI encryptionAPI_;
-  protected String privateKeyPeerId_;
+  protected String instancePrivateKeyId_;
 
   @Inject
   private void setDependencies(CommAddress myAddress,
@@ -39,12 +39,12 @@ public abstract class Broker extends JobModule {
                                BrokerContext context,
                                AppKey appKey,
                                EncryptionAPI encryptionAPI,
-                               @Named("PrivateKeyPeerId") String privateKeyPeerId) {
+                               @Named("InstancePrivateKeyId") String instancePrivateKeyId) {
     myAddress_ = myAddress;
     networkMonitor_ = networkMonitor;
     context_ = context;
     appKey_ = appKey;
-    privateKeyPeerId_ = privateKeyPeerId;
+    instancePrivateKeyId_ = instancePrivateKeyId;
     encryptionAPI_ = encryptionAPI;
   }
 

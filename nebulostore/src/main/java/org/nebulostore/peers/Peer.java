@@ -75,10 +75,10 @@ public class Peer extends AbstractPeer {
   private RestModule restModule_;
 
   private EncryptionAPI encryption_;
-  private String publicKeyFilePath_;
-  private String privateKeyFilePath_;
-  private String publicKeyPeerId_;
-  private String privateKeyPeerId_;
+  private String instancePublicKeyFilePath_;
+  private String instancePrivateKeyFilePath_;
+  private String instancePublicKeyId_;
+  private String instancePrivateKeyId_;
 
   @Inject
   public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherInQueue,
@@ -101,10 +101,10 @@ public class Peer extends AbstractPeer {
                               RestModuleImpl restModule,
                               @Named("rest-api.enabled") boolean isRestEnabled,
                               EncryptionAPI encryption,
-                              @Named("security.public-key-file") String publicKeyFilePath,
-                              @Named("security.private-key-file") String privateKeyFilePath,
-                              @Named("PublicKeyPeerId") String publicKeyPeerId,
-                              @Named("PrivateKeyPeerId") String privateKeyPeerId) {
+                              @Named("security.public-key") String instancePublicKeyFilePath,
+                              @Named("security.private-key") String instancePrivateKeyFilePath,
+                              @Named("InstancePublicKeyId") String instancePublicKeyId,
+                              @Named("InstancePrivateKeyId") String instancePrivateKeyId) {
     dispatcherInQueue_ = dispatcherInQueue;
     networkInQueue_ = networkQueue;
     commPeerInQueue_ = commPeerInQueue;
@@ -122,10 +122,10 @@ public class Peer extends AbstractPeer {
     msgReceivingChecker_ = msgReceivingChecker;
     isRestEnabled_ = isRestEnabled;
     encryption_ = encryption;
-    publicKeyFilePath_ = publicKeyFilePath;
-    privateKeyFilePath_ = privateKeyFilePath;
-    publicKeyPeerId_ = publicKeyPeerId;
-    privateKeyPeerId_ = privateKeyPeerId;
+    instancePublicKeyFilePath_ = instancePublicKeyFilePath;
+    instancePrivateKeyFilePath_ = instancePrivateKeyFilePath;
+    instancePublicKeyId_ = instancePublicKeyId;
+    instancePrivateKeyId_ = instancePrivateKeyId;
 
     // Create core threads.
     Runnable dispatcher = new Dispatcher(dispatcherInQueue_, networkInQueue_, injector_);
@@ -204,7 +204,7 @@ public class Peer extends AbstractPeer {
     } catch (NebuloException exception) {
       logger_.error("Unable to register InstanceMetadata!", exception);
     }
-    registerPeerPublicPrivateKeys();
+    registerInstanceKeys();
   }
 
   /**
@@ -234,12 +234,12 @@ public class Peer extends AbstractPeer {
     // Empty by default.
   }
 
-  protected void registerPeerPublicPrivateKeys() {
+  protected void registerInstanceKeys() {
     try {
-      encryption_.load(publicKeyPeerId_, new FileKeySource(publicKeyFilePath_, KeyType.PUBLIC),
-          EncryptionAPI.STORE_IN_DHT);
-      encryption_.load(privateKeyPeerId_, new FileKeySource(privateKeyFilePath_, KeyType.PRIVATE),
-          !EncryptionAPI.STORE_IN_DHT);
+      encryption_.load(instancePublicKeyId_, new FileKeySource(instancePublicKeyFilePath_,
+          KeyType.PUBLIC), EncryptionAPI.STORE_IN_DHT);
+      encryption_.load(instancePrivateKeyId_, new FileKeySource(instancePrivateKeyFilePath_,
+          KeyType.PRIVATE), !EncryptionAPI.STORE_IN_DHT);
     } catch (CryptoException e) {
       throw new RuntimeException("Unable to load public/private keys", e);
     }

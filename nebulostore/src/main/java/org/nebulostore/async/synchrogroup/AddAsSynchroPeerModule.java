@@ -4,7 +4,6 @@ import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.InstanceMetadata;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -37,13 +36,11 @@ public class AddAsSynchroPeerModule extends JobModule {
   private String messageJobId_;
   private CommAddress recipient_;
 
-  private AppKey appKey_;
   private CommAddress myAddress_;
   private AsyncMessagesContext context_;
 
   @Inject
-  public void setDependencies(AppKey appKey, CommAddress myAddress, AsyncMessagesContext context) {
-    appKey_ = appKey;
+  public void setDependencies(CommAddress myAddress, AsyncMessagesContext context) {
     myAddress_ = myAddress;
     context_ = context;
   }
@@ -58,7 +55,7 @@ public class AddAsSynchroPeerModule extends JobModule {
           recipient_ = message.getSourceAddress();
           if (context_.addRecipient(recipient_, message.getCounterValue())) {
             RecipientsData recipientsData = context_.getRecipientsData();
-            InstanceMetadata metadata = new InstanceMetadata(appKey_);
+            InstanceMetadata metadata = new InstanceMetadata();
             metadata.setRecipients(recipientsData.getRecipients());
             metadata.setRecipientsSetVersion(recipientsData.getRecipientsSetVersion());
             networkQueue_.add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(

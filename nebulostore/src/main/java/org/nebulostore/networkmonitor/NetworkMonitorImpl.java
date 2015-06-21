@@ -151,7 +151,7 @@ public class NetworkMonitorImpl extends NetworkMonitor {
         result = CryptoUtils.getRandomString();
         peersPublicKeyId_.put(peer, result);
         logger_.debug(String.format("Put (Peer address %s, KeyID %s)", peer, result));
-        encryptionAPI_.load(result, new DHTKeySource(peer, dispatcherQueue_),
+        encryptionAPI_.load(result, new DHTKeySource(peer.toKeyDHT(), dispatcherQueue_),
             !EncryptionAPI.STORE_IN_DHT);
       } catch (CryptoException e) {
         logger_.error("Unable to load peer public key", e);

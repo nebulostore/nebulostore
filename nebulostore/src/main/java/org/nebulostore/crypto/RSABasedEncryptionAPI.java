@@ -85,7 +85,7 @@ public class RSABasedEncryptionAPI extends EncryptionAPI {
     LOGGER.debug(String.format("load %s %s %s", keyId, keySource, saveInDHT));
     KeyHandler keyHandler = keySource.getKeyHandler();
     if (saveInDHT) {
-      DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(peerAddress_, dispatcherQueue_);
+      DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(peerAddress_.toKeyDHT(), dispatcherQueue_);
       dhtKeyHandler.save(keyHandler.load());
       keyHandler = dhtKeyHandler;
     }

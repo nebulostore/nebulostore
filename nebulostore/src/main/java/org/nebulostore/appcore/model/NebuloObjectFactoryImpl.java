@@ -37,22 +37,22 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
   // Needed to inject dependencies to objects fetched from the network.
   protected Injector injector_;
   private EncryptionAPI encryptionAPI_;
-  private String publicKeyPeerId_;
-  private String privateKeyPeerId_;
+  private String instancePublicKeyId_;
+  private String instancePrivateKeyId_;
 
   @Inject
   public void setDependencies(Injector injector, EncryptionAPI encryptionAPI,
-      @Named("PublicKeyPeerId") String publicKeyPeerId,
-      @Named("PrivateKeyPeerId") String privateKeyPeerId) {
+      @Named("InstancePublicKeyId") String instancePublicKeyId,
+      @Named("InstancePrivateKeyId") String instancePrivateKeyId) {
     injector_ = injector;
     encryptionAPI_ = encryptionAPI;
-    publicKeyPeerId_ = publicKeyPeerId;
-    privateKeyPeerId_ = privateKeyPeerId;
+    instancePublicKeyId_ = instancePublicKeyId;
+    instancePrivateKeyId_ = instancePrivateKeyId;
   }
 
   @Override
   public NebuloObject fetchExistingNebuloObject(NebuloAddress address) throws NebuloException {
-    DecryptWrapper decryptWrapper = new DecryptWrapper(encryptionAPI_, privateKeyPeerId_);
+    DecryptWrapper decryptWrapper = new DecryptWrapper(encryptionAPI_, instancePrivateKeyId_);
     ObjectGetter getter = injector_.getInstance(ObjectGetter.class);
     getter.fetchObject(address, decryptWrapper);
     NebuloObject result = getter.awaitResult(TIMEOUT_SEC);
@@ -84,7 +84,7 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
   @Override
   public NebuloFile createNewNebuloFile(NebuloAddress address) {
     NebuloFile file = new NebuloFile(address);
-    file.setEncryptWrapper(new EncryptWrapper(encryptionAPI_, publicKeyPeerId_));
+    file.setEncryptWrapper(new EncryptWrapper(encryptionAPI_, instancePublicKeyId_));
     injector_.injectMembers(file);
     return file;
   }
@@ -112,7 +112,7 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
   @Override
   public NebuloList createNewNebuloList(NebuloAddress address) {
     NebuloList list = new NebuloList(address);
-    list.setEncryptWrapper(new EncryptWrapper(encryptionAPI_, publicKeyPeerId_));
+    list.setEncryptWrapper(new EncryptWrapper(encryptionAPI_, instancePublicKeyId_));
     injector_.injectMembers(list);
     return list;
   }

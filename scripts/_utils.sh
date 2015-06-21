@@ -42,8 +42,8 @@ function buildNebulostore() {
 
 function _generateKey() {
     KEY_SIZE=4096
-    KEY_DIR=$1/keys
-    mkdir $KEY_DIR
+    KEY_DIR=$1/keys/instance
+    mkdir -p $KEY_DIR
     PRIVATE_PEM=$KEY_DIR/private.pem
     PRIVATE_KEY=$KEY_DIR/private.key
     PUBLIC_KEY=$KEY_DIR/public.key

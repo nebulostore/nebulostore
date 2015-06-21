@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.dht.core.Mergeable;
 import org.nebulostore.networkmonitor.StatisticsList;
@@ -17,15 +16,12 @@ import org.nebulostore.networkmonitor.StatisticsList;
  *
  * @author szymonmatejczyk
  */
-public class InstanceMetadata implements Serializable, Mergeable {
+public class InstanceMetadata implements Serializable, Mergeable, PublicKeyMetadata {
   private static final long serialVersionUID = -2246471507395388278L;
 
   private static final double STATISTICS_LIST_MEAN_WEIGHT_SINGLE = 0.7;
   private static final double STATISTICS_LIST_MEAN_WEIGHT_MULTI = 0.4;
   private static final int STATISTICS_LIST_MAX_SIZE = 1000;
-
-  /* Id of user, that this metadata applies to. */
-  private AppKey owner_;
 
   /* Communication addresses of peers that store messages for @instance. */
   private Set<CommAddress> synchroGroup_;
@@ -34,7 +30,7 @@ public class InstanceMetadata implements Serializable, Mergeable {
   private Set<CommAddress> recipients_;
   private int recipientsSetVersion_;
 
-  private Key peerKey_;
+  private Key instancePublicKey_;
 
   /**
    * Map with counters indicating number of times each peer was added as a synchro peer of this
@@ -48,13 +44,8 @@ public class InstanceMetadata implements Serializable, Mergeable {
   public InstanceMetadata() {
   }
 
-  public InstanceMetadata(AppKey owner) {
-    owner_ = owner;
-  }
-
-  public InstanceMetadata(AppKey owner, Set<CommAddress> synchroGroup, Set<CommAddress> recipients,
+  public InstanceMetadata(Set<CommAddress> synchroGroup, Set<CommAddress> recipients,
       Map<CommAddress, Integer> synchroPeerCounters) {
-    owner_ = owner;
     synchroGroup_ = synchroGroup;
     recipients_ = recipients;
     synchroPeerCounters_ = synchroPeerCounters;
@@ -84,10 +75,6 @@ public class InstanceMetadata implements Serializable, Mergeable {
     recipientsSetVersion_ = recipientsSetVersion;
   }
 
-  public AppKey getOwner() {
-    return owner_;
-  }
-
   public Map<CommAddress, Integer> getSynchroPeerCounters() {
     return synchroPeerCounters_;
   }
@@ -96,12 +83,13 @@ public class InstanceMetadata implements Serializable, Mergeable {
     synchroPeerCounters_ = recipientsCounters;
   }
 
-  public Key getPeerKey() {
-    return peerKey_;
+  @Override
+  public Key getPublicKey() {
+    return instancePublicKey_;
   }
 
-  public void setPeerKey(Key peerKey) {
-    peerKey_ = peerKey;
+  public void setInstancePublicKey(Key instancePublicKey) {
+    instancePublicKey_ = instancePublicKey;
   }
 
   @Override
@@ -109,10 +97,6 @@ public class InstanceMetadata implements Serializable, Mergeable {
     // TODO(SZM): remove duplicated old statistics - design issue
     if (other instanceof InstanceMetadata) {
       InstanceMetadata o = (InstanceMetadata) other;
-
-      if (owner_ == null) {
-        owner_ = o.owner_;
-      }
 
       statistics_.addAllInFront(o.statistics_);
 
@@ -137,8 +121,8 @@ public class InstanceMetadata implements Serializable, Mergeable {
         recipientsSetVersion_ = o.recipientsSetVersion_;
       }
 
-      if (peerKey_ == null) {
-        peerKey_ = o.peerKey_;
+      if (instancePublicKey_ == null) {
+        instancePublicKey_ = o.instancePublicKey_;
       }
     }
     return this;
@@ -150,10 +134,10 @@ public class InstanceMetadata implements Serializable, Mergeable {
 
   @Override
   public String toString() {
-    return "InstanceMetadata: owner: " + owner_ + "\n\t" + "SynchroGroup: " +
+    return "InstanceMetadata: SynchroGroup: " +
         synchroGroup_ + "\n\t" + "Recipients: " + recipients_ + "\n\t" +
         "recipients set version: " + recipientsSetVersion_ + "\n\t" +
-        "peer key: " + peerKey_ + "\n\t" +
+        "instance public key: " + instancePublicKey_ + "\n\t" +
         " statistics list size: " + statistics_.getAllStatisticsView().size() + "\n\t";
   }
 }

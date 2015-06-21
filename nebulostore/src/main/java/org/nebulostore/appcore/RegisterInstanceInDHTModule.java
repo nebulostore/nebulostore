@@ -3,7 +3,6 @@ package org.nebulostore.appcore;
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
@@ -43,16 +42,10 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
   }
 
   private CommAddress myAddress_;
-  private AppKey appKey_;
 
   @Inject
   public void setMyAddress(CommAddress myAddress) {
     myAddress_ = myAddress;
-  }
-
-  @Inject
-  public void setMyAppKey(AppKey appKey) {
-    appKey_ = appKey;
   }
 
   public class RIIDHTVisitor extends MessageVisitor {
@@ -69,7 +62,7 @@ public class RegisterInstanceInDHTModule extends ReturningJobModule<Boolean> {
       if (state_ == State.WAITING_FOR_RESPONSE) {
         logger_.debug("Unable to retrieve InstanceMetadata from DHT, putting new.");
         // TODO(szm): read from file if exists
-        InstanceMetadata instanceMetadata = new InstanceMetadata(appKey_);
+        InstanceMetadata instanceMetadata = new InstanceMetadata();
         networkQueue_
           .add(new PutDHTMessage(jobId_, myAddress_.toKeyDHT(), new ValueDHT(instanceMetadata)));
         state_ = State.PUT_DHT;

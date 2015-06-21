@@ -46,7 +46,7 @@ public class InitSessionNegotiatorModule extends JobModule {
   private CommAddress myAddress_;
   private NetworkMonitor networkMonitor_;
   private EncryptionAPI encryptionAPI_;
-  private String privateKeyPeerId_;
+  private String instancePrivateKeyId_;
   private String sessionId_;
 
   private CommAddress peerAddress_;
@@ -70,12 +70,12 @@ public class InitSessionNegotiatorModule extends JobModule {
       CommAddress myAddress,
       NetworkMonitor networkMonitor,
       EncryptionAPI encryptionAPI,
-      @Named("PrivateKeyPeerId") String privateKeyPeerId,
+      @Named("InstancePrivateKeyId") String instancePrivateKeyId,
       InitSessionContext initSessionContext) {
     myAddress_ = myAddress;
     networkMonitor_ = networkMonitor;
     encryptionAPI_ = encryptionAPI;
-    privateKeyPeerId_ = privateKeyPeerId;
+    instancePrivateKeyId_ = instancePrivateKeyId;
     initSessionContext_ = initSessionContext;
   }
 
@@ -126,7 +126,7 @@ public class InitSessionNegotiatorModule extends JobModule {
       }
       try {
         DiffieHellmanInitPackage diffieHellmanInitPackage = (DiffieHellmanInitPackage)
-            encryptionAPI_.decrypt(message.getEncryptedData(), privateKeyPeerId_);
+            encryptionAPI_.decrypt(message.getEncryptedData(), instancePrivateKeyId_);
 
         Pair<KeyAgreement, DiffieHellmanResponsePackage> secondStep =
             DiffieHellmanProtocol.secondStepDHKeyAgreement(diffieHellmanInitPackage);
@@ -159,7 +159,7 @@ public class InitSessionNegotiatorModule extends JobModule {
       }
       try {
         DiffieHellmanResponsePackage diffieHellmanResponsePackage = (DiffieHellmanResponsePackage)
-            encryptionAPI_.decrypt(message.getEncryptedData(), privateKeyPeerId_);
+            encryptionAPI_.decrypt(message.getEncryptedData(), instancePrivateKeyId_);
 
         KeyAgreement keyAgreement = DiffieHellmanProtocol.thirdStepDHKeyAgreement(
             initSessionObject.getKeyAgreement(), diffieHellmanResponsePackage);

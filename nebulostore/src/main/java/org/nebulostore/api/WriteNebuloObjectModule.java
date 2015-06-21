@@ -3,7 +3,6 @@ package org.nebulostore.api;
 import java.util.List;
 
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.Metadata;
@@ -56,7 +55,6 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
 
   @Inject
   public WriteNebuloObjectModule(EncryptionAPI encryption,
-      @Named("PublicKeyPeerId") String publicKeyPeerId,
       ReplicaPlacementPreparator replicaPlacementPreparator) {
     super(encryption);
     replicaPlacementPreparator_ = replicaPlacementPreparator;
