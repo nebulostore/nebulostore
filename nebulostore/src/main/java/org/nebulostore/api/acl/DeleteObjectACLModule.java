@@ -28,7 +28,7 @@ public class DeleteObjectACLModule extends ReturningJobModule<Void> {
   private DeleteObjectACLVisitor deleteObjectACLVisitor_ = new DeleteObjectACLVisitor();
   private NebuloAddress address_;
   private EncryptionAPI encryptionAPI_;
-  private String instancePrivateKeyId_;
+  private String userPrivateKeyId_;
   private Injector injector_;
   private NetworkMonitor networkMonitor_;
   private AppKey appKey_;
@@ -36,12 +36,12 @@ public class DeleteObjectACLModule extends ReturningJobModule<Void> {
   @Inject
   public void setDependencies(
       EncryptionAPI encryptionAPI,
-      @Named("InstancePrivateKeyId") String instancePrivateKeyId,
+      @Named("UserPrivateKeyId") String userPrivateKeyId,
       Injector injector,
       NetworkMonitor networkMonitor,
       AppKey appKey) {
     encryptionAPI_ = encryptionAPI;
-    instancePrivateKeyId_ = instancePrivateKeyId;
+    userPrivateKeyId_ = userPrivateKeyId;
     injector_ = injector;
     networkMonitor_ = networkMonitor;
     appKey_ = appKey;
@@ -55,7 +55,7 @@ public class DeleteObjectACLModule extends ReturningJobModule<Void> {
         NebuloFile accessFile = ACLModuleUtils.getAccessFile(networkMonitor_, encryptionAPI_,
             injector_, address_);
         SecretKey secretKey = ACLModuleUtils.getSecretKeyFromAccessFile(
-            encryptionAPI_, appKey_, instancePrivateKeyId_, accessFile);
+            encryptionAPI_, appKey_, userPrivateKeyId_, accessFile);
         NebuloAddress dataAddress = new NebuloAddress(address_.getAppKey(), accessFile.getNextId());
         accessFile.delete();
         NebuloObject dataFile = ACLModuleUtils.getDataFile(

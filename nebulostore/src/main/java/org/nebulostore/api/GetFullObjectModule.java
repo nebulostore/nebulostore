@@ -4,7 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.appcore.Metadata;
+import org.nebulostore.appcore.UserMetadata;
 import org.nebulostore.appcore.addressing.ContractList;
 import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
@@ -76,7 +76,7 @@ public abstract class GetFullObjectModule<V> extends GetModule<V> {
         // for consecutive parts.
         state_ = STATE.REPLICA_FETCH;
         // TODO(bolek): How to avoid casting here? Make ValueDHTMessage generic?
-        Metadata metadata = (Metadata) message.getValue().getValue();
+        UserMetadata metadata = (UserMetadata) message.getValue().getValue();
         logger_.debug("Received ValueDHTMessage: " + metadata.toString());
         ContractList contractList = metadata.getContractList();
         ReplicationGroup replicationGroup = contractList.getGroup(address_.getObjectId());

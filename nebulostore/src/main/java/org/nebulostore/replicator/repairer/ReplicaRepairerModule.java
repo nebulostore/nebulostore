@@ -65,7 +65,7 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
       @Assisted("NewReplicators") List<ReplicatorData> newReplicators,
       @Assisted Collection<ObjectId> objectIds, Provider<ObjectGetter> getModuleProvider,
       Provider<PartialObjectWriter> writeModuleProvider, AppKey appKey, EncryptionAPI encryption,
-      @Named("InstancePublicKeyId") String instancePublicKeyId,
+      @Named("UserPublicKeyId") String userPublicKeyId,
       ReplicaPlacementPreparator placementPreparator) {
     currentReplicators_ = currentReplicators;
     newReplicators_ = newReplicators;
@@ -73,7 +73,7 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
     getModuleProvider_ = getModuleProvider;
     writeModuleProvider_ = writeModuleProvider;
     appKey_ = appKey;
-    encryptWrapper_ = new EncryptWrapper(encryption, instancePublicKeyId);
+    encryptWrapper_ = new EncryptWrapper(encryption, userPublicKeyId);
     placementPreparator_ = placementPreparator;
     visitor_ = new ReplicaRepairerVisitor();
   }

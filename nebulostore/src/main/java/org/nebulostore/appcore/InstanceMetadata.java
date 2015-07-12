@@ -88,7 +88,8 @@ public class InstanceMetadata implements Serializable, Mergeable, PublicKeyMetad
     return instancePublicKey_;
   }
 
-  public void setInstancePublicKey(Key instancePublicKey) {
+  @Override
+  public void setPublicKey(Key instancePublicKey) {
     instancePublicKey_ = instancePublicKey;
   }
 

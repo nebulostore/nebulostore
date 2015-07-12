@@ -9,4 +9,6 @@ public interface PublicKeyMetadata {
 
   Key getPublicKey();
 
+  void setPublicKey(Key key);
+
 }

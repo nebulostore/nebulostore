@@ -62,7 +62,7 @@ echo "["`date +"%T"`"] STARTING UI PEERS ..."
 for host in `head -$UI_PEER_NUM $HOST_LIST`
 do
     echo "["`date +"%T"`"] host: $host"
-    execInNewTerminalWindow "ssh -o $SSH_OPTIONS -l $USER $host \"hostname; cd $REMOTE_DIR; $JAVA_EXEC -jar Nebulostore.jar\"; echo hit enter to close the window; read"
+    execInNewTerminalWindow "ssh -o $SSH_OPTIONS -l $USER $host \"hostname; cd $REMOTE_DIR; $JAVA_EXEC -jar Nebulostore.jar\"; echo hit enter to close the window; read" "Instance $host"
     if [ "$BOOTSTRAP" = true ] ; then
         sleep $BOOTSTRAP_SLEEP
         BOOTSTRAP=false

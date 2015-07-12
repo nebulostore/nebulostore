@@ -93,7 +93,7 @@ public class InitSessionNegotiatorModule extends JobModule {
       } finally {
         initSessionContext_.releaseWriteLock();
       }
-      String peerKeyId = networkMonitor_.getPeerPublicKeyId(peerAddress_);
+      String peerKeyId = networkMonitor_.getInstancePublicKeyId(peerAddress_);
       try {
         Pair<KeyAgreement, DiffieHellmanInitPackage> firstStep =
             DiffieHellmanProtocol.firstStepDHKeyAgreement();
@@ -132,7 +132,7 @@ public class InitSessionNegotiatorModule extends JobModule {
             DiffieHellmanProtocol.secondStepDHKeyAgreement(diffieHellmanInitPackage);
         initSessionContext_.tryGetInitSessionObject(sessionId_).setSessionKey(
             DiffieHellmanProtocol.fourthStepDHKeyAgreement(secondStep.getFirst()));
-        String peerKeyId = networkMonitor_.getPeerPublicKeyId(peerAddress_);
+        String peerKeyId = networkMonitor_.getInstancePublicKeyId(peerAddress_);
         EncryptedObject encryptedData = encryptionAPI_.encrypt(secondStep.getSecond(), peerKeyId);
 
         Message initSessionResponseMessage = new InitSessionResponseMessage(remoteSourceJobId_,

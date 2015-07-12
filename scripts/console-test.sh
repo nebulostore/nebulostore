@@ -52,7 +52,7 @@ echo "["`date +"%T"`"] STARTING UI PEERS ..."
 for ((i=1; i<=$PEER_NUM; i++))
 do
     cd build/jar/$i
-    execInNewTerminalWindow "java -jar Nebulostore.jar"
+    execInNewTerminalWindow "java -jar Nebulostore.jar" "Instance no $i"
     cd ${EXEC_DIR}
     if [ "$BOOTSTRAP" = true ] ; then
         sleep $BOOTSTRAP_SLEEP

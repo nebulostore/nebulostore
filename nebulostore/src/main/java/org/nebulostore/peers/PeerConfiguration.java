@@ -122,6 +122,10 @@ public class PeerConfiguration extends GenericConfiguration {
         Names.named("InstancePublicKeyId")).toInstance(CryptoUtils.getRandomString());
     bind(String.class).annotatedWith(
         Names.named("InstancePrivateKeyId")).toInstance(CryptoUtils.getRandomString());
+    bind(String.class).annotatedWith(
+        Names.named("UserPublicKeyId")).toInstance(CryptoUtils.getRandomString());
+    bind(String.class).annotatedWith(
+        Names.named("UserPrivateKeyId")).toInstance(CryptoUtils.getRandomString());
   }
 
   private void configureSessionNegotiator() {

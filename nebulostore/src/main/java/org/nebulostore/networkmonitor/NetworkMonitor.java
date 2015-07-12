@@ -5,6 +5,7 @@ import java.util.Set;
 
 import com.google.inject.Inject;
 
+import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.modules.JobModule;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.timer.MessageGenerator;
@@ -38,5 +39,7 @@ public abstract class NetworkMonitor extends JobModule {
     throw new UnsupportedOperationException();
   }
 
-  public abstract String getPeerPublicKeyId(CommAddress peer);
+  public abstract String getInstancePublicKeyId(CommAddress instance);
+
+  public abstract String getUserPublicKeyId(AppKey user);
 }

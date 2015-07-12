@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
@@ -59,7 +58,6 @@ public final class CryptoUtils {
   private static final int SYMETRIC_KEY_BYTE_LENGTH = 256;
   private static final int ASYMETRIC_ENCRYPTION_BYTE_LENGTH = 512;
   private static final int ASYMETRIC_ENCRYPTION_KEY_LENGTH = 8 * ASYMETRIC_ENCRYPTION_BYTE_LENGTH;
-  private static final String KEYS_DIR = "keys/";
 
   public static PublicKey readPublicKey(String filename) throws CryptoException {
     try {
@@ -92,21 +90,6 @@ public final class CryptoUtils {
       return keyPairGenerator.generateKeyPair();
     } catch (NoSuchAlgorithmException e) {
       logger_.error("Unable to generate key pair.", e);
-      throw new CryptoException(e.getMessage(), e);
-    }
-  }
-
-  public static String saveKeyOnDisk(Key key, String keyId) throws CryptoException {
-    try {
-      String path = CryptoUtils.KEYS_DIR + keyId;
-      File keyFile = new File(path);
-      ObjectOutputStream objectOutputStream =
-          new ObjectOutputStream(new FileOutputStream(keyFile));
-      objectOutputStream.writeObject(key);
-      objectOutputStream.close();
-      return path;
-    } catch (IOException e) {
-      logger_.error("Unable to save key on disk");
       throw new CryptoException(e.getMessage(), e);
     }
   }

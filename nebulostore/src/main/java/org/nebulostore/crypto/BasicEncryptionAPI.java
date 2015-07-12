@@ -5,8 +5,7 @@ import java.io.Serializable;
 import javax.crypto.SecretKey;
 
 import org.nebulostore.appcore.model.EncryptedObject;
-import org.nebulostore.crypto.keys.KeySource;
-import org.nebulostore.utils.Pair;
+import org.nebulostore.crypto.keys.KeyHandler;
 
 /**
  * @author lukaszsiczek
@@ -47,12 +46,7 @@ public class BasicEncryptionAPI extends EncryptionAPI {
   }
 
   @Override
-  public void load(String keyId, KeySource keySource, boolean saveInDHT) {
-  }
-
-  @Override
-  public Pair<String, String> generatePublicPrivateKey() throws CryptoException {
-    return new Pair<String, String>(null, null);
+  public void load(String keyId, KeyHandler keyHandler) {
   }
 
 }

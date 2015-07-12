@@ -38,8 +38,8 @@ public class WriteObjectACLModule extends ReturningJobModule<NebuloObject> {
   private WriteObjectACLVisitor createObjectACLVisitor_ = new WriteObjectACLVisitor();
   private NebuloAddress address_;
   private EncryptionAPI encryptionAPI_;
-  private String instancePublicKeyId_;
-  private String instancePrivateKeyId_;
+  private String userPublicKeyId_;
+  private String userPrivateKeyId_;
   private AppKey appKey_;
   private Injector injector_;
   private NetworkMonitor networkMonitor_;
@@ -64,7 +64,7 @@ public class WriteObjectACLModule extends ReturningJobModule<NebuloObject> {
             injector_, address_);
         accessFileVersions = accessFile.getVersions();
         SecretKey secretKey = ACLModuleUtils.getSecretKeyFromAccessFile(encryptionAPI_, appKey_,
-            instancePrivateKeyId_, accessFile);
+            userPrivateKeyId_, accessFile);
         NebuloAddress dataAddress = new NebuloAddress(address_.getAppKey(), accessFile.getNextId());
         dataFile = ACLModuleUtils.getDataFile(
             networkMonitor_, encryptionAPI_, injector_, secretKey, dataAddress);
@@ -82,7 +82,7 @@ public class WriteObjectACLModule extends ReturningJobModule<NebuloObject> {
       try {
         SecretKey secretKey = CryptoUtils.generateSecretKey();
         ACLAccessData aclAccessData = buildACLAccessData(secretKey);
-        accessFile.setEncryptWrapper(new EncryptWrapper(encryptionAPI_, instancePrivateKeyId_));
+        accessFile.setEncryptWrapper(new EncryptWrapper(encryptionAPI_, userPrivateKeyId_));
         accessFile.write(CryptoUtils.serializeObject(aclAccessData), 0);
         NebuloAddress dataAddress = new NebuloAddress(address_.getAppKey(), accessFile.getNextId());
         dataFile = new NebuloFile(dataAddress);
@@ -100,14 +100,14 @@ public class WriteObjectACLModule extends ReturningJobModule<NebuloObject> {
   @Inject
   public void setDependencies(
       EncryptionAPI encryptionAPI,
-      @Named("InstancePublicKeyId") String instancePublicKeyId,
-      @Named("InstancePrivateKeyId") String instancePrivateKeyId,
+      @Named("UserPublicKeyId") String userPublicKeyId,
+      @Named("UserPrivateKeyId") String userPrivateKeyId,
       AppKey appKey,
       Injector injector,
       NetworkMonitor networkMonitor) {
     encryptionAPI_ = encryptionAPI;
-    instancePublicKeyId_ = instancePublicKeyId;
-    instancePrivateKeyId_ = instancePrivateKeyId;
+    userPublicKeyId_ = userPublicKeyId;
+    userPrivateKeyId_ = userPrivateKeyId;
     appKey_ = appKey;
     injector_ = injector;
     networkMonitor_ = networkMonitor;
@@ -131,10 +131,9 @@ public class WriteObjectACLModule extends ReturningJobModule<NebuloObject> {
   private ACLAccessData buildACLAccessData(SecretKey secretKey) throws CryptoException {
     ACLAccessData aclAccessData = new ACLAccessData();
     aclAccessData.add(address_.getAppKey(),
-        encryptionAPI_.encrypt(secretKey, instancePublicKeyId_));
+        encryptionAPI_.encrypt(secretKey, userPublicKeyId_));
     for (AppKey appKey : accessList_) {
-      String publicKey = networkMonitor_.getPeerPublicKeyId(
-          ACLModuleUtils.tmpAppKeyToCommAddress(appKey));
+      String publicKey = networkMonitor_.getUserPublicKeyId(appKey);
       aclAccessData.add(appKey, encryptionAPI_.encrypt(secretKey, publicKey));
     }
     return aclAccessData;

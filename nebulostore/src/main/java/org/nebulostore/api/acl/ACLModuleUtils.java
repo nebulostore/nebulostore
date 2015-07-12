@@ -11,7 +11,6 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.NebuloFile;
 import org.nebulostore.appcore.model.NebuloObject;
 import org.nebulostore.appcore.model.ObjectGetter;
-import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.DecryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
@@ -32,8 +31,7 @@ public final class ACLModuleUtils {
       EncryptionAPI encryptionAPI,
       Injector injector,
       NebuloAddress address) throws NebuloException {
-    String publicKey = networkMonitor.getPeerPublicKeyId(
-        ACLModuleUtils.tmpAppKeyToCommAddress(address.getAppKey()));
+    String publicKey = networkMonitor.getUserPublicKeyId(address.getAppKey());
     DecryptWrapper accessDecryptWrapper = new DecryptWrapper(encryptionAPI, publicKey);
 
     ObjectGetter getter = injector.getInstance(ObjectGetter.class);
@@ -62,7 +60,7 @@ public final class ACLModuleUtils {
   public static SecretKey getSecretKeyFromAccessFile(
       EncryptionAPI encryptionAPI,
       AppKey appKey,
-      String privateKeyPeerId,
+      String privateKeyUserId,
       NebuloFile accessFile) throws NebuloException {
     byte[] rowData = new byte[0];
     int pos = 0;
@@ -74,7 +72,7 @@ public final class ACLModuleUtils {
       rowData = Arrays.concatenate(rowData, data);
     } while (data.length > 0);
     ACLAccessData accessData = (ACLAccessData) CryptoUtils.deserializeObject(rowData);
-    return (SecretKey) encryptionAPI.decrypt(accessData.get(appKey), privateKeyPeerId);
+    return (SecretKey) encryptionAPI.decrypt(accessData.get(appKey), privateKeyUserId);
   }
 
   public static void checkOwner(NebuloAddress address, AppKey appKey) throws NebuloException {
@@ -83,13 +81,4 @@ public final class ACLModuleUtils {
     }
   }
 
-  public static CommAddress tmpAppKeyToCommAddress(AppKey appKey) {
-    int i = 11;
-    int id = 1;
-    while (i < appKey.getKey().intValue()) {
-      i += 11;
-      ++id;
-    }
-    return new CommAddress("00000000-0000-0000-" + String.format("%04d", id) +  "-000000000000");
-  }
 }

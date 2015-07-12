@@ -42,12 +42,12 @@ function buildNebulostore() {
 
 function _generateKey() {
     KEY_SIZE=4096
-    KEY_DIR=$1/keys/instance
+    KEY_DIR=$1
     mkdir -p $KEY_DIR
     PRIVATE_PEM=$KEY_DIR/private.pem
     PRIVATE_KEY=$KEY_DIR/private.key
     PUBLIC_KEY=$KEY_DIR/public.key
-    openssl genrsa -out $PRIVATE_PEM $KEY_SIZE
+    openssl genrsa -out $PRIVATE_PEM $KEY_SIZE 2> /dev/null
     openssl pkcs8 -topk8 -inform PEM -outform DER -in $PRIVATE_PEM -out $PRIVATE_KEY -nocrypt
     openssl rsa -in $PRIVATE_PEM -pubout -outform DER -out $PUBLIC_KEY
     rm $PRIVATE_PEM
@@ -69,7 +69,8 @@ function createNebuloProductionArtifact() {
     _copyLibraries $1
     _copyNebuloJar $1 $2 $3
     _copyConfig $1
-    _generateKey $1
+    _generateKey $1/keys/instance
+    _generateKey $1/keys/user
     generateReadMe $1
     addLicenseFile $1
 }
@@ -80,7 +81,8 @@ function createNebuloLocalArtifact() {
     _linkLibraries $1
     _copyNebuloJar $1 $2 $3
     _copyConfig $1
-    _generateKey $1
+    _generateKey $1/keys/instance
+    _generateKey $1/keys/user
     generateReadMe $1
     addLicenseFile $1
 }
@@ -118,6 +120,6 @@ tell app "Terminal"
 end tell
 EOF
     else
-        gnome-terminal -e "$1" &
+        gnome-terminal -e "$1" --title "$2" &
     fi
 }

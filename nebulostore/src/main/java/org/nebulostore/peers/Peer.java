@@ -9,8 +9,8 @@ import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.api.PutKeyModule;
-import org.nebulostore.appcore.Metadata;
 import org.nebulostore.appcore.RegisterInstanceInDHTModule;
+import org.nebulostore.appcore.UserMetadata;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.ContractList;
 import org.nebulostore.appcore.addressing.IntervalCollisionException;
@@ -27,7 +27,8 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.crypto.EncryptionAPI.KeyType;
-import org.nebulostore.crypto.keys.FileKeySource;
+import org.nebulostore.crypto.keys.DHTKeyHandler;
+import org.nebulostore.crypto.keys.LocalDiscKeyHandler;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.dispatcher.Dispatcher;
@@ -75,10 +76,14 @@ public class Peer extends AbstractPeer {
   private RestModule restModule_;
 
   private EncryptionAPI encryption_;
-  private String instancePublicKeyFilePath_;
-  private String instancePrivateKeyFilePath_;
+  private String instancePublicKeyPath_;
+  private String instancePrivateKeyPath_;
   private String instancePublicKeyId_;
   private String instancePrivateKeyId_;
+  private String userPublicKeyPath_;
+  private String userPrivateKeyPath_;
+  private String userPublicKeyId_;
+  private String userPrivateKeyId_;
 
   @Inject
   public void setDependencies(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherInQueue,
@@ -101,10 +106,14 @@ public class Peer extends AbstractPeer {
                               RestModuleImpl restModule,
                               @Named("rest-api.enabled") boolean isRestEnabled,
                               EncryptionAPI encryption,
-                              @Named("security.public-key") String instancePublicKeyFilePath,
-                              @Named("security.private-key") String instancePrivateKeyFilePath,
+                              @Named("security.instance.public-key") String instancePublicKeyPath,
+                              @Named("security.instance.private-key") String instancePrivateKeyPath,
                               @Named("InstancePublicKeyId") String instancePublicKeyId,
-                              @Named("InstancePrivateKeyId") String instancePrivateKeyId) {
+                              @Named("InstancePrivateKeyId") String instancePrivateKeyId,
+                              @Named("security.user.public-key") String userPublicKeyPath,
+                              @Named("security.user.private-key") String userPrivateKeyPath,
+                              @Named("UserPublicKeyId") String userPublicKeyId,
+                              @Named("UserPrivateKeyId") String userPrivateKeyId) {
     dispatcherInQueue_ = dispatcherInQueue;
     networkInQueue_ = networkQueue;
     commPeerInQueue_ = commPeerInQueue;
@@ -122,10 +131,14 @@ public class Peer extends AbstractPeer {
     msgReceivingChecker_ = msgReceivingChecker;
     isRestEnabled_ = isRestEnabled;
     encryption_ = encryption;
-    instancePublicKeyFilePath_ = instancePublicKeyFilePath;
-    instancePrivateKeyFilePath_ = instancePrivateKeyFilePath;
+    instancePublicKeyPath_ = instancePublicKeyPath;
+    instancePrivateKeyPath_ = instancePrivateKeyPath;
     instancePublicKeyId_ = instancePublicKeyId;
     instancePrivateKeyId_ = instancePrivateKeyId;
+    userPublicKeyPath_ = userPublicKeyPath;
+    userPrivateKeyPath_ = userPrivateKeyPath;
+    userPublicKeyId_ = userPublicKeyId;
+    userPrivateKeyId_ = userPrivateKeyId;
 
     // Create core threads.
     Runnable dispatcher = new Dispatcher(dispatcherInQueue_, networkInQueue_, injector_);
@@ -177,6 +190,20 @@ public class Peer extends AbstractPeer {
    * @param appKey
    */
   protected void register(AppKey appKey) {
+    RegisterInstanceInDHTModule registerInstanceMetadataModule = new RegisterInstanceInDHTModule();
+    registerInstanceMetadataModule.setDispatcherQueue(dispatcherInQueue_);
+    registerInstanceMetadataModule.runThroughDispatcher();
+    try {
+      registerInstanceMetadataModule.getResult(registrationTimeout_);
+    } catch (NebuloException exception) {
+      logger_.error("Unable to register InstanceMetadata!", exception);
+    }
+    registerInstanceKeys();
+    registerUser(appKey);
+    registerUserKeys();
+  }
+
+  private void registerUser(AppKey appKey) {
     // TODO(bolek): This should be part of broker. (szm): or NetworkMonitor
 
     ContractList contractList = new ContractList();
@@ -189,22 +216,12 @@ public class Peer extends AbstractPeer {
     PutKeyModule putKeyModule = new PutKeyModule(
         dispatcherInQueue_,
         new KeyDHT(appKey.getKey()),
-        new ValueDHT(new Metadata(appKey, contractList)));
-    RegisterInstanceInDHTModule registerInstanceMetadataModule = new RegisterInstanceInDHTModule();
-    registerInstanceMetadataModule.setDispatcherQueue(dispatcherInQueue_);
-    registerInstanceMetadataModule.runThroughDispatcher();
+        new ValueDHT(new UserMetadata(appKey, contractList)));
     try {
       putKeyModule.getResult(registrationTimeout_);
     } catch (NebuloException exception) {
       logger_.error("Unable to execute PutKeyModule!", exception);
     }
-
-    try {
-      registerInstanceMetadataModule.getResult(registrationTimeout_);
-    } catch (NebuloException exception) {
-      logger_.error("Unable to register InstanceMetadata!", exception);
-    }
-    registerInstanceKeys();
   }
 
   /**
@@ -236,10 +253,25 @@ public class Peer extends AbstractPeer {
 
   protected void registerInstanceKeys() {
     try {
-      encryption_.load(instancePublicKeyId_, new FileKeySource(instancePublicKeyFilePath_,
-          KeyType.PUBLIC), EncryptionAPI.STORE_IN_DHT);
-      encryption_.load(instancePrivateKeyId_, new FileKeySource(instancePrivateKeyFilePath_,
-          KeyType.PRIVATE), !EncryptionAPI.STORE_IN_DHT);
+      DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(commAddress_, dispatcherInQueue_);
+      dhtKeyHandler.save(new LocalDiscKeyHandler(instancePublicKeyPath_,
+          KeyType.PUBLIC).load());
+      encryption_.load(instancePublicKeyId_, dhtKeyHandler);
+      encryption_.load(instancePrivateKeyId_, new LocalDiscKeyHandler(instancePrivateKeyPath_,
+          KeyType.PRIVATE));
+    } catch (CryptoException e) {
+      throw new RuntimeException("Unable to load public/private keys", e);
+    }
+  }
+
+  protected void registerUserKeys() {
+    try {
+      DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(appKey_, dispatcherInQueue_);
+      dhtKeyHandler.save(new LocalDiscKeyHandler(userPublicKeyPath_,
+          KeyType.PUBLIC).load());
+      encryption_.load(userPublicKeyId_, dhtKeyHandler);
+      encryption_.load(userPrivateKeyId_, new LocalDiscKeyHandler(userPrivateKeyPath_,
+          KeyType.PRIVATE));
     } catch (CryptoException e) {
       throw new RuntimeException("Unable to load public/private keys", e);
     }

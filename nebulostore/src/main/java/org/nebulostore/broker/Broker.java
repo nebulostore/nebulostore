@@ -6,7 +6,7 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 import org.nebulostore.api.PutKeyModule;
-import org.nebulostore.appcore.Metadata;
+import org.nebulostore.appcore.UserMetadata;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.ContractList;
 import org.nebulostore.appcore.addressing.IntervalCollisionException;
@@ -60,7 +60,7 @@ public abstract class Broker extends JobModule {
     PutKeyModule putKeyModule = new PutKeyModule(
         outQueue_,
         new KeyDHT(appKey_.getKey()),
-        new ValueDHT(new Metadata(appKey_, contractList)));
+        new ValueDHT(new UserMetadata(appKey_, contractList)));
     putKeyModule.getResult(timeoutSec);
   }
 }

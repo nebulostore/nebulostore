@@ -225,7 +225,13 @@
         </replicator-write-file-form>
     </rest-api>
     <security>
-        <private-key>keys/instance/private.key</private-key>
-        <public-key>keys/instance/public.key</public-key>
+        <instance>
+            <private-key>keys/instance/private.key</private-key>
+            <public-key>keys/instance/public.key</public-key>
+        </instance>
+        <user>
+            <private-key>keys/user/private.key</private-key>
+            <public-key>keys/user/public.key</public-key>
+        </user>
     </security>
 </peer>

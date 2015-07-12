@@ -38,6 +38,10 @@ public class TestingPeerConfiguration extends PeerConfiguration {
         Names.named("InstancePublicKeyId")).toInstance("");
     bind(String.class).annotatedWith(
         Names.named("InstancePrivateKeyId")).toInstance("");
+    bind(String.class).annotatedWith(
+        Names.named("UserPublicKeyId")).toInstance("");
+    bind(String.class).annotatedWith(
+        Names.named("UserPrivateKeyId")).toInstance("");
   }
 
   @Override

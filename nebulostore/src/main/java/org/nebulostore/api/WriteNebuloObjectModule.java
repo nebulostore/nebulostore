@@ -5,7 +5,7 @@ import java.util.List;
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.appcore.Metadata;
+import org.nebulostore.appcore.UserMetadata;
 import org.nebulostore.appcore.addressing.ContractList;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ReplicationGroup;
@@ -113,7 +113,7 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
 
         // TODO(bolek): How to avoid casting here? Make ValueDHTMessage generic?
         // TODO(bolek): Merge this with similar part from GetNebuloFileModule?
-        Metadata metadata = (Metadata) message.getValue().getValue();
+        UserMetadata metadata = (UserMetadata) message.getValue().getValue();
         logger_.debug("Metadata: " + metadata);
 
         ContractList contractList = metadata.getContractList();

@@ -16,14 +16,14 @@ import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
+import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
 import org.nebulostore.communication.naming.CommAddress;
-import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
-import org.nebulostore.crypto.keys.DHTKeySource;
+import org.nebulostore.crypto.keys.DHTKeyHandler;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.messages.ConnectionTestMessage;
 import org.nebulostore.timer.MessageGenerator;
@@ -63,7 +63,8 @@ public class NetworkMonitorImpl extends NetworkMonitor {
 
   private final EncryptionAPI encryptionAPI_;
 
-  private final Map<CommAddress, String> peersPublicKeyId_;
+  private final Map<CommAddress, String> instancePublicKeyId_;
+  private final Map<AppKey, String> userPublicKeyId_;
 
   @Inject
   public NetworkMonitorImpl(@Named("DispatcherQueue") BlockingQueue<Message> dispatcherQueue,
@@ -83,7 +84,8 @@ public class NetworkMonitorImpl extends NetworkMonitor {
     connectionTestMessageHandlerProvider_ = connectionTestMessageHandlerProvider;
     statisticsUpdateIntervalMillis_ = statisticsUpdateIntervalMillis;
     encryptionAPI_ = encryptionAPI;
-    peersPublicKeyId_ = new HashMap<CommAddress, String>();
+    instancePublicKeyId_ = new HashMap<CommAddress, String>();
+    userPublicKeyId_ = new HashMap<AppKey, String>();
     visitor_ = new NetworkMonitorVisitor();
   }
 
@@ -144,18 +146,25 @@ public class NetworkMonitorImpl extends NetworkMonitor {
   }
 
   @Override
-  public String getPeerPublicKeyId(CommAddress peer) {
-    String result = peersPublicKeyId_.get(peer);
+  public String getInstancePublicKeyId(CommAddress instance) {
+    String result = instancePublicKeyId_.get(instance);
     if (result == null) {
-      try {
-        result = CryptoUtils.getRandomString();
-        peersPublicKeyId_.put(peer, result);
-        logger_.debug(String.format("Put (Peer address %s, KeyID %s)", peer, result));
-        encryptionAPI_.load(result, new DHTKeySource(peer.toKeyDHT(), dispatcherQueue_),
-            !EncryptionAPI.STORE_IN_DHT);
-      } catch (CryptoException e) {
-        logger_.error("Unable to load peer public key", e);
-      }
+      result = CryptoUtils.getRandomString();
+      instancePublicKeyId_.put(instance, result);
+      logger_.debug(String.format("Put (Instance address %s, KeyID %s)", instance, result));
+      encryptionAPI_.load(result, new DHTKeyHandler(instance, dispatcherQueue_));
+    }
+    return result;
+  }
+
+  @Override
+  public String getUserPublicKeyId(AppKey user) {
+    String result = userPublicKeyId_.get(user);
+    if (result == null) {
+      result = CryptoUtils.getRandomString();
+      userPublicKeyId_.put(user, result);
+      logger_.debug(String.format("Put (User %s, KeyID %s)", user, result));
+      encryptionAPI_.load(result, new DHTKeyHandler(user, dispatcherQueue_));
     }
     return result;
   }
