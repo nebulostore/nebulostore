@@ -5,7 +5,7 @@ import javax.crypto.SecretKey;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.naming.CommAddress;
 
-public class GetSessionKeyResponseMessage extends Message {
+public class DHGetSessionKeyResponseMessage extends Message {
 
   private static final long serialVersionUID = -7314530957894008209L;
 
@@ -13,7 +13,7 @@ public class GetSessionKeyResponseMessage extends Message {
   private SecretKey sessionKey_;
   private String sessionId_;
 
-  public GetSessionKeyResponseMessage(String jobId, CommAddress peerAddress,
+  public DHGetSessionKeyResponseMessage(String jobId, CommAddress peerAddress,
       SecretKey sessionKey, String sessionId) {
     super(jobId);
     peerAddress_ = peerAddress;

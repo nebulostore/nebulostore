@@ -8,7 +8,6 @@ import javax.crypto.SecretKey;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.AppKey;
@@ -24,6 +23,7 @@ import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.identity.IdentityManager;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -100,15 +100,13 @@ public class WriteObjectACLModule extends ReturningJobModule<NebuloObject> {
   @Inject
   public void setDependencies(
       EncryptionAPI encryptionAPI,
-      @Named("UserPublicKeyId") String userPublicKeyId,
-      @Named("UserPrivateKeyId") String userPrivateKeyId,
-      AppKey appKey,
+      IdentityManager identityManager,
       Injector injector,
       NetworkMonitor networkMonitor) {
     encryptionAPI_ = encryptionAPI;
-    userPublicKeyId_ = userPublicKeyId;
-    userPrivateKeyId_ = userPrivateKeyId;
-    appKey_ = appKey;
+    appKey_ = identityManager.getCurrentUserAppKey();
+    userPublicKeyId_ = identityManager.getCurrentUserPublicKeyId();
+    userPrivateKeyId_ = identityManager.getCurrentUserPrivateKeyId();
     injector_ = injector;
     networkMonitor_ = networkMonitor;
   }

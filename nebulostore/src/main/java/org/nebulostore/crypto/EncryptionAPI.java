@@ -32,6 +32,13 @@ public abstract class EncryptionAPI {
   public abstract Object decryptWithSessionKey(EncryptedObject cipher,
       SecretKey key) throws CryptoException;
 
+  public abstract String generateMAC(Serializable object, String keyId) throws CryptoException;
+
+  public abstract boolean verifyMAC(Serializable object, String version, String keyId)
+      throws CryptoException;
+
   public abstract void load(String keyId, KeyHandler keyHandler);
+
+  public abstract void remove(String keyId);
 
 }

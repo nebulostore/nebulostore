@@ -49,4 +49,19 @@ public class BasicEncryptionAPI extends EncryptionAPI {
   public void load(String keyId, KeyHandler keyHandler) {
   }
 
+  @Override
+  public String generateMAC(Serializable object, String keyId) throws CryptoException {
+    return CryptoUtils.sha(encrypt(object, keyId));
+  }
+
+  @Override
+  public boolean verifyMAC(Serializable object, String version, String keyId)
+      throws CryptoException {
+    return generateMAC(object, null).equals(version);
+  }
+
+  @Override
+  public void remove(String keyId) {
+  }
+
 }

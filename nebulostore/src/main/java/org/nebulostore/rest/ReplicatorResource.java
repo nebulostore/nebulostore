@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -33,6 +34,7 @@ import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.NebuloFile;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
+import org.nebulostore.identity.IdentityManager;
 import org.nebulostore.replicator.core.Replicator;
 import org.nebulostore.utils.JSONFactory;
 import org.slf4j.Logger;
@@ -49,14 +51,17 @@ public class ReplicatorResource {
   private final Provider<Replicator> replicatorProvider_;
   private final NebuloObjectFactory nebuloObjectFactory_;
   private final String writeFileFormDestination_;
+  private IdentityManager identityManager_;
 
   @Inject
   public ReplicatorResource(Provider<Replicator> replicatorProvider,
-      @Named("rest-api.replicator-write-file-form") String writeFileFormDestination,
-      NebuloObjectFactory nebuloObjectFactory) {
+      @Named("rest-api.html-template.replicator-write-file-form") String writeFileFormDestination,
+      NebuloObjectFactory nebuloObjectFactory,
+      IdentityManager identityManager) {
     replicatorProvider_ = replicatorProvider;
     writeFileFormDestination_ = writeFileFormDestination;
     nebuloObjectFactory_ = nebuloObjectFactory;
+    identityManager_ = identityManager;
   }
 
   @GET
@@ -100,8 +105,8 @@ public class ReplicatorResource {
   @Consumes(MediaType.MULTIPART_FORM_DATA)
   @Produces(MediaType.APPLICATION_JSON)
   public String writeFileData(
-      @FormDataParam("appKey") String key,
       @FormDataParam("objectId") long id,
+      @FormDataParam("appKeys") String appKeys,
       @FormDataParam("file") InputStream uploadedInputStream,
       @FormDataParam("file") FormDataContentDisposition fileDetail)
       throws NebuloException {
@@ -109,11 +114,10 @@ public class ReplicatorResource {
     LOGGER.info(fileDetail.getFileName());
     LOGGER.info(JSONFactory.convertFromCollection(fileDetail.getParameters().keySet()).toString());
 
-    AppKey appKey = new AppKey(key);
     ObjectId objectId = new ObjectId(BigInteger.valueOf(id));
     JsonPrimitive result;
     try {
-      result = new JsonPrimitive(writeFile(appKey, objectId, uploadedInputStream));
+      result = new JsonPrimitive(writeFile(objectId, appKeys, uploadedInputStream));
     } catch (NebuloException e) {
       LOGGER.error(e.getMessage());
       throw e;
@@ -191,16 +195,22 @@ public class ReplicatorResource {
     return byteArrayOutputStream.toByteArray();
   }
 
-  private int writeFile(AppKey appKey, ObjectId objectId, InputStream uploadedInputStream)
+  private int writeFile(ObjectId objectId, String appKeys, InputStream uploadedInputStream)
       throws IOException, NebuloException {
-    NebuloFile file;
-    try {
-      file = (NebuloFile) nebuloObjectFactory_.fetchExistingNebuloObject(
-          new NebuloAddress(appKey, objectId));
-      file.truncate(0);
-    } catch (NebuloException e) {
-      file = nebuloObjectFactory_.createNewNebuloFile(new NebuloAddress(appKey, objectId));
-    }
+    Set<AppKey> accessList = buildAccessList(appKeys);
+    NebuloFile file = nebuloObjectFactory_.createNewAccessNebuloFile(
+          new NebuloAddress(identityManager_.getCurrentUserAppKey(), objectId), accessList);
     return file.write(ByteStreams.toByteArray(uploadedInputStream), 0);
+  }
+
+  private Set<AppKey> buildAccessList(String appKeys) {
+    Set<AppKey> result = new HashSet<AppKey>();
+    if (appKeys.equals("0")) {
+      return result;
+    }
+    for (String appKey : appKeys.split(",")) {
+      result.add(new AppKey(appKey));
+    }
+    return result;
   }
 }

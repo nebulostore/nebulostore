@@ -24,10 +24,11 @@ import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.DecryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
-import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
-import org.nebulostore.crypto.session.message.InitSessionEndMessage;
-import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
+import org.nebulostore.crypto.session.SessionNegotiatorModule;
+import org.nebulostore.crypto.session.message.DHFinishMessage;
+import org.nebulostore.crypto.session.message.DHLocalErrorMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.replicator.messages.GetObjectMessage;
 import org.nebulostore.replicator.messages.ReplicatorErrorMessage;
 import org.nebulostore.replicator.messages.SendObjectMessage;
@@ -55,10 +56,13 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
 
   protected NebuloAddress address_;
   protected Map<String, SecretKey> sessionKeys_ = new HashMap<String, SecretKey>();
+  protected NetworkMonitor networkMonitor_;
 
-  public void setDependencies(Provider<Timer> timerProvider, EncryptionAPI encryptionAPI) {
+  public void setDependencies(Provider<Timer> timerProvider, EncryptionAPI encryptionAPI,
+      NetworkMonitor networkMonitor) {
     timerProvider_ = timerProvider;
     encryption_ = encryptionAPI;
+    networkMonitor_ = networkMonitor;
   }
 
   public void fetchObject(NebuloAddress address, DecryptWrapper decryptWrapper) {
@@ -79,14 +83,14 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
 
     public abstract void visit(TimeoutMessage message);
 
-    public void visit(InitSessionEndMessage message) {
+    public void visit(DHFinishMessage message) {
       logger_.debug("Process " + message);
       sessionKeys_.put(message.getSessionId(), message.getSessionKey());
       networkQueue_.add(new GetObjectMessage(CryptoUtils.getRandomId().toString(), myAddress_,
           message.getPeerAddress(), address_.getObjectId(), jobId_, message.getSessionId()));
     }
 
-    public void visit(InitSessionEndWithErrorMessage message) {
+    public void visit(DHLocalErrorMessage message) {
       logger_.debug("Process InitSessionEndWithErrorMessage " + message);
       failReplicator(message.getPeerAddress());
     }
@@ -154,8 +158,8 @@ public abstract class GetModule<V> extends ReturningJobModule<V> {
     }
 
     private void startSessionAgreement(CommAddress replicator) {
-      InitSessionNegotiatorModule initSessionNegotiatorModule =
-          new InitSessionNegotiatorModule(replicator, getJobId(), null);
+      SessionNegotiatorModule initSessionNegotiatorModule =
+          new SessionNegotiatorModule(replicator, getJobId(), null, 1);
       outQueue_.add(new JobInitMessage(initSessionNegotiatorModule));
     }
 

@@ -77,10 +77,8 @@ public final class TextInterface extends Peer implements ShellManageable {
   }
 
   @Inject
-  public void setDependencies(NebuloObjectFactory objectFactory,
-      AppKey appKey) {
+  public void setDependencies(NebuloObjectFactory objectFactory) {
     objectFactory_ = objectFactory;
-    appKey_ = appKey;
   }
 
   @Override
@@ -91,7 +89,7 @@ public final class TextInterface extends Peer implements ShellManageable {
 
   @Override
   protected void runActively() {
-    register(appKey_);
+    register();
     try {
       ShellFactory.createConsoleShell("nebulo", "nebulostore shell.\n" +
           "Type ?list to see available commands.\n" +
@@ -127,7 +125,7 @@ public final class TextInterface extends Peer implements ShellManageable {
 
   @Command(description = "Show nebulo parameters of this instance")
   public void info() {
-    System.out.println("appKey: " + appKey_);
+    System.out.println("appKey: " + identityManager_.getCurrentUserAppKey());
     System.out.println("commAddress: " + commAddress_);
   }
 
@@ -168,7 +166,7 @@ public final class TextInterface extends Peer implements ShellManageable {
     try {
       Set<AppKey> accessList = buildAccessList(appKeys);
       NebuloFile file = objectFactory_.createNewAccessNebuloFile(
-          new NebuloAddress(appKey_, objectId), accessList);
+          new NebuloAddress(identityManager_.getCurrentUserAppKey(), objectId), accessList);
       System.out.println("Successfully created new file");
       int bytesWritten = file.write(
           StringUtils.join(content, " ").getBytes(StandardCharsets.UTF_8), 0);
@@ -182,7 +180,8 @@ public final class TextInterface extends Peer implements ShellManageable {
   public void delete(
       @Param(name = "objectid", description = "object idpart of the file name") ObjectId objectId) {
     try {
-      objectFactory_.deleteNebuloObject(new NebuloAddress(appKey_, objectId));
+      objectFactory_.deleteNebuloObject(new NebuloAddress(
+          identityManager_.getCurrentUserAppKey(), objectId));
       System.out.println("Successfully deleted file");
     } catch (NebuloException exception) {
       System.out.println("Got exception from 'delete()':\n");

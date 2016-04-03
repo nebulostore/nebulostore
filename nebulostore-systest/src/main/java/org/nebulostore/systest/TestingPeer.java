@@ -50,7 +50,7 @@ public class TestingPeer extends Peer {
   @Override
   protected void runActively() {
     // TODO: Move register to separate module or at least make it non-blocking.
-    register(appKey_);
+    register();
     if (isTestServer_) {
       runTestingServer();
     }

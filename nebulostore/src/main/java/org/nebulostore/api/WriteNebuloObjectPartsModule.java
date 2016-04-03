@@ -10,6 +10,7 @@ import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.appcore.model.PartialObjectWriter;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dispatcher.JobInitMessage;
 
@@ -46,7 +47,11 @@ public class WriteNebuloObjectPartsModule extends WriteModule implements Partial
   protected class WriteNebuloObjectPartsVisitor extends WriteModuleVisitor {
 
     public void visit(JobInitMessage message) {
-      sendStoreQueries(objectsMap_, previousVersionSHAs_, true, null, objectId_);
+      try {
+        sendStoreQueries(objectsMap_, previousVersionSHAs_, true, null, objectId_);
+      } catch (CryptoException e) {
+        endWithError(e);
+      }
     }
   }
 

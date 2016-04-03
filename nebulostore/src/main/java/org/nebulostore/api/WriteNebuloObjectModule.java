@@ -21,14 +21,15 @@ import org.nebulostore.coding.ReplicaPlacementData;
 import org.nebulostore.coding.ReplicaPlacementPreparator;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.session.SessionObjectMap;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
 import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.identity.IdentityManager;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.replicator.messages.ObjectOutdatedMessage;
 
@@ -47,6 +48,7 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
 
   private NebuloObject object_;
   private EncryptWrapper encryptWrapper_;
+  private String userPrivateKeyId_;
 
   private List<String> previousVersionSHAs_;
 
@@ -55,9 +57,11 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
 
   @Inject
   public WriteNebuloObjectModule(EncryptionAPI encryption,
-      ReplicaPlacementPreparator replicaPlacementPreparator) {
+      ReplicaPlacementPreparator replicaPlacementPreparator,
+      IdentityManager identityManager) {
     super(encryption);
     replicaPlacementPreparator_ = replicaPlacementPreparator;
+    userPrivateKeyId_ = identityManager.getCurrentUserPrivateKeyId();
   }
 
   @Override
@@ -67,10 +71,11 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
 
   @Override
   public void writeObject(NebuloObject objectToWrite, List<String> previousVersionSHAs,
-      EncryptWrapper encryptWrapper) {
+      EncryptWrapper encryptWrapper, SessionObjectMap sessionObjectMap) {
     object_ = objectToWrite;
     previousVersionSHAs_ = previousVersionSHAs;
     encryptWrapper_ = encryptWrapper;
+    sessionObjectMap_ = sessionObjectMap;
     super.writeObject(CONFIRMATIONS_REQUIRED);
   }
 
@@ -126,7 +131,8 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
         } else {
           try {
             EncryptedObject encryptedObject = encryptWrapper_.encrypt(object_);
-            commitVersion_ = CryptoUtils.sha(encryptedObject);
+            commitVersion_ = encryption_.generateMAC(object_, userPrivateKeyId_);
+
             boolean isSmallFile = encryptedObject.size() < SMALL_FILE_THRESHOLD;
 
             ReplicaPlacementData placementData =
@@ -170,7 +176,8 @@ public class WriteNebuloObjectModule extends WriteModule implements ObjectWriter
         // Peers that rejected or withheld transaction should get notification, that their
         // version is outdated.
         for (CommAddress rejecting : rejectingOrWithholdingReplicators_) {
-          networkQueue_.add(new ObjectOutdatedMessage(rejecting, object_.getAddress()));
+          networkQueue_.add(new ObjectOutdatedMessage(rejecting, object_.getAddress(),
+              commitVersion_));
         }
 
         // TODO(szm): don't like updating version here

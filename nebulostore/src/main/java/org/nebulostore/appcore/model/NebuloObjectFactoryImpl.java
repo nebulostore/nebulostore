@@ -1,37 +1,27 @@
 package org.nebulostore.appcore.model;
 
-import java.math.BigInteger;
 import java.util.Set;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.name.Named;
 
 import org.nebulostore.api.acl.DeleteObjectACLModule;
 import org.nebulostore.api.acl.ReadObjectACLModule;
 import org.nebulostore.api.acl.WriteObjectACLModule;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
-import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
-import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.DecryptWrapper;
 import org.nebulostore.crypto.EncryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.identity.IdentityManager;
 
 /**
  * Factory that produces objects for NebuloStore users.
  * @author Bolek Kulbabinski
  */
 public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
-  /**
-   * For now default contract in nebulostore is set for objects of ids up to
-   * 1000000. In order to make nebulostore work out of the box we limit the
-   * random id of object ids to that number as well.  TODO. Please change it
-   * once we have contract negotation working properly.
-   */
-  private static final BigInteger DEFAULT_OBJECTID_LIMIT =
-      new BigInteger("1000000");
+
   private static final int TIMEOUT_SEC = 60;
 
   // Needed to inject dependencies to objects fetched from the network.
@@ -41,13 +31,13 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
   private String userPrivateKeyId_;
 
   @Inject
-  public void setDependencies(Injector injector, EncryptionAPI encryptionAPI,
-      @Named("UserPublicKeyId") String userPublicKeyId,
-      @Named("UserPrivateKeyId") String userPrivateKeyId) {
+  public void setDependencies(Injector injector,
+      EncryptionAPI encryptionAPI,
+      IdentityManager identityManager) {
     injector_ = injector;
     encryptionAPI_ = encryptionAPI;
-    userPublicKeyId_ = userPublicKeyId;
-    userPrivateKeyId_ = userPrivateKeyId;
+    userPublicKeyId_ = identityManager.getCurrentUserPublicKeyId();
+    userPrivateKeyId_ = identityManager.getCurrentUserPrivateKeyId();
   }
 
   @Override
@@ -69,19 +59,6 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
   }
 
   @Override
-  public NebuloFile createNewNebuloFile() {
-    // TODO(bolek): Here should come more sophisticated ID generation method to account for
-    //   (probably) fixed replication groups with ID intervals. (ask Broker? what size?)
-    return createNewNebuloFile(new ObjectId(CryptoUtils.getRandomId().mod(DEFAULT_OBJECTID_LIMIT)));
-  }
-
-  @Override
-  public NebuloFile createNewNebuloFile(ObjectId objectId) {
-    NebuloAddress address = new NebuloAddress(injector_.getInstance(AppKey.class), objectId);
-    return createNewNebuloFile(address);
-  }
-
-  @Override
   public NebuloFile createNewNebuloFile(NebuloAddress address) {
     NebuloFile file = new NebuloFile(address);
     file.setEncryptWrapper(new EncryptWrapper(encryptionAPI_, userPublicKeyId_));
@@ -95,18 +72,6 @@ public class NebuloObjectFactoryImpl implements NebuloObjectFactory {
     WriteObjectACLModule createObjectACLModule = injector_.getInstance(WriteObjectACLModule.class);
     createObjectACLModule.createNewNebuloFile(address, accessList);
     return (NebuloFile) createObjectACLModule.awaitResult(TIMEOUT_SEC);
-  }
-
-  @Override
-  public NebuloList createNewNebuloList() {
-    ObjectId objectId = new ObjectId(CryptoUtils.getRandomId().mod(DEFAULT_OBJECTID_LIMIT));
-    return createNewNebuloList(objectId);
-  }
-
-  @Override
-  public NebuloList createNewNebuloList(ObjectId objectId) {
-    NebuloAddress address = new NebuloAddress(injector_.getInstance(AppKey.class), objectId);
-    return createNewNebuloList(address);
   }
 
   @Override

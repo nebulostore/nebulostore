@@ -1,6 +1,5 @@
 package org.nebulostore.peers;
 
-import java.math.BigInteger;
 import java.util.concurrent.BlockingQueue;
 
 import com.google.inject.Inject;
@@ -8,13 +7,8 @@ import com.google.inject.Injector;
 import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
-import org.nebulostore.api.PutKeyModule;
 import org.nebulostore.appcore.RegisterInstanceInDHTModule;
-import org.nebulostore.appcore.UserMetadata;
 import org.nebulostore.appcore.addressing.AppKey;
-import org.nebulostore.appcore.addressing.ContractList;
-import org.nebulostore.appcore.addressing.IntervalCollisionException;
-import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.modules.EndModuleMessage;
@@ -29,9 +23,8 @@ import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.crypto.EncryptionAPI.KeyType;
 import org.nebulostore.crypto.keys.DHTKeyHandler;
 import org.nebulostore.crypto.keys.LocalDiscKeyHandler;
-import org.nebulostore.dht.core.KeyDHT;
-import org.nebulostore.dht.core.ValueDHT;
 import org.nebulostore.dispatcher.Dispatcher;
+import org.nebulostore.identity.IdentityManager;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.rest.RestModule;
 import org.nebulostore.rest.RestModuleImpl;
@@ -75,6 +68,7 @@ public class Peer extends AbstractPeer {
   private boolean isRestEnabled_;
   private RestModule restModule_;
 
+  protected IdentityManager identityManager_;
   private EncryptionAPI encryption_;
   private String instancePublicKeyPath_;
   private String instancePrivateKeyPath_;
@@ -93,7 +87,6 @@ public class Peer extends AbstractPeer {
                               @Named("CommunicationPeerOutQueue")
                                 BlockingQueue<Message> commPeerOutQueue,
                               Broker broker,
-                              AppKey appKey,
                               CommAddress commAddress,
                               CommunicationPeerFactory commPeerFactory,
                               Timer timer,
@@ -110,16 +103,14 @@ public class Peer extends AbstractPeer {
                               @Named("security.instance.private-key") String instancePrivateKeyPath,
                               @Named("InstancePublicKeyId") String instancePublicKeyId,
                               @Named("InstancePrivateKeyId") String instancePrivateKeyId,
+                              IdentityManager identityManager,
                               @Named("security.user.public-key") String userPublicKeyPath,
-                              @Named("security.user.private-key") String userPrivateKeyPath,
-                              @Named("UserPublicKeyId") String userPublicKeyId,
-                              @Named("UserPrivateKeyId") String userPrivateKeyId) {
+                              @Named("security.user.private-key") String userPrivateKeyPath) {
     dispatcherInQueue_ = dispatcherInQueue;
     networkInQueue_ = networkQueue;
     commPeerInQueue_ = commPeerInQueue;
     commPeerOutQueue_ = commPeerOutQueue;
     broker_ = broker;
-    appKey_ = appKey;
     commAddress_ = commAddress;
     commPeerFactory_ = commPeerFactory;
     peerTimer_ = timer;
@@ -135,10 +126,9 @@ public class Peer extends AbstractPeer {
     instancePrivateKeyPath_ = instancePrivateKeyPath;
     instancePublicKeyId_ = instancePublicKeyId;
     instancePrivateKeyId_ = instancePrivateKeyId;
+    identityManager_ = identityManager;
     userPublicKeyPath_ = userPublicKeyPath;
     userPrivateKeyPath_ = userPrivateKeyPath;
-    userPublicKeyId_ = userPublicKeyId;
-    userPrivateKeyId_ = userPrivateKeyId;
 
     // Create core threads.
     Runnable dispatcher = new Dispatcher(dispatcherInQueue_, networkInQueue_, injector_);
@@ -186,10 +176,8 @@ public class Peer extends AbstractPeer {
   /**
    * Puts replication group under appKey_ in DHT and InstanceMetadata under commAddress_.
    * Register peer public and private keys.
-   *
-   * @param appKey
    */
-  protected void register(AppKey appKey) {
+  protected void register() {
     RegisterInstanceInDHTModule registerInstanceMetadataModule = new RegisterInstanceInDHTModule();
     registerInstanceMetadataModule.setDispatcherQueue(dispatcherInQueue_);
     registerInstanceMetadataModule.runThroughDispatcher();
@@ -199,29 +187,8 @@ public class Peer extends AbstractPeer {
       logger_.error("Unable to register InstanceMetadata!", exception);
     }
     registerInstanceKeys();
-    registerUser(appKey);
-    registerUserKeys();
-  }
-
-  private void registerUser(AppKey appKey) {
-    // TODO(bolek): This should be part of broker. (szm): or NetworkMonitor
-
-    ContractList contractList = new ContractList();
-    try {
-      contractList.addGroup(new ReplicationGroup(new CommAddress[] {commAddress_ },
-        BigInteger.ZERO, new BigInteger("1000000")));
-    } catch (IntervalCollisionException e) {
-      logger_.error("Error while creating replication group", e);
-    }
-    PutKeyModule putKeyModule = new PutKeyModule(
-        dispatcherInQueue_,
-        new KeyDHT(appKey.getKey()),
-        new ValueDHT(new UserMetadata(appKey, contractList)));
-    try {
-      putKeyModule.getResult(registrationTimeout_);
-    } catch (NebuloException exception) {
-      logger_.error("Unable to execute PutKeyModule!", exception);
-    }
+    appKey_ = identityManager_.registerUserIdentity(userPublicKeyPath_);
+    identityManager_.login(appKey_, userPrivateKeyPath_);
   }
 
   /**
@@ -240,7 +207,7 @@ public class Peer extends AbstractPeer {
    */
   protected void runActively() {
     // TODO: Move register to separate module or at least make it non-blocking.
-    register(appKey_);
+    register();
   }
 
   /**
@@ -264,9 +231,9 @@ public class Peer extends AbstractPeer {
     }
   }
 
-  protected void registerUserKeys() {
+  protected void registerUserKeys(AppKey appKey) {
     try {
-      DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(appKey_, dispatcherInQueue_);
+      DHTKeyHandler dhtKeyHandler = new DHTKeyHandler(appKey, dispatcherInQueue_);
       dhtKeyHandler.save(new LocalDiscKeyHandler(userPublicKeyPath_,
           KeyType.PUBLIC).load());
       encryption_.load(userPublicKeyId_, dhtKeyHandler);

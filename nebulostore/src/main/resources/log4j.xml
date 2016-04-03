@@ -158,6 +158,14 @@
     </layout>
   </appender>
 
+  <appender name="FA-identity" class="org.apache.log4j.FileAppender">
+    <param name="File" value="logs/identity.log" />
+    <param name="Threshold" value="DEBUG" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="&pattern;" />
+    </layout>
+  </appender>
+
   <logger name="org.nebulostore.api">
     <level value="DEBUG" />
     <appender-ref ref="FA-api" />
@@ -256,6 +264,11 @@
   <logger name="org.nebulostore.rest">
     <level value="DEBUG" />
     <appender-ref ref="FA-rest"/>
+  </logger>
+
+  <logger name="org.nebulostore.identity">
+    <level value="DEBUG" />
+    <appender-ref ref="FA-identity"/>
   </logger>
 
   <root>

@@ -13,6 +13,7 @@ import java.util.concurrent.Future;
 import com.google.inject.Inject;
 
 import org.apache.log4j.Logger;
+import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
@@ -24,6 +25,7 @@ import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.NewPhaseMessage;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.identity.IdentityManager;
 
 /**
  * Lists client.
@@ -47,6 +49,7 @@ public final class ListsClient extends ConductorClient {
   private NebuloList myList_;
   private transient NebuloObjectFactory objectFactory_;
   private transient EncryptionAPI encryption_;
+  private transient IdentityManager identityManager_;
 
   public ListsClient(String serverJobId, CommAddress serverAddress, int numPhases,
       List<CommAddress> clients, int clientId) {
@@ -65,6 +68,11 @@ public final class ListsClient extends ConductorClient {
   @Inject
   public void setEncryptionAPI(EncryptionAPI encryption) {
     encryption_ = encryption;
+  }
+
+  @Inject
+  public void setIdentityManager(IdentityManager identityManager) {
+    identityManager_ = identityManager;
   }
 
   @Override
@@ -87,8 +95,9 @@ public final class ListsClient extends ConductorClient {
   }
 
   private NebuloList createList() throws NebuloException {
-    NebuloList list = objectFactory_.createNewNebuloList(new ObjectId(new BigInteger(
-        (clientId_ + 1) + "000")));
+    AppKey appKey = identityManager_.getCurrentUserAppKey();
+    NebuloList list = objectFactory_.createNewNebuloList(new NebuloAddress(appKey,
+        new ObjectId(new BigInteger((clientId_ + 1) + "000"))));
     for (int i = 0; i < N_CASES; ++i) {
       BigInteger value = list.getObjectId().getKey().add(BigInteger.valueOf(i));
       list.append(new NebuloElement(encryption_.encrypt(value, null)));

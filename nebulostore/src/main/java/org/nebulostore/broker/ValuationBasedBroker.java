@@ -25,11 +25,11 @@ import org.nebulostore.broker.messages.OfferReplyMessage;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
-import org.nebulostore.crypto.session.message.GetSessionKeyMessage;
-import org.nebulostore.crypto.session.message.GetSessionKeyResponseMessage;
-import org.nebulostore.crypto.session.message.InitSessionEndMessage;
-import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
+import org.nebulostore.crypto.session.SessionNegotiatorModule;
+import org.nebulostore.crypto.session.message.DHFinishMessage;
+import org.nebulostore.crypto.session.message.DHGetSessionKeyMessage;
+import org.nebulostore.crypto.session.message.DHGetSessionKeyResponseMessage;
+import org.nebulostore.crypto.session.message.DHLocalErrorMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.timer.MessageGenerator;
@@ -153,7 +153,7 @@ public class ValuationBasedBroker extends Broker {
       }
     }
 
-    public void visit(InitSessionEndMessage message) {
+    public void visit(DHFinishMessage message) {
       logger_.debug("Process " + message);
       CommAddress peerAddress = message.getPeerAddress();
       SecretKey sessionKey = message.getSessionKey();
@@ -167,7 +167,7 @@ public class ValuationBasedBroker extends Broker {
       }
     }
 
-    public void visit(InitSessionEndWithErrorMessage message) {
+    public void visit(DHLocalErrorMessage message) {
       logger_.debug("InitSessionEndWithErrorMessage " + message.getErrorMessage());
     }
 
@@ -203,10 +203,10 @@ public class ValuationBasedBroker extends Broker {
       CommAddress peerAddress = message.getSourceAddress();
       String sessionId = message.getSessionId();
       contractOffer_.put(sessionId, message.getEncryptedContract());
-      outQueue_.add(new GetSessionKeyMessage(peerAddress, getJobId(), sessionId));
+      outQueue_.add(new DHGetSessionKeyMessage(peerAddress, getJobId(), sessionId));
     }
 
-    public void visit(GetSessionKeyResponseMessage message) {
+    public void visit(DHGetSessionKeyResponseMessage message) {
       CommAddress peerAddress = message.getPeerAddress();
       ContractsSet contracts = context_.acquireReadAccessToContracts();
       String sessionId = message.getSessionId();
@@ -280,8 +280,8 @@ public class ValuationBasedBroker extends Broker {
   }
 
   private void startSessionAgreement(Contract offer) {
-    InitSessionNegotiatorModule initSessionNegotiatorModule =
-        new InitSessionNegotiatorModule(offer.getPeer(), getJobId(), offer);
+    SessionNegotiatorModule initSessionNegotiatorModule =
+        new SessionNegotiatorModule(offer.getPeer(), getJobId(), offer, 1);
     outQueue_.add(new JobInitMessage(initSessionNegotiatorModule));
   }
 

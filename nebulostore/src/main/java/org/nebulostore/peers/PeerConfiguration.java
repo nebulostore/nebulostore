@@ -20,7 +20,6 @@ import org.nebulostore.api.WriteNebuloObjectPartsModule;
 import org.nebulostore.api.acl.DeleteObjectACLModule;
 import org.nebulostore.api.acl.ReadObjectACLModule;
 import org.nebulostore.api.acl.WriteObjectACLModule;
-import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
 import org.nebulostore.appcore.model.NebuloObjectFactoryImpl;
@@ -49,7 +48,9 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.crypto.RSABasedEncryptionAPI;
-import org.nebulostore.crypto.session.InitSessionContext;
+import org.nebulostore.crypto.session.SessionChannelModule;
+import org.nebulostore.crypto.session.SessionContext;
+import org.nebulostore.identity.IdentityManager;
 import org.nebulostore.networkmonitor.ConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.DefaultConnectionTestMessageHandler;
 import org.nebulostore.networkmonitor.NetworkMonitor;
@@ -83,13 +84,13 @@ public class PeerConfiguration extends GenericConfiguration {
   protected void configureAll() {
     bind(XMLConfiguration.class).toInstance(config_);
 
-    AppKey appKey = new AppKey(config_.getString("app-key", ""));
-    bind(AppKey.class).toInstance(appKey);
-    bind(CommAddress.class).toInstance(
-        new CommAddress(config_.getString("communication.comm-address", "")));
+    CommAddress instanceAddress = new CommAddress(
+        config_.getString("communication.comm-address", ""));
+    bind(CommAddress.class).toInstance(instanceAddress);
     configureQueues();
 
     configureEncryption();
+    configureIdentityManager();
 
     bind(NebuloObjectFactory.class).to(NebuloObjectFactoryImpl.class);
     bind(ObjectGetter.class).to(GetNebuloObjectModule.class);
@@ -110,7 +111,7 @@ public class PeerConfiguration extends GenericConfiguration {
     configureNetworkMonitor();
     configureAsyncMessaging();
     configurePeer();
-    configureReplicator(appKey);
+    configureReplicator(instanceAddress);
     configureRestModule();
     configureSessionNegotiator();
     configureErasureCoding();
@@ -122,21 +123,18 @@ public class PeerConfiguration extends GenericConfiguration {
         Names.named("InstancePublicKeyId")).toInstance(CryptoUtils.getRandomString());
     bind(String.class).annotatedWith(
         Names.named("InstancePrivateKeyId")).toInstance(CryptoUtils.getRandomString());
-    bind(String.class).annotatedWith(
-        Names.named("UserPublicKeyId")).toInstance(CryptoUtils.getRandomString());
-    bind(String.class).annotatedWith(
-        Names.named("UserPrivateKeyId")).toInstance(CryptoUtils.getRandomString());
   }
 
   private void configureSessionNegotiator() {
-    bind(InitSessionContext.class).in(Scopes.SINGLETON);
+    bind(SessionContext.class).in(Scopes.SINGLETON);
+    bind(SessionChannelModule.class);
   }
 
-  private void configureReplicator(AppKey appKey) {
+  private void configureReplicator(CommAddress instanceAddress) {
     KeyValueStore<byte[]> replicatorStore;
     try {
       String pathPrefix = config_.getString("replicator.storage-path") + "/" +
-        appKey.getKey().toString() + "_storage/";
+          instanceAddress + "_storage/";
       replicatorStore = new FileStore<byte[]>(pathPrefix,
         Functions.<byte[]>identity(), Functions.<byte[]>identity());
     } catch (IOException e) {
@@ -145,6 +143,10 @@ public class PeerConfiguration extends GenericConfiguration {
     bind(new TypeLiteral<KeyValueStore<byte[]>>() { }).
       annotatedWith(Names.named("ReplicatorStore")).toInstance(replicatorStore);
     bind(Replicator.class).to(ReplicatorImpl.class);
+  }
+
+  protected void configureIdentityManager() {
+    bind(IdentityManager.class).in(Scopes.SINGLETON);
   }
 
   protected void configureAdditional() {

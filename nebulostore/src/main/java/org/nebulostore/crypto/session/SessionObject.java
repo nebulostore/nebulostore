@@ -10,7 +10,7 @@ import org.nebulostore.communication.naming.CommAddress;
 /**
  * @author lukaszsiczek
  */
-public class InitSessionObject implements Serializable {
+public class SessionObject implements Serializable {
 
   private static final long serialVersionUID = 1199048874217118145L;
 
@@ -21,13 +21,13 @@ public class InitSessionObject implements Serializable {
   private transient KeyAgreement keyAgreement_;
   private SecretKey sessionKey_;
 
-  public InitSessionObject(CommAddress peerAddress, String sourceJobId, Serializable data) {
+  public SessionObject(CommAddress peerAddress, String sourceJobId, Serializable data) {
     peerAddress_ = peerAddress;
     sourceJobId_ = sourceJobId;
     data_ = data;
   }
 
-  public InitSessionObject(CommAddress peerAddress) {
+  public SessionObject(CommAddress peerAddress) {
     peerAddress_ = peerAddress;
   }
 

@@ -45,6 +45,12 @@ public class GetNebuloObjectModule extends
         NebuloObject nebuloObject;
         try {
           nebuloObject = (NebuloObject) decryptWrapper_.decrypt(fullObject);
+          String ownerPublicKey = networkMonitor_.getUserPublicKeyId(
+              nebuloObject.getAddress().getAppKey());
+          String version = currentVersions_.get(currentVersions_.size() - 1);
+          if (!encryption_.verifyMAC(nebuloObject, version, ownerPublicKey)) {
+            throw new NebuloException("Verify version error");
+          }
           nebuloObject.setVersions(currentVersions_);
         } catch (NebuloException exception) {
           // TODO(bolek): Error not fatal? Retry?

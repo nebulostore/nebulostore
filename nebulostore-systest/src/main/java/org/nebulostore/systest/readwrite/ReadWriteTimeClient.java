@@ -15,6 +15,7 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 
 import org.apache.log4j.Logger;
+import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
@@ -59,8 +60,9 @@ public final class ReadWriteTimeClient extends ReadWriteClient {
   }
 
   private NebuloFile createFile() {
-    NebuloFile file = objectFactory_.createNewNebuloFile(
-        new ObjectId(new BigInteger((clientId_ + 1) + "000")));
+    AppKey appKey = identityManager_.getCurrentUserAppKey();
+    NebuloFile file = objectFactory_.createNewNebuloFile(new NebuloAddress(appKey,
+        new ObjectId(new BigInteger((clientId_ + 1) + "000"))));
     try {
       byte[] data = readFile(testDataFile_);
       final long startWriting = System.nanoTime();

@@ -11,21 +11,31 @@ import org.nebulostore.crypto.EncryptionAPI.KeyType;
  */
 public class LocalDiscKeyHandler implements KeyHandler {
 
-  private final String keyPath_;
-  private final KeyType keyType_;
+  private String keyPath_;
+  private KeyType keyType_;
+  private Key key_;
 
   public LocalDiscKeyHandler(String keyPath, KeyType keyType) {
     keyPath_ = keyPath;
     keyType_ = keyType;
   }
 
+  public LocalDiscKeyHandler(Key key) {
+    key_ = key;
+  }
+
   @Override
   public Key load() throws CryptoException {
+    if (key_ != null) {
+      return key_;
+    }
     switch (keyType_) {
       case PUBLIC:
-        return CryptoUtils.readPublicKey(keyPath_);
+        key_ = CryptoUtils.readPublicKeyFromPath(keyPath_);
+        return key_;
       case PRIVATE:
-        return CryptoUtils.readPrivateKey(keyPath_);
+        key_ = CryptoUtils.readPrivateKeyFromPath(keyPath_);
+        return key_;
       default:
         break;
     }

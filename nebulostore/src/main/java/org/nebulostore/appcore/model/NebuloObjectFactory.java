@@ -4,7 +4,6 @@ import java.util.Set;
 
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
-import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
 
 /**
@@ -13,18 +12,10 @@ import org.nebulostore.appcore.exceptions.NebuloException;
  */
 public interface NebuloObjectFactory {
 
-  NebuloFile createNewNebuloFile();
-
-  NebuloFile createNewNebuloFile(ObjectId objectId);
-
   NebuloFile createNewNebuloFile(NebuloAddress address);
 
   NebuloFile createNewAccessNebuloFile(NebuloAddress address, Set<AppKey> accessList)
       throws NebuloException;
-
-  NebuloList createNewNebuloList();
-
-  NebuloList createNewNebuloList(ObjectId objectId);
 
   NebuloList createNewNebuloList(NebuloAddress address);
 

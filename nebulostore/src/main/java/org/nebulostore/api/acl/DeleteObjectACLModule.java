@@ -4,7 +4,6 @@ import javax.crypto.SecretKey;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.name.Named;
 
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
@@ -16,6 +15,7 @@ import org.nebulostore.appcore.model.NebuloObject;
 import org.nebulostore.appcore.modules.ReturningJobModule;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.identity.IdentityManager;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -36,15 +36,14 @@ public class DeleteObjectACLModule extends ReturningJobModule<Void> {
   @Inject
   public void setDependencies(
       EncryptionAPI encryptionAPI,
-      @Named("UserPrivateKeyId") String userPrivateKeyId,
       Injector injector,
       NetworkMonitor networkMonitor,
-      AppKey appKey) {
+      IdentityManager identityManager) {
     encryptionAPI_ = encryptionAPI;
-    userPrivateKeyId_ = userPrivateKeyId;
+    userPrivateKeyId_ = identityManager.getCurrentUserPrivateKeyId();
     injector_ = injector;
     networkMonitor_ = networkMonitor;
-    appKey_ = appKey;
+    appKey_ = identityManager.getCurrentUserAppKey();
   }
 
   protected class DeleteObjectACLVisitor extends MessageVisitor {

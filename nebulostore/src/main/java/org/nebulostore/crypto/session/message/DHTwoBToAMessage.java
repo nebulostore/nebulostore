@@ -6,11 +6,11 @@ import org.nebulostore.communication.naming.CommAddress;
 /**
  * @author lukaszsiczek
  */
-public class InitSessionResponseMessage extends SessionCryptoMessage {
+public class DHTwoBToAMessage extends SessionCryptoMessage {
 
   private static final long serialVersionUID = -5774260936905244967L;
 
-  public InitSessionResponseMessage(String jobId, CommAddress sourceAddress,
+  public DHTwoBToAMessage(String jobId, CommAddress sourceAddress,
       CommAddress destAddress, String sessionId, String sourceJobId, EncryptedObject data) {
     super(jobId, sourceAddress, destAddress, sessionId, sourceJobId, data);
   }

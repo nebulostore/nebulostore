@@ -8,6 +8,7 @@ import org.mockito.Mockito;
 import org.nebulostore.appcore.addressing.AppKey;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
+import org.nebulostore.crypto.session.SessionChannelModule;
 
 
 /**
@@ -46,7 +47,18 @@ public final class NebuloObjectUtils {
   public static NebuloFile getNewNebuloFile(String appKey, String objectId) {
     NebuloFile file = new NebuloFile(NebuloObjectUtils.getNewNebuloAddress(appKey, objectId));
     setMockProviders(file);
+    setSessionChannel(file);
     return file;
+  }
+
+  private static void setSessionChannel(NebuloObject nebuloObject) {
+    Provider<SessionChannelModule> sessionChannelProvider = new Provider<SessionChannelModule>() {
+      @Override
+      public SessionChannelModule get() {
+        return Mockito.mock(SessionChannelModule.class);
+      }
+    };
+    nebuloObject.setSessionChannelProvider(sessionChannelProvider);
   }
 
   public static NebuloList getNewNebuloList(String appKey, String objectId) {

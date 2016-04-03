@@ -6,22 +6,20 @@ import javax.crypto.SecretKey;
 
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.naming.CommAddress;
-import org.nebulostore.crypto.session.InitSessionObject;
+import org.nebulostore.crypto.session.SessionObject;
 
 /**
  * @author lukaszsiczek
  */
-public class InitSessionEndMessage extends Message {
+public class DHFinishMessage extends Message {
 
   private static final long serialVersionUID = -4874767425008086012L;
 
-  private InitSessionObject initSessionObject_;
-  private String sourceJobId_;
+  private SessionObject initSessionObject_;
 
-  public InitSessionEndMessage(InitSessionObject initSessionObject, String sourceJobId) {
+  public DHFinishMessage(SessionObject initSessionObject) {
     super(initSessionObject.getJobId());
     initSessionObject_ = initSessionObject;
-    sourceJobId_ = sourceJobId;
   }
 
   public Serializable getData() {
@@ -36,12 +34,12 @@ public class InitSessionEndMessage extends Message {
     return initSessionObject_.getSessionKey();
   }
 
-  public String getSourceJobId() {
-    return sourceJobId_;
-  }
-
   public String getSessionId() {
     return initSessionObject_.getSessionId();
+  }
+
+  public SessionObject getSessionObject() {
+    return initSessionObject_;
   }
 
   @Override

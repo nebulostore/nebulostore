@@ -17,6 +17,7 @@ import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
 import org.nebulostore.dht.messages.ValueDHTMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.replicator.messages.SendObjectMessage;
 import org.nebulostore.timer.TimeoutMessage;
 import org.nebulostore.timer.Timer;
@@ -36,8 +37,8 @@ public abstract class GetFullObjectModule<V> extends GetModule<V> {
 
   @Inject
   public void setDependencies(Provider<Timer> timerProvider,
-      EncryptionAPI encryptionAPI, ObjectRecreator recreator) {
-    super.setDependencies(timerProvider, encryptionAPI);
+      EncryptionAPI encryptionAPI, NetworkMonitor networkMonitor, ObjectRecreator recreator) {
+    super.setDependencies(timerProvider, encryptionAPI, networkMonitor);
     recreator_ = recreator;
   }
 

@@ -12,6 +12,8 @@ import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.NebuloAddress;
 import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
+import org.nebulostore.crypto.session.SessionChannelModule;
+import org.nebulostore.crypto.session.SessionObjectMap;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
 
@@ -61,16 +63,16 @@ public class NebuloFile extends NebuloObject {
       isChanged_ = true;
     }
 
-    public ObjectDeleter deleteChunk() throws NebuloException {
+    public ObjectDeleter deleteChunk(SessionObjectMap sessionKeys) throws NebuloException {
       ObjectDeleter deleter = objectDeleterProvider_.get();
-      deleter.deleteObject(chunkAddress_);
+      deleter.deleteObject(chunkAddress_, sessionKeys);
       return deleter;
     }
 
-    public ObjectWriter sync() {
+    public ObjectWriter sync(SessionObjectMap sessionObjectMap) {
       if (isChanged_) {
         ObjectWriter writer = objectWriterProvider_.get();
-        writer.writeObject(chunk_, chunk_.getVersions(), encryptWrapper_);
+        writer.writeObject(chunk_, chunk_.getVersions(), encryptWrapper_, sessionObjectMap);
         return writer;
       } else {
         return null;
@@ -220,32 +222,6 @@ public class NebuloFile extends NebuloObject {
           getKey().add(BigInteger.ONE));
     }
   }
-  /**
-   * Truncates the file to newSize.
-   * @param newSize
-   * @throws NebuloException The exception is thrown when newSize is greater than current size.
-   */
-  public void truncate(int newSize) throws NebuloException {
-    if (newSize > size_) {
-      throw new NebuloException("Cannot truncate file to greater size!");
-    }
-    int nChunks = (newSize + (chunkSize_ - 1)) / chunkSize_;
-    /// Remove unneeded chunks.
-    while (chunks_.size() > nChunks) {
-      chunks_.get(chunks_.size() - 1).deleteChunk();
-      chunks_.remove(chunks_.size() - 1);
-    }
-    // Truncate last chunk if necessary.
-    FileChunkWrapper chunk = chunks_.get(chunks_.size() - 1);
-    if (chunk.endByte_ > newSize) {
-      byte[] newData = new byte[newSize - chunk.startByte_];
-      System.arraycopy(chunk.getData(), 0, newData, 0, newSize - chunk.startByte_);
-      chunk.setData(newData);
-      chunk.endByte_ = newSize;
-    }
-    // Set file size.
-    size_ = newSize;
-  }
 
   private void initNewFile() {
     isNew_ = true;
@@ -257,15 +233,16 @@ public class NebuloFile extends NebuloObject {
   @Override
   protected void runSync() throws NebuloException {
     logger_.info("Running sync on file ");
-    List<ObjectWriter> updateModules = new ArrayList<ObjectWriter>();
+    SessionObjectMap sessionKeys = generateSessionKeys();
     // Run sync for all chunks in parallel.
+    List<ObjectWriter> updateModules = new ArrayList<ObjectWriter>();
     for (int i = 0; i < chunks_.size(); ++i) {
       logger_.debug("Creating update module for chunk " + i);
-      updateModules.add(chunks_.get(i).sync());
+      updateModules.add(chunks_.get(i).sync(sessionKeys));
     }
     // Run sync for NebuloFile (metadata).
     ObjectWriter writer = objectWriterProvider_.get();
-    writer.writeObject(this, previousVersions_, encryptWrapper_);
+    writer.writeObject(this, previousVersions_, encryptWrapper_, sessionKeys);
     updateModules.add(writer);
 
     // Wait for all results.
@@ -309,15 +286,16 @@ public class NebuloFile extends NebuloObject {
   @Override
   public void delete() throws NebuloException {
     logger_.info("Running delete on file.");
+    SessionObjectMap sessionKeys = generateSessionKeys();
     List<ObjectDeleter> deleteModules = new ArrayList<ObjectDeleter>();
     // Run delete for all chunks in parallel.
     for (int i = 0; i < chunks_.size(); ++i) {
       logger_.debug("Creating delete module for chunk " + i);
-      deleteModules.add(chunks_.get(i).deleteChunk());
+      deleteModules.add(chunks_.get(i).deleteChunk(sessionKeys));
     }
     // Run delete for NebuloFile (metadata).
     ObjectDeleter deleter = objectDeleterProvider_.get();
-    deleter.deleteObject(address_);
+    deleter.deleteObject(address_, sessionKeys);
     deleteModules.add(deleter);
     notifySubscribers(NotificationReason.FILE_DELETED);
     // Wait for all results.
@@ -326,6 +304,17 @@ public class NebuloFile extends NebuloObject {
         deleteModules.get(i).awaitResult(TIMEOUT_SEC);
       }
     }
+  }
+
+  private SessionObjectMap generateSessionKeys() throws NebuloException {
+    List<ObjectId> objectsList = new ArrayList<ObjectId>();
+    for (FileChunkWrapper chunk : chunks_) {
+      objectsList.add(chunk.chunkAddress_.getObjectId());
+    }
+    objectsList.add(this.getObjectId());
+    SessionChannelModule sessionChannelModule = sessionChannelProvider_.get();
+    sessionChannelModule.generateSessionChannelKey(address_.getAppKey(), objectsList);
+    return sessionChannelModule.getResult(TIMEOUT_SEC);
   }
 
   private void writeObject(ObjectOutputStream out) throws IOException {

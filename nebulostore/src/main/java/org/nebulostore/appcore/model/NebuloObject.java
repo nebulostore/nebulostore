@@ -20,6 +20,7 @@ import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.DecryptWrapper;
 import org.nebulostore.crypto.EncryptWrapper;
+import org.nebulostore.crypto.session.SessionChannelModule;
 import org.nebulostore.subscription.model.Subscribers;
 import org.nebulostore.subscription.model.SubscriptionNotification;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
@@ -49,6 +50,8 @@ public abstract class NebuloObject implements Serializable {
   protected transient Provider<ObjectWriter> objectWriterProvider_;
   protected transient Provider<ObjectDeleter> objectDeleterProvider_;
 
+  protected transient Provider<SessionChannelModule> sessionChannelProvider_;
+
   protected NebuloObject(NebuloAddress address) {
     address_ = address;
     subscribers_ = new Subscribers();
@@ -75,6 +78,11 @@ public abstract class NebuloObject implements Serializable {
   @Inject
   public void setCommAddress(CommAddress commAddress) {
     commAddress_ = commAddress;
+  }
+
+  @Inject
+  public void setSessionChannelProvider(Provider<SessionChannelModule> sessionChannelProvider) {
+    sessionChannelProvider_ = sessionChannelProvider;
   }
 
   public NebuloAddress getAddress() {

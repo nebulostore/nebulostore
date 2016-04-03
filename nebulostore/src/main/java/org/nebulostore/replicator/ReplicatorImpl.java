@@ -29,11 +29,10 @@ import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.broker.messages.CheckContractMessage;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
-import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
-import org.nebulostore.crypto.session.message.GetSessionKeyMessage;
-import org.nebulostore.crypto.session.message.GetSessionKeyResponseMessage;
-import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
+import org.nebulostore.crypto.session.message.DHGetSessionKeyMessage;
+import org.nebulostore.crypto.session.message.DHGetSessionKeyResponseMessage;
+import org.nebulostore.crypto.session.message.DHLocalErrorMessage;
 import org.nebulostore.crypto.session.message.SessionInnerMessageInterface;
 import org.nebulostore.persistence.KeyValueStore;
 import org.nebulostore.replicator.core.DeleteObjectException;
@@ -73,7 +72,7 @@ public class ReplicatorImpl extends Replicator {
   private static final String TMP_SUFFIX = ".tmp.";
   private static final String INDEX_ID = "object.index";
 
-  private enum ActionType { WRITE, READ }
+  private enum ActionType { WRITE, READ, DELETE }
 
   private static LockMap lockMap_ = new LockMap();
 
@@ -208,7 +207,7 @@ public class ReplicatorImpl extends Replicator {
       CommAddress peerAddress = message.getSourceAddress();
       workingMessages_.put(message.getSessionId(), message);
       actionTypes_.put(message.getSessionId(), ActionType.WRITE);
-      outQueue_.add(new GetSessionKeyMessage(peerAddress, getJobId(),
+      outQueue_.add(new DHGetSessionKeyMessage(peerAddress, getJobId(),
           message.getSessionId()));
     }
 
@@ -223,7 +222,7 @@ public class ReplicatorImpl extends Replicator {
       if (message.getResult() == TransactionAnswer.COMMIT) {
         commitUpdateObject(storeData_.getObjectId(),
                            storeData_.getPreviousVersionSHAs(),
-                           CryptoUtils.sha(storeData_.getData()),
+                           storeData_.getNewVersionSHA(),
                            message.getId());
       } else {
         abortUpdateObject(storeData_.getObjectId(), message.getId());
@@ -235,17 +234,17 @@ public class ReplicatorImpl extends Replicator {
       CommAddress peerAddress = message.getSourceAddress();
       workingMessages_.put(message.getSessionId(), message);
       actionTypes_.put(message.getSessionId(), ActionType.READ);
-      outQueue_.add(new GetSessionKeyMessage(peerAddress, getJobId(),
+      outQueue_.add(new DHGetSessionKeyMessage(peerAddress, getJobId(),
           message.getSessionId()));
     }
 
-    public void visit(GetSessionKeyResponseMessage message) {
+    public void visit(DHGetSessionKeyResponseMessage message) {
       workingSecretKeys_.put(message.getSessionId(), message.getSessionKey());
       outQueue_.add(new CheckContractMessage(getJobId(), message.getPeerAddress(),
           message.getSessionId()));
     }
 
-    public void visit(InitSessionEndWithErrorMessage message) {
+    public void visit(DHLocalErrorMessage message) {
       logger_.debug("InitSessionEndWithErrorMessage " + message.getErrorMessage());
       SessionInnerMessageInterface getObjectMessage =
           workingMessages_.remove(message.getPeerAddress());
@@ -301,22 +300,20 @@ public class ReplicatorImpl extends Replicator {
         case WRITE:
           saveObject(sessionKey, (QueryToStoreObjectMessage) insideSessionMessage);
           break;
+        case DELETE:
+          processDeleteMessage(sessionKey, (DeleteObjectMessage) insideSessionMessage);
+          break;
         default:
           break;
       }
     }
 
     public void visit(DeleteObjectMessage message) {
-      try {
-        deleteObject(message.getObjectId());
-        networkQueue_.add(new ConfirmationMessage(message.getSourceJobId(),
-            message.getSourceAddress()));
-      } catch (DeleteObjectException exception) {
-        logger_.warn(exception.toString());
-        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
-            message.getSourceAddress(), exception.getMessage());
-      }
-      endJobModule();
+      CommAddress peerAddress = message.getSourceAddress();
+      workingMessages_.put(message.getSessionId(), message);
+      actionTypes_.put(message.getSessionId(), ActionType.DELETE);
+      outQueue_.add(new DHGetSessionKeyMessage(peerAddress, getJobId(),
+          message.getSessionId()));
     }
 
     public void visit(ObjectOutdatedMessage message) {
@@ -336,7 +333,7 @@ public class ReplicatorImpl extends Replicator {
         if (query == QueryToStoreResult.OK || query == QueryToStoreResult.OBJECT_OUT_OF_DATE ||
             query == QueryToStoreResult.INVALID_VERSION) {
           commitUpdateObject(message.getAddress().getObjectId(), res.getSecond(),
-              CryptoUtils.sha(encryptedObject), message.getId());
+              message.getCurrentVersion(), message.getId());
         } else {
           throw new NebuloException("Unable to fetch new version of file.");
         }
@@ -349,6 +346,22 @@ public class ReplicatorImpl extends Replicator {
         CommAddress destinationAddress, String errorMessage) {
       networkQueue_.add(new ReplicatorErrorMessage(jobId, destinationAddress, errorMessage));
       endJobModule();
+    }
+
+    private void processDeleteMessage(SecretKey sessionKey, DeleteObjectMessage message)
+        throws CryptoException {
+      try {
+        ObjectId objectId = (ObjectId) encryptionAPI_.decryptWithSessionKey(
+            message.getEncryptedData(), sessionKey);
+        deleteObject(objectId);
+      } catch (DeleteObjectException exception) {
+        logger_.warn(exception.toString());
+        dieWithError(message.getSourceJobId(), message.getDestinationAddress(),
+            message.getSourceAddress(), exception.getMessage());
+      }
+      endJobModule();
+      networkQueue_.add(new ConfirmationMessage(message.getSourceJobId(),
+          message.getSourceAddress()));
     }
   }
 
@@ -475,7 +488,7 @@ public class ReplicatorImpl extends Replicator {
     }
   }
 
-  public void deleteObject(ObjectId objectId) throws DeleteObjectException {
+  private void deleteObject(ObjectId objectId) throws DeleteObjectException {
     try {
       if (!lockMap_.tryLock(objectId.toString(), UPDATE_TIMEOUT_SEC, TimeUnit.SECONDS)) {
         logger_.warn("Object " + objectId.toString() + " lock timeout in deleteObject().");

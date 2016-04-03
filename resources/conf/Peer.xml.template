@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- String is default attribute type -->
 <peer>
-    <!-- Application Key, a unique user identifier. -->
-    <app-key>
-        11
-    </app-key>
     <!-- Main class that is created and executed when Nebulostore starts,
          'org.nebulostore.peers.Peer' is the full, standard instance,
          'org.nebulostore.conductor.TestingPeer' is the test execution environment. -->
@@ -220,9 +216,23 @@
             <host>http://0.0.0.0</host>
             <port type="Integer">14000</port>
         </server-config>
-        <replicator-write-file-form>
-            resources/web/replicator-write-file-form.html
-        </replicator-write-file-form>
+        <html-template>
+            <identity-login-form>
+                resources/web/identity-login-form.html
+            </identity-login-form>
+            <identity-register-form>
+                resources/web/identity-register-form.html
+            </identity-register-form>
+            <identity-register-guest-form>
+                resources/web/identity-register-guest-form.html
+            </identity-register-guest-form>
+            <identity-unregister-guest-form>
+                resources/web/identity-unregister-guest-form.html
+            </identity-unregister-guest-form>
+            <replicator-write-file-form>
+                resources/web/replicator-write-file-form.html
+            </replicator-write-file-form>
+        </html-template>
     </rest-api>
     <security>
         <instance>
@@ -234,4 +244,7 @@
             <public-key>keys/user/public.key</public-key>
         </user>
     </security>
+    <identity-manager>
+        <guests-limit type="Integer">10</guests-limit>
+    </identity-manager>
 </peer>

@@ -3,6 +3,8 @@ package org.nebulostore.api;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.inject.Inject;
+
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.UserMetadata;
 import org.nebulostore.appcore.addressing.ContractList;
@@ -11,11 +13,16 @@ import org.nebulostore.appcore.addressing.ReplicationGroup;
 import org.nebulostore.appcore.exceptions.NebuloException;
 import org.nebulostore.appcore.messaging.Message;
 import org.nebulostore.appcore.messaging.MessageVisitor;
+import org.nebulostore.appcore.model.EncryptedObject;
 import org.nebulostore.appcore.model.ObjectDeleter;
 import org.nebulostore.appcore.modules.ReturningJobModule;
 import org.nebulostore.communication.messages.ErrorCommMessage;
 import org.nebulostore.communication.naming.CommAddress;
+import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
+import org.nebulostore.crypto.EncryptionAPI;
+import org.nebulostore.crypto.session.SessionObject;
+import org.nebulostore.crypto.session.SessionObjectMap;
 import org.nebulostore.dht.core.KeyDHT;
 import org.nebulostore.dht.messages.ErrorDHTMessage;
 import org.nebulostore.dht.messages.GetDHTMessage;
@@ -32,10 +39,18 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
 
   private NebuloAddress address_;
   private final StateMachineVisitor visitor_ = new StateMachineVisitor();
+  private final EncryptionAPI encryption_;
+  private SessionObjectMap sessionObjectMap_;
+
+  @Inject
+  public DeleteNebuloObjectModule(EncryptionAPI encryption) {
+    encryption_ = encryption;
+  }
 
   @Override
-  public void deleteObject(NebuloAddress address) {
+  public void deleteObject(NebuloAddress address, SessionObjectMap sessionObjectMap) {
     address_ = address;
+    sessionObjectMap_ = sessionObjectMap;
     runThroughDispatcher();
   }
 
@@ -75,7 +90,7 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
       }
     }
 
-    public void visit(ValueDHTMessage message) {
+    public void visit(ValueDHTMessage message) throws CryptoException {
       logger_.debug("Got ValueDHTMessage " + message.toString());
       if (state_ == STATE.DHT_QUERY) {
         state_ = STATE.REPLICA_UPDATE;
@@ -93,8 +108,12 @@ public class DeleteNebuloObjectModule extends ReturningJobModule<Void> implement
         } else {
           for (CommAddress replicator : group) {
             String remoteJobId = CryptoUtils.getRandomId().toString();
+            SessionObject sessionObject = sessionObjectMap_.get(replicator);
+
+            EncryptedObject encryptedObjectId = encryption_.encryptWithSessionKey(
+                address_.getObjectId(), sessionObject.getSessionKey());
             networkQueue_.add(new DeleteObjectMessage(remoteJobId, replicator,
-                address_.getObjectId(), getJobId()));
+                encryptedObjectId, getJobId(), sessionObject.getSessionId()));
             recipientsSet_.add(replicator);
           }
         }

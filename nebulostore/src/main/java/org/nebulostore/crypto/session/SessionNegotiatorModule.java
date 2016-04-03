@@ -19,13 +19,13 @@ import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.crypto.dh.DiffieHellmanInitPackage;
 import org.nebulostore.crypto.dh.DiffieHellmanProtocol;
 import org.nebulostore.crypto.dh.DiffieHellmanResponsePackage;
-import org.nebulostore.crypto.session.message.GetSessionKeyMessage;
-import org.nebulostore.crypto.session.message.GetSessionKeyResponseMessage;
-import org.nebulostore.crypto.session.message.InitSessionEndMessage;
-import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
-import org.nebulostore.crypto.session.message.InitSessionErrorMessage;
-import org.nebulostore.crypto.session.message.InitSessionMessage;
-import org.nebulostore.crypto.session.message.InitSessionResponseMessage;
+import org.nebulostore.crypto.session.message.DHFinishMessage;
+import org.nebulostore.crypto.session.message.DHGetSessionKeyMessage;
+import org.nebulostore.crypto.session.message.DHGetSessionKeyResponseMessage;
+import org.nebulostore.crypto.session.message.DHLocalErrorMessage;
+import org.nebulostore.crypto.session.message.DHOneAToBMessage;
+import org.nebulostore.crypto.session.message.DHRemoteErrorMessage;
+import org.nebulostore.crypto.session.message.DHTwoBToAMessage;
 import org.nebulostore.dispatcher.JobInitMessage;
 import org.nebulostore.networkmonitor.NetworkMonitor;
 import org.nebulostore.utils.Pair;
@@ -33,15 +33,15 @@ import org.nebulostore.utils.Pair;
 /**
  * @author lukaszsiczek
  */
-public class InitSessionNegotiatorModule extends JobModule {
+public class SessionNegotiatorModule extends JobModule {
 
-  private static final Logger LOGGER = Logger.getLogger(InitSessionNegotiatorModule.class);
+  private static final Logger LOGGER = Logger.getLogger(SessionNegotiatorModule.class);
 
   private enum ErrorNotificationMethod { NONE, LOCAL, REMOTE, ALL };
 
   private InitSessionNegotiatorModuleVisitor sessionNegotiatorModuleVisitor_ =
       new InitSessionNegotiatorModuleVisitor();
-  private InitSessionContext initSessionContext_;
+  private SessionContext initSessionContext_;
 
   private CommAddress myAddress_;
   private NetworkMonitor networkMonitor_;
@@ -53,16 +53,18 @@ public class InitSessionNegotiatorModule extends JobModule {
   private String localSourceJobId_;
   private String remoteSourceJobId_;
   private Serializable data_;
+  private int ttl_;
 
-  public InitSessionNegotiatorModule() {
+  public SessionNegotiatorModule() {
 
   }
 
-  public InitSessionNegotiatorModule(CommAddress peerAddress, String sourceJobId,
-      Serializable data) {
+  public SessionNegotiatorModule(CommAddress peerAddress, String sourceJobId,
+      Serializable data, int ttl) {
     peerAddress_ = peerAddress;
     localSourceJobId_ = sourceJobId;
     data_ = data;
+    ttl_ = ttl;
   }
 
   @Inject
@@ -71,7 +73,7 @@ public class InitSessionNegotiatorModule extends JobModule {
       NetworkMonitor networkMonitor,
       EncryptionAPI encryptionAPI,
       @Named("InstancePrivateKeyId") String instancePrivateKeyId,
-      InitSessionContext initSessionContext) {
+      SessionContext initSessionContext) {
     myAddress_ = myAddress;
     networkMonitor_ = networkMonitor;
     encryptionAPI_ = encryptionAPI;
@@ -85,30 +87,30 @@ public class InitSessionNegotiatorModule extends JobModule {
       LOGGER.debug("Process JobInitMessage: " + message);
       initSessionContext_.acquireWriteLock();
       try {
-        sessionId_ = initSessionContext_.tryAllocFreeSlot(new InitSessionObject(
-            peerAddress_, localSourceJobId_, data_));
+        sessionId_ = initSessionContext_.tryAllocFreeSlot(new SessionObject(
+            peerAddress_, localSourceJobId_, data_), ttl_);
       } catch (SessionRuntimeException e) {
         endWithError(e, ErrorNotificationMethod.REMOTE);
         return;
       } finally {
         initSessionContext_.releaseWriteLock();
       }
-      String peerKeyId = networkMonitor_.getInstancePublicKeyId(peerAddress_);
       try {
         Pair<KeyAgreement, DiffieHellmanInitPackage> firstStep =
             DiffieHellmanProtocol.firstStepDHKeyAgreement();
-        EncryptedObject encryptedData = encryptionAPI_.encrypt(firstStep.getSecond(), peerKeyId);
+        EncryptedObject encryptedData = encryptionAPI_.encrypt(firstStep.getSecond(),
+            instancePrivateKeyId_);
         initSessionContext_.tryGetInitSessionObject(sessionId_).setKeyAgreement(
             firstStep.getFirst());
-        Message initSessionMessage = new InitSessionMessage(myAddress_, peerAddress_, sessionId_,
-            getJobId(), encryptedData);
+        Message initSessionMessage = new DHOneAToBMessage(myAddress_, peerAddress_, sessionId_,
+            getJobId(), ttl_, encryptedData);
         networkQueue_.add(initSessionMessage);
       } catch (CryptoException e) {
         endWithErrorAndClear(e, ErrorNotificationMethod.LOCAL);
       }
     }
 
-    public void visit(InitSessionMessage message) {
+    public void visit(DHOneAToBMessage message) {
       LOGGER.debug("Process InitSessionMessage: " + message);
       peerAddress_ = message.getSourceAddress();
       remoteSourceJobId_ = message.getSourceJobId();
@@ -116,7 +118,8 @@ public class InitSessionNegotiatorModule extends JobModule {
       if (!peerAddress_.equals(myAddress_)) {
         initSessionContext_.acquireWriteLock();
         try {
-          initSessionContext_.allocFreeSlot(sessionId_, new InitSessionObject(peerAddress_));
+          initSessionContext_.allocFreeSlot(sessionId_, new SessionObject(peerAddress_),
+              message.getTTL());
         } catch (SessionRuntimeException e) {
           endWithError(e, ErrorNotificationMethod.REMOTE);
           return;
@@ -124,18 +127,19 @@ public class InitSessionNegotiatorModule extends JobModule {
           initSessionContext_.releaseWriteLock();
         }
       }
+      String peerKeyId = networkMonitor_.getInstancePublicKeyId(peerAddress_);
       try {
         DiffieHellmanInitPackage diffieHellmanInitPackage = (DiffieHellmanInitPackage)
-            encryptionAPI_.decrypt(message.getEncryptedData(), instancePrivateKeyId_);
+            encryptionAPI_.decrypt(message.getEncryptedData(), peerKeyId);
 
         Pair<KeyAgreement, DiffieHellmanResponsePackage> secondStep =
             DiffieHellmanProtocol.secondStepDHKeyAgreement(diffieHellmanInitPackage);
         initSessionContext_.tryGetInitSessionObject(sessionId_).setSessionKey(
             DiffieHellmanProtocol.fourthStepDHKeyAgreement(secondStep.getFirst()));
-        String peerKeyId = networkMonitor_.getInstancePublicKeyId(peerAddress_);
-        EncryptedObject encryptedData = encryptionAPI_.encrypt(secondStep.getSecond(), peerKeyId);
+        EncryptedObject encryptedData = encryptionAPI_.encrypt(secondStep.getSecond(),
+            instancePrivateKeyId_);
 
-        Message initSessionResponseMessage = new InitSessionResponseMessage(remoteSourceJobId_,
+        Message initSessionResponseMessage = new DHTwoBToAMessage(remoteSourceJobId_,
             myAddress_, peerAddress_, sessionId_, getJobId(), encryptedData);
         networkQueue_.add(initSessionResponseMessage);
         endWithSuccess();
@@ -144,10 +148,10 @@ public class InitSessionNegotiatorModule extends JobModule {
       }
     }
 
-    public void visit(InitSessionResponseMessage message) {
+    public void visit(DHTwoBToAMessage message) {
       LOGGER.debug("Process InitSessionResponseMessage: " + message);
       remoteSourceJobId_ = message.getSourceJobId();
-      InitSessionObject initSessionObject = null;
+      SessionObject initSessionObject = null;
       initSessionContext_.acquireReadLock();
       try {
         initSessionObject = initSessionContext_.tryGetInitSessionObject(sessionId_);
@@ -157,17 +161,17 @@ public class InitSessionNegotiatorModule extends JobModule {
       } finally {
         initSessionContext_.releaseReadLock();
       }
+      String peerKeyId = networkMonitor_.getInstancePublicKeyId(peerAddress_);
       try {
         DiffieHellmanResponsePackage diffieHellmanResponsePackage = (DiffieHellmanResponsePackage)
-            encryptionAPI_.decrypt(message.getEncryptedData(), instancePrivateKeyId_);
+            encryptionAPI_.decrypt(message.getEncryptedData(), peerKeyId);
 
         KeyAgreement keyAgreement = DiffieHellmanProtocol.thirdStepDHKeyAgreement(
             initSessionObject.getKeyAgreement(), diffieHellmanResponsePackage);
         initSessionObject.setSessionKey(
             DiffieHellmanProtocol.fourthStepDHKeyAgreement(keyAgreement));
 
-        InitSessionEndMessage initSessionEndMessage =
-            new InitSessionEndMessage(initSessionObject, getJobId());
+        DHFinishMessage initSessionEndMessage = new DHFinishMessage(initSessionObject);
         outQueue_.add(initSessionEndMessage);
         if (peerAddress_.equals(myAddress_)) {
           endWithSuccess();
@@ -179,12 +183,12 @@ public class InitSessionNegotiatorModule extends JobModule {
       }
     }
 
-    public void visit(GetSessionKeyMessage message) {
+    public void visit(DHGetSessionKeyMessage message) {
       LOGGER.debug("Process GetSessionKeyMessage: " + message);
       peerAddress_ = message.getPeerAddress();
       localSourceJobId_ = message.getSourceJobId();
       sessionId_ = message.getSessionId();
-      InitSessionObject initSessionObject = null;
+      SessionObject initSessionObject = null;
       initSessionContext_.acquireReadLock();
       try {
         initSessionObject = initSessionContext_.tryGetInitSessionObject(sessionId_);
@@ -197,12 +201,12 @@ public class InitSessionNegotiatorModule extends JobModule {
       } finally {
         initSessionContext_.releaseReadLock();
       }
-      outQueue_.add(new GetSessionKeyResponseMessage(localSourceJobId_,
+      outQueue_.add(new DHGetSessionKeyResponseMessage(localSourceJobId_,
           message.getPeerAddress(), initSessionObject.getSessionKey(), sessionId_));
       endWithSuccessAndClear();
     }
 
-    public void visit(InitSessionErrorMessage message) {
+    public void visit(DHRemoteErrorMessage message) {
       LOGGER.debug("Process InitSessionErrorMessage: " + message);
       endWithErrorAndClear(new SessionRuntimeException(message.getErrorMessage()),
           ErrorNotificationMethod.LOCAL);
@@ -247,12 +251,12 @@ public class InitSessionNegotiatorModule extends JobModule {
     }
 
     private void remoteErrorNotify(String destinationJobId, Throwable e) {
-      networkQueue_.add(new InitSessionErrorMessage(destinationJobId, myAddress_,
+      networkQueue_.add(new DHRemoteErrorMessage(destinationJobId, myAddress_,
           peerAddress_, e.getMessage()));
     }
 
     private void localErrorNotify(String destinationJobId, Throwable e) {
-      outQueue_.add(new InitSessionEndWithErrorMessage(
+      outQueue_.add(new DHLocalErrorMessage(
           destinationJobId, e.getMessage(), peerAddress_));
     }
 

@@ -66,6 +66,24 @@ public class RSABasedEncryptionAPI extends EncryptionAPI {
   @Override
   public void load(String keyId, KeyHandler keyHandler) {
     keys_.put(keyId, keyHandler);
-  };
+  }
+
+  @Override
+  public String generateMAC(Serializable object, String keyId) throws CryptoException {
+    Key key = keys_.get(keyId).load();
+    return CryptoUtils.generateMAC(object, key);
+  }
+
+  @Override
+  public boolean verifyMAC(Serializable object, String version, String keyId)
+      throws CryptoException {
+    Key key = keys_.get(keyId).load();
+    return CryptoUtils.verifyMAC(object, version, key);
+  }
+
+  @Override
+  public void remove(String keyId) {
+    keys_.remove(keyId);
+  }
 
 }

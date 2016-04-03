@@ -11,7 +11,6 @@ import java.util.Set;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.assistedinject.Assisted;
-import com.google.inject.name.Named;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.api.GetObjectFragmentsModule;
@@ -35,6 +34,7 @@ import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.EncryptWrapper;
 import org.nebulostore.crypto.EncryptionAPI;
 import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.identity.IdentityManager;
 import org.nebulostore.replicator.core.TransactionAnswer;
 
 /**
@@ -64,16 +64,16 @@ public class ReplicaRepairerModule extends ReturningJobModule<Void> {
       @Assisted("CurrentReplicators") List<CommAddress> currentReplicators,
       @Assisted("NewReplicators") List<ReplicatorData> newReplicators,
       @Assisted Collection<ObjectId> objectIds, Provider<ObjectGetter> getModuleProvider,
-      Provider<PartialObjectWriter> writeModuleProvider, AppKey appKey, EncryptionAPI encryption,
-      @Named("UserPublicKeyId") String userPublicKeyId,
-      ReplicaPlacementPreparator placementPreparator) {
+      Provider<PartialObjectWriter> writeModuleProvider, EncryptionAPI encryption,
+      ReplicaPlacementPreparator placementPreparator,
+      IdentityManager identityManager) {
     currentReplicators_ = currentReplicators;
     newReplicators_ = newReplicators;
     objectIds_ = objectIds;
     getModuleProvider_ = getModuleProvider;
     writeModuleProvider_ = writeModuleProvider;
-    appKey_ = appKey;
-    encryptWrapper_ = new EncryptWrapper(encryption, userPublicKeyId);
+    appKey_ = identityManager.getCurrentUserAppKey();
+    encryptWrapper_ = new EncryptWrapper(encryption, identityManager.getCurrentUserPublicKeyId());
     placementPreparator_ = placementPreparator;
     visitor_ = new ReplicaRepairerVisitor();
   }

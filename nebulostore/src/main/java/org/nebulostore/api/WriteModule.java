@@ -1,6 +1,5 @@
 package org.nebulostore.api;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -20,10 +19,10 @@ import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.crypto.CryptoException;
 import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.crypto.EncryptionAPI;
-import org.nebulostore.crypto.session.InitSessionNegotiatorModule;
-import org.nebulostore.crypto.session.message.InitSessionEndMessage;
-import org.nebulostore.crypto.session.message.InitSessionEndWithErrorMessage;
-import org.nebulostore.dispatcher.JobInitMessage;
+import org.nebulostore.crypto.session.SessionObject;
+import org.nebulostore.crypto.session.SessionObjectMap;
+import org.nebulostore.crypto.session.message.DHFinishMessage;
+import org.nebulostore.crypto.session.message.DHLocalErrorMessage;
 import org.nebulostore.replicator.core.StoreData;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.replicator.messages.ConfirmationMessage;
@@ -51,6 +50,7 @@ public abstract class WriteModule extends TwoStepReturningJobModule<Void, Void, 
   private ObjectId objectId_;
 
   protected final EncryptionAPI encryption_;
+  protected SessionObjectMap sessionObjectMap_;
 
   /**
    * States of the state machine.
@@ -100,19 +100,26 @@ public abstract class WriteModule extends TwoStepReturningJobModule<Void, Void, 
      * @param isSmallFile
      * @param commitVersion
      *          Version of this commit. If version was not changed, it should be equal to null
+     * @param objectId
+     * @throws CryptoException
      */
     protected void sendStoreQueries(Map<CommAddress, EncryptedObject> objectsMap,
         List<String> previousVersionSHAs, boolean isSmallFile, String commitVersion,
-        ObjectId objectId) {
+        ObjectId objectId) throws CryptoException {
       state_ = STATE.REPLICA_UPDATE;
       isSmallFile_ = isSmallFile;
       objectsMap_ = objectsMap;
       objectId_ = objectId;
       for (Entry<CommAddress, EncryptedObject> placementEntry : objectsMap_.entrySet()) {
         String remoteJobId = CryptoUtils.getRandomId().toString();
+        SessionObject sessionObject = sessionObjectMap_.get(placementEntry.getKey());
         waitingForTransactionResult_.put(placementEntry.getKey(), remoteJobId);
-        startSession(placementEntry.getKey(), new StoreData(remoteJobId, objectId_,
-            placementEntry.getValue(), previousVersionSHAs, commitVersion));
+        EncryptedObject data = encryption_.encryptWithSessionKey(placementEntry.getValue(),
+            sessionObject.getSessionKey());
+        networkQueue_.add(new QueryToStoreObjectMessage(remoteJobId,
+            placementEntry.getKey(), objectId_, data,
+            previousVersionSHAs, getJobId(),
+            commitVersion, sessionObject.getSessionId()));
         logger_.debug("added recipient: " + placementEntry.getKey());
       }
       recipientsSet_.addAll(objectsMap_.keySet());
@@ -208,7 +215,7 @@ public abstract class WriteModule extends TwoStepReturningJobModule<Void, Void, 
       endWithSuccess(null);
     }
 
-    public void visit(InitSessionEndMessage message) {
+    public void visit(DHFinishMessage message) {
       logger_.debug("Process " + message);
       StoreData storeData = (StoreData) message.getData();
       try {
@@ -223,7 +230,7 @@ public abstract class WriteModule extends TwoStepReturningJobModule<Void, Void, 
       }
     }
 
-    public void visit(InitSessionEndWithErrorMessage message) {
+    public void visit(DHLocalErrorMessage message) {
       logger_.debug("Process InitSessionEndWithErrorMessage " + message);
     }
 
@@ -263,13 +270,6 @@ public abstract class WriteModule extends TwoStepReturningJobModule<Void, Void, 
     public TransactionAnswerInMessage(TransactionAnswer answer) {
       answer_ = answer;
     }
-  }
-
-
-  protected void startSession(CommAddress replicator, Serializable data) {
-    InitSessionNegotiatorModule initSessionNegotiatorModule =
-        new InitSessionNegotiatorModule(replicator, getJobId(), data);
-    outQueue_.add(new JobInitMessage(initSessionNegotiatorModule));
   }
 
   @Override

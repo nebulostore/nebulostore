@@ -33,6 +33,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -59,25 +60,43 @@ public final class CryptoUtils {
   private static final int ASYMETRIC_ENCRYPTION_BYTE_LENGTH = 512;
   private static final int ASYMETRIC_ENCRYPTION_KEY_LENGTH = 8 * ASYMETRIC_ENCRYPTION_BYTE_LENGTH;
 
-  public static PublicKey readPublicKey(String filename) throws CryptoException {
+  public static PublicKey readPublicKey(byte[] file) throws CryptoException {
     try {
       X509EncodedKeySpec x509EncodedKeySpec =
-          new X509EncodedKeySpec(CryptoUtils.readBytes(filename));
+          new X509EncodedKeySpec(file);
       KeyFactory keyFactory = KeyFactory.getInstance(CryptoUtils.RSA_ALGORITHM);
       return keyFactory.generatePublic(x509EncodedKeySpec);
-    } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+      logger_.error("Unable to read public key", e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  public static PublicKey readPublicKeyFromPath(String filename) throws CryptoException {
+    try {
+      return CryptoUtils.readPublicKey(CryptoUtils.readBytes(filename));
+    } catch (IOException e) {
       logger_.error("Unable to read public key from file " + filename, e);
       throw new CryptoException(e.getMessage(), e);
     }
   }
 
-  public static PrivateKey readPrivateKey(String filename) throws CryptoException {
+  public static PrivateKey readPrivateKey(byte[] file) throws CryptoException {
     try {
       PKCS8EncodedKeySpec pkcs8EncodedKeySpec =
-          new PKCS8EncodedKeySpec(CryptoUtils.readBytes(filename));
+          new PKCS8EncodedKeySpec(file);
       KeyFactory keyFactory = KeyFactory.getInstance(CryptoUtils.RSA_ALGORITHM);
       return keyFactory.generatePrivate(pkcs8EncodedKeySpec);
-    } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+      logger_.error("Unable to read private key", e);
+      throw new CryptoException(e.getMessage(), e);
+    }
+  }
+
+  public static PrivateKey readPrivateKeyFromPath(String filename) throws CryptoException {
+    try {
+      return CryptoUtils.readPrivateKey(CryptoUtils.readBytes(filename));
+    } catch (IOException e) {
       logger_.error("Unable to read private key from file " + filename, e);
       throw new CryptoException(e.getMessage(), e);
     }
@@ -153,6 +172,10 @@ public final class CryptoUtils {
       id = id.negate().subtract(new BigInteger("-1"));
     }
     return id;
+  }
+
+  public static BigInteger getRandomNumber(BigInteger m) {
+    return getRandomId().mod(m);
   }
 
   public static String getRandomString() {
@@ -240,21 +263,38 @@ public final class CryptoUtils {
   }
 
   private static String byteArrayToHexString(byte[] array) {
-    StringBuilder sb = new StringBuilder();
-    for (byte b : array)
-       sb.append(String.format("%02x", b & 0xff));
-    return sb.toString();
+    return DatatypeConverter.printHexBinary(array);
+  }
+
+  private static byte[] hexStringToByteArray(String hexString) {
+    return DatatypeConverter.parseHexBinary(hexString);
   }
 
   public static String sha(EncryptedObject encryptedObject) {
+    return byteArrayToHexString(sha(encryptedObject.getEncryptedData()));
+  }
+
+  private static byte[] sha(byte[] data) {
     MessageDigest md = null;
     try {
-      md = MessageDigest.getInstance("SHA-1");
+      md = MessageDigest.getInstance("SHA-256");
     } catch (NoSuchAlgorithmException e) {
       logger_.error(e.getMessage());
     }
-    md.update(encryptedObject.getEncryptedData());
-    return byteArrayToHexString(md.digest());
+    md.update(data);
+    return md.digest();
+  }
+
+  public static String generateMAC(Serializable object, Key key) throws CryptoException {
+    byte[] sha = sha(serializeObject(object));
+    return byteArrayToHexString(encryptRSA(sha, key));
+  }
+
+  public static boolean verifyMAC(Serializable object, String version, Key key)
+      throws CryptoException {
+    byte[] sha = sha(serializeObject(object));
+    byte[] decryptedVersion = decryptRSA(hexStringToByteArray(version), key);
+    return Arrays.equals(sha, decryptedVersion);
   }
 
   public static double nextDouble() {

@@ -7,7 +7,6 @@
     part of it (ex. 'comm-address') if it is unique.
     Provide at least the following:
         ./generate_config.py\
-            --app-key=123\
             --class-name=org.nebulostore.appcore.Peer\
             --configuration-class-name=org.nebulostore.appcore.PeerConfiguration\
             --bootstrap/mode=(client|server)\

@@ -6,14 +6,14 @@ import org.nebulostore.communication.naming.CommAddress;
 /**
  * @author lukaszsiczek
  */
-public class InitSessionEndWithErrorMessage extends Message {
+public class DHLocalErrorMessage extends Message {
 
   private static final long serialVersionUID = 6029715086748333997L;
 
   private String errorMessage_;
   private CommAddress peerAddress_;
 
-  public InitSessionEndWithErrorMessage(String jobId, String errorMessage,
+  public DHLocalErrorMessage(String jobId, String errorMessage,
       CommAddress peerAddress) {
     super(jobId);
     errorMessage_ = errorMessage;

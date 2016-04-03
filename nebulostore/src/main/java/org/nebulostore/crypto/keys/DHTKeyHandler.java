@@ -26,6 +26,7 @@ public class DHTKeyHandler implements KeyHandler {
   private final BlockingQueue<Message> dispatcherQueue_;
   private final InstanceMetadata instanceMetadata_;
   private final UserMetadata userMetadata_;
+  private Key key_;
 
   public DHTKeyHandler(CommAddress instanceAddress, BlockingQueue<Message> dispatcherQueue) {
     keyDHT_ = instanceAddress.toKeyDHT();
@@ -43,15 +44,18 @@ public class DHTKeyHandler implements KeyHandler {
 
   @Override
   public Key load() throws CryptoException {
+    if (key_ != null) {
+      return key_;
+    }
     try {
       GetKeyModule getKeyModule = new GetKeyModule(dispatcherQueue_, keyDHT_);
       PublicKeyMetadata publicKeyMetadata =
         (PublicKeyMetadata) getKeyModule.getResult(TIMEOUT_SEC).getValue();
-      Key key = publicKeyMetadata.getPublicKey();
-      if (key == null) {
+      key_ = publicKeyMetadata.getPublicKey();
+      if (key_ == null) {
         throw new CryptoException("Unable to get Key from DHT");
       }
-      return key;
+      return key_;
     } catch (NebuloException e) {
       throw new CryptoException("Unable to get Key from DHT because of " + e.getMessage(), e);
     }

@@ -9,7 +9,10 @@ import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.nebulostore.appcore.addressing.NebuloAddress;
+import org.nebulostore.appcore.addressing.ObjectId;
 import org.nebulostore.appcore.exceptions.NebuloException;
+import org.nebulostore.crypto.session.SessionChannelModule;
+import org.nebulostore.crypto.session.SessionObjectMap;
 import org.nebulostore.replicator.core.TransactionAnswer;
 import org.nebulostore.subscription.model.SubscriptionNotification.NotificationReason;
 
@@ -154,7 +157,7 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
   protected void runSync() throws NebuloException {
     logger_.info("Running sync on list.");
     ObjectWriter writer = objectWriterProvider_.get();
-    writer.writeObject(this, previousVersions_, encryptWrapper_);
+    writer.writeObject(this, previousVersions_, encryptWrapper_, generateSessionKeys());
 
     try {
       writer.getSemiResult(TIMEOUT_SEC);
@@ -167,11 +170,19 @@ public class NebuloList extends NebuloObject implements Iterable<NebuloElement> 
     }
   }
 
+  private SessionObjectMap generateSessionKeys() throws NebuloException {
+    List<ObjectId> objectsList = new ArrayList<ObjectId>();
+    objectsList.add(this.getObjectId());
+    SessionChannelModule sessionChannelModule = sessionChannelProvider_.get();
+    sessionChannelModule.generateSessionChannelKey(address_.getAppKey(), objectsList);
+    return sessionChannelModule.getResult(TIMEOUT_SEC);
+  }
+
   @Override
   public void delete() throws NebuloException {
     logger_.info("Running delete on list.");
     ObjectDeleter deleter = objectDeleterProvider_.get();
-    deleter.deleteObject(address_);
+    deleter.deleteObject(address_, generateSessionKeys());
     deleter.awaitResult(TIMEOUT_SEC);
     notifySubscribers(NotificationReason.FILE_DELETED);
   }

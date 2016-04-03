@@ -123,7 +123,6 @@ do
     fi
 
     ../resources/conf/generate_config.py $COMMON_ARGS \
-         --app-key=$i$i \
          --class-name=$PEERNAME \
          --configuration-class-name=$PEERNAME_CONFIGURATION \
          --testing-peer-class-list=$CONCAT\

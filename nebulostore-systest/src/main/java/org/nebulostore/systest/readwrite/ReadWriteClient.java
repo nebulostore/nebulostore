@@ -18,6 +18,7 @@ import org.nebulostore.appcore.model.NebuloObjectFactory;
 import org.nebulostore.communication.naming.CommAddress;
 import org.nebulostore.conductor.ConductorClient;
 import org.nebulostore.conductor.messages.NewPhaseMessage;
+import org.nebulostore.identity.IdentityManager;
 
 /**
  * ReadWrite client.
@@ -34,11 +35,11 @@ public class ReadWriteClient extends ConductorClient {
 
   private final List<CommAddress> clients_;
   protected List<NebuloAddress> files_;
-  protected AppKey myAppKey_;
   protected int clientId_;
   protected NebuloFile myFile_;
   protected transient NebuloObjectFactory objectFactory_;
   protected final ReadWriteStats stats_;
+  protected transient IdentityManager identityManager_;
 
   public ReadWriteClient(String serverJobId, CommAddress serverAddress, int numPhases,
       List<CommAddress> clients, int clientId) {
@@ -50,8 +51,8 @@ public class ReadWriteClient extends ConductorClient {
   }
 
   @Inject
-  public void setAppKey(AppKey appKey) {
-    myAppKey_ = appKey;
+  public void setIdentityManager(IdentityManager identityManager) {
+    identityManager_ = identityManager;
   }
 
   @Inject
@@ -81,10 +82,11 @@ public class ReadWriteClient extends ConductorClient {
 
   private NebuloFile createFile() {
     sleep(INITIAL_SLEEP);
-    NebuloFile file = objectFactory_.createNewNebuloFile(
-        new ObjectId(new BigInteger((clientId_ + 1) + "000")));
+    AppKey appKey = identityManager_.getCurrentUserAppKey();
+    NebuloFile file = objectFactory_.createNewNebuloFile(new NebuloAddress(appKey,
+        new ObjectId(new BigInteger((clientId_ + 1) + "000"))));
     try {
-      file.write(myAppKey_.getKey().toString().getBytes("UTF-8"), 0);
+      file.write(appKey.getKey().toString().getBytes("UTF-8"), 0);
       return file;
     } catch (NebuloException exception) {
       endWithError("Unable to write NebuloFile (" + exception.getMessage() + ")");

@@ -10,8 +10,6 @@ cd $(dirname $0)
 
 HOST_NUM=$1
 
-APP_KEY=$1$1
-
 # naan address and ports
 BOOTSTRAP_ADDRESS=193.0.109.30
 BOOTSTRAP_PORT=10201
@@ -22,7 +20,6 @@ BOOTSTRAP_PORT=10201
                  ../Peer.xml.base
 
 ../resources/conf/generate_config.py \
-                      --app-key=$APP_KEY \
                       --bootstrap-net-address=$BOOTSTRAP_ADDRESS \
                       --bootstrap-port=$BOOTSTRAP_PORT \
                       < ../Peer.xml.base > \

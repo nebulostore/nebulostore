@@ -32,6 +32,7 @@ import org.nebulostore.appcore.model.NebuloList;
 import org.nebulostore.appcore.model.NebuloList.ListIterator;
 import org.nebulostore.appcore.model.NebuloObject;
 import org.nebulostore.appcore.model.NebuloObjectFactory;
+import org.nebulostore.crypto.CryptoUtils;
 import org.nebulostore.peers.Peer;
 
 /**
@@ -73,7 +74,7 @@ public class GUIController extends Peer {
   @Override
   protected void runActively() {
     // TODO: Move register to separate module or at least make it non-blocking.
-    register(appKey_);
+    register();
     try {
       initializeRootAddress();
       if (appKey_.equals(rootAddress_.getAppKey())) {
@@ -391,8 +392,9 @@ public class GUIController extends Peer {
       clearInfoMessage();
 
       try {
-
-        NebuloList newList = objectFactory_.createNewNebuloList();
+        NebuloAddress newListAddress = new NebuloAddress(appKey_,
+            new ObjectId(CryptoUtils.getRandomId().mod(new BigInteger("1000000"))));
+        NebuloList newList = objectFactory_.createNewNebuloList(newListAddress);
         NebuloAddress listAddress = newList.getAddress();
         NebuloElement element = new NebuloElement(listAddress);
 
@@ -743,7 +745,9 @@ public class GUIController extends Peer {
 
   private void uploadFolder(File directoryPath) throws NebuloException, IOException {
     NebuloList oldParentList = currentParentList_;
-    currentParentList_ = objectFactory_.createNewNebuloList();
+    NebuloAddress listAddress = new NebuloAddress(appKey_, new ObjectId(
+        CryptoUtils.getRandomId().mod(new BigInteger("1000000"))));
+    currentParentList_ = objectFactory_.createNewNebuloList(listAddress);
 
     String[] elements = directoryPath.list();
     for (String elementPath : elements) {
@@ -751,7 +755,9 @@ public class GUIController extends Peer {
           "/" + elementPath);
 
       if (abstractFile.isFile()) {
-        NebuloFile newFile = objectFactory_.createNewNebuloFile();
+        NebuloAddress fileAddress = new NebuloAddress(appKey_,
+            new ObjectId(CryptoUtils.getRandomId().mod(new BigInteger("1000000"))));
+        NebuloFile newFile = objectFactory_.createNewNebuloFile(fileAddress);
         uploadFile(abstractFile, newFile.getAddress());
       } else {
         uploadFolder(abstractFile);
